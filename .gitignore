@@ -1,0 +1,3 @@
+.venv
+__pytest__
+*.sqlite3
