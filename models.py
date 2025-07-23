@@ -3,9 +3,10 @@ from sqlalchemy import (event, create_engine, Column, ForeignKey, Integer,
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 
 
-# Global variables
+# == Global variables ==
 MAX_CHARS = 100
 
+# == DB Connection ==
 # Create connection with sqlite db. Echo=True == debugging mode
 engine = create_engine("sqlite:///wineshop.db", echo=True)
 # Add event listener to activate Foreing Keys in SQLite (it allows using ondelete)
@@ -15,7 +16,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
-# Create tables
+# == Create tables ==
 Base = declarative_base()
 
 class Shop(Base):
@@ -54,11 +55,12 @@ class Wine(Base):
     winery = Column(String(MAX_CHARS), nullable=False)
     colour_id = Column(Integer, ForeignKey("colour.id", ondelete="RESTRICT"), nullable=False)
     style_id = Column(Integer, ForeignKey("style.id", ondelete="RESTRICT"), nullable=False)
-    varietal_id = Column(Integer, ForeignKey("varietal.id", ondelete="SET NULL"))
-    vintage_year = Column(Integer, nullable=False)
+    varietal_id = Column(Integer, ForeignKey("varietal.id", ondelete="SET NULL")) # Optional
+    vintage_year = Column(Integer, nullable=False) 
     origin = Column(String(MAX_CHARS)) # Optional
     code = Column(String, nullable=False)
     wine_picture_path = Column(String) # Optional
+    # Relationships
     colour = relationship("Colour", back_populates="wines") 
     style = relationship("Style", back_populates="wines") 
     varietal = relationship("Varietal", back_populates="wines", passive_deletes=True) 
@@ -70,6 +72,7 @@ class Colour(Base):
     __tablename__ = "colour"
     id = Column(Integer, primary_key=True)
     name = Column(String(MAX_CHARS), nullable=False)
+    # Relationships
     wines = relationship("Wine", back_populates="colour")
 
 class Style(Base):
@@ -79,6 +82,7 @@ class Style(Base):
     __tablename__ = "style"
     id = Column(Integer, primary_key=True)
     name = Column(String(MAX_CHARS), nullable=False)
+    # Relationships
     wines = relationship("Wine", back_populates="style")
 
 class Varietal(Base):
@@ -89,10 +93,12 @@ class Varietal(Base):
     __tablename__ = "varietal"
     id = Column(Integer, primary_key=True)
     name = Column(String(MAX_CHARS), nullable=False)
+    # Relationships
     wines = relationship("Wine", back_populates="varietal")
     
 Base.metadata.create_all(engine)
 
+# == Session ==
 # Start session for command operations
 Session = sessionmaker(bind=engine)
     

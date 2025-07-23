@@ -3,10 +3,6 @@ from models import Colour
 from helpers import populate_db_model
 
 
-
-
-
-
 def test_populate_creates_entries(session):
     populate_db_model(["Red", "White", "Rosé"], Colour, session)
 
