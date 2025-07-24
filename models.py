@@ -40,7 +40,8 @@ class Shop(Base):
         """
         instance = session.query(cls).first()
         if not instance:
-            instance = cls(name="Default Shop", logo_path="") # Empty instance
+            # Default instance
+            instance = cls(name="WINE STOCK", logo_path="assets/logos/app_logo.png")
             session.add(instance)
             session.commit()
         return instance

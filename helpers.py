@@ -3,7 +3,7 @@ Secondary functions used by the main program.
 """
 import shutil
 import uuid
-from customtkinter import filedialog
+import customtkinter as ctk
 from pathlib import Path
 from typing import Type, TypeVar
 from PIL import Image, ImageOps
@@ -24,6 +24,24 @@ def populate_db_model(fields: list[str], model: type, session: Session) -> None:
         if not session.query(model).filter_by(name=field).first():
             session.add(model(name=field))
         session.commit()   
+
+
+def load_ctk_image(image_path: str, size: tuple[int,int] = (80, 80)) -> ctk.CTkImage:
+    """
+    Loads a ctk image
+
+    Parameters:
+        image_path = The path of the image to load
+        size = Desired size of the image
+    
+    Returns:
+        CTkImage that can be used in other components
+    """
+    
+    return ctk.CTkImage(
+        light_image=Image.open(image_path),
+        size=(size),
+    )
 
 
 def generate_colored_icon(path: str, colour: type) -> PILImage:
@@ -56,10 +74,9 @@ def generate_favicon(path: str) -> PILImage:
     image.save("assets/favicon.ico", format="ICO", sizes=[(32, 32)])
 
 
-def load_image_from_file() -> str:
+def load_image_from_file(filepath) -> str:
     """
-    Open a dialog for the user to pick a picture.
-    Then it creates a copy of it in assets/user_images with the name logo_user/
+    Creates a copy of the user's logo in assets/user_images with the name logo_user.
     It creates the folders if they don't exist.
     It deletes any old logo file.
     
@@ -68,10 +85,6 @@ def load_image_from_file() -> str:
     """
     
     # Select image
-    filepath = filedialog.askopenfilename(
-        title="Select Logo",
-        filetypes=[("Images", "*.png *.jpg *.jpeg")]
-    )
     if filepath:
         original_path = Path(filepath)
         

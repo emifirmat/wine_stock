@@ -10,8 +10,11 @@ class Colours:
     PRIMARY_WINE = "#7B2E2E"
     BG_MAIN = "#F9F6F1"
     BG_SECONDARY = "#FDFCFB"
-    BG_HOVER = "#F0E5E5"
+    BG_HOVER_NAV = "#F0E5E5"
+    BG_HOVER_BTN_WINE = "#5F2222"
+    BG_HOVER_BTN_STATUS = "#688F2E"
     TEXT_MAIN = "#2E2E2E"
+    TEXT_SECONDARY = "#555555"
     BORDERS = "#CCCCCC"
     STATUS = "#556B2F"
     ICONS = "#D4AF37"
@@ -20,8 +23,9 @@ class Fonts:
     SHOP_NAME = ("Segoe UI", 40, "bold")
     TITLE = ("Segoe UI", 20, "bold")
     SUBTITLE = ("Segoe UI", 16, "bold")
-    TEXT = ("Segoe UI", 15)
-    BUTTON = ("Segoe UI", 15, "bold")
+    TEXT_MAIN = ("Segoe UI", 15)
+    NAVLINK = ("Segoe UI", 15, "bold")
+    TEXT_SECONDARY = ("Segoe UI", 13, "italic")
 
 class Icons:
     root_path = "assets/icons"

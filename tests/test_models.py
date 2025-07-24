@@ -5,8 +5,8 @@ from models import Shop, Wine, Colour, Style, Varietal
 def test_shop_singleton(session):
     # Verify singleton creates a default shop
     shop = Shop.get_singleton(session)
-    assert shop.name == "Default Shop"
-    assert shop.logo_path == ""
+    assert shop.name == "WINE STOCK"
+    assert shop.logo_path == "assets/logos/app_logo.png"
 
     # Verify that in the second call, there is no second shop.
     shop2 = Shop.get_singleton(session)

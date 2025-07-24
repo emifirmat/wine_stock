@@ -2,28 +2,34 @@ import os
 import platform
 import customtkinter as ctk
 from PIL import Image
+from sqlalchemy.orm import Session
 
 from ui.style import Colours, Fonts, Icons
-from helpers import generate_favicon
-
+from ui.settings_frame import SettingsFrame
+from ui.wine_frame import WineFrame
+from helpers import generate_favicon, load_image_from_file, load_ctk_image
+from models import Shop
 
 class MainWindow:
     """Main window of the app"""
     SCREEN_WIDTH = 1200
     SCREEN_HEIGHT = 700
     
-    def __init__(self, root: ctk.CTk):
+    def __init__(self, root: ctk.CTk, session: Session):
         # Main window
         self.root = root
         self.setup_main_window()
-        # Frames
+        # DB
+        self.session = session
+        # Layout Frames
         self.frame_top = None
         self.frame_side = None
         self.frame_body = None
         self.create_layout_containers()
         # Topframe
-        self.logo = None
-        self.shop_name = None
+        self.shop = None
+        self.label_logo = None
+        self.label_shop_name = None
         self.create_topframe_components()
         # Sidebar
         self.button_home = None
@@ -32,8 +38,6 @@ class MainWindow:
         self.button_price = None
         self.button_settings = None
         self.create_sidebar_components()
-        # Settings
-        self.card_settings = None
 
     def setup_main_window(self) -> None:
         """
@@ -93,30 +97,28 @@ class MainWindow:
         """
         Create the components located at the top of the page.
         """
+        # Import data from DB
+        self.shop = self.session.query(Shop).first()
+  
         # Create Logo
-        logo_image = ctk.CTkImage(
-            light_image=Image.open("assets/logos/app_logo.png"),
-            size=(80, 80),
-        )
-        self.logo = ctk.CTkLabel(
+        self.label_logo = ctk.CTkLabel(
             self.frame_top,
-            image = logo_image,
+            image = load_ctk_image(self.shop.logo_path),
             text="",
             fg_color="transparent"  
         )
         
         # Create Name
-        self.shop_name = ctk.CTkLabel(
+        self.label_shop_name = ctk.CTkLabel(
             self.frame_top,
-            text="WINE STOCK",
+            text=self.shop.name,
             text_color=Colours.STATUS,
             font=Fonts.SHOP_NAME,
         )
         
-        
         # Place labels
-        self.logo.pack(side="left", padx=40, pady=10)
-        self.shop_name.place(relx=0.5, rely=0.6, anchor="center")
+        self.label_logo.pack(side="left", padx=40, pady=10)
+        self.label_shop_name.place(relx=0.6, rely=0.6, anchor="center")
 
     def create_sidebar_components(self):
         """
@@ -137,38 +139,39 @@ class MainWindow:
             self.frame_side,
             text="Home",
             text_color=Colours.TEXT_MAIN,
-            font=Fonts.BUTTON,
+            font=Fonts.NAVLINK,
             image=Icons.STATISTICS,
             anchor="w",
             compound="left",
             fg_color="transparent",
-            hover_color=Colours.BG_HOVER,
+            hover_color=Colours.BG_HOVER_NAV,
             corner_radius=10,
-            cursor="hand2"
+            cursor="hand2",
         )
         self.button_wine = ctk.CTkButton(
             self.frame_side,
             text="Wine",
             text_color=Colours.TEXT_MAIN,
-            font=Fonts.BUTTON,
+            font=Fonts.NAVLINK,
             image=Icons.WINE_GLASS,
             anchor="w",
             compound="left",
             fg_color="transparent",
-            hover_color=Colours.BG_HOVER,
+            hover_color=Colours.BG_HOVER_NAV,
             corner_radius=10,
-            cursor="hand2"
+            cursor="hand2",
+            command=self.show_wine_section
         )
         self.button_stock = ctk.CTkButton(
             self.frame_side,
             text="Stock",
             text_color=Colours.TEXT_MAIN,
-            font=Fonts.BUTTON,
+            font=Fonts.NAVLINK,
             image=Icons.STOCK,
             anchor="w",
             compound="left",
             fg_color="transparent",
-            hover_color=Colours.BG_HOVER,
+            hover_color=Colours.BG_HOVER_NAV,
             corner_radius=10,
             cursor="hand2"
         )
@@ -176,12 +179,12 @@ class MainWindow:
             self.frame_side,
             text="Price",
             text_color=Colours.TEXT_MAIN,
-            font=Fonts.BUTTON,
+            font=Fonts.NAVLINK,
             image=Icons.PRICE,
             anchor="w",
             compound="left",
             fg_color="transparent",
-            hover_color=Colours.BG_HOVER,
+            hover_color=Colours.BG_HOVER_NAV,
             corner_radius=10,
             cursor="hand2"
         )
@@ -189,15 +192,15 @@ class MainWindow:
             self.frame_side,
             text="Settings",
             text_color=Colours.TEXT_MAIN,
-            font=Fonts.BUTTON,
+            font=Fonts.NAVLINK,
             image=Icons.SETTINGS,
             anchor="w",
             compound="left",
             fg_color="transparent",
-            hover_color=Colours.BG_HOVER,
+            hover_color=Colours.BG_HOVER_NAV,
             corner_radius=10,
             cursor="hand2",
-            command=self.show_settings
+            command=self.show_settings_section,
         )
 
         # Place buttons
@@ -209,45 +212,58 @@ class MainWindow:
             self.button_settings
         ]:
             btn.pack(fill="x", expand=True, padx=10, pady=5)
-            
-    def show_settings(self) -> None:
+
+    def show_wine_section(self):
+        """Click event that shows the wine section in the body frame"""
+        # Add function to clear body
+        self.clear_body()
+
+        # Display settings frame
+        frame_wine = WineFrame(
+            self.frame_body, 
+            self.session,
+            on_save=None,
+        )
+        frame_wine.pack(padx=20, pady=20, fill="both", expand="true")
+
+
+    def show_settings_section(self):
+        """Click event that shows the settings section in the body frame"""
+        # Add function to clear body
+        self.clear_body()
+
+        # Display settings frame
+        frame_settings = SettingsFrame(
+            self.frame_body, 
+            self.session,
+            on_save=self.refresh_shop_labels,
+        )
+        frame_settings.pack(padx=20, pady=20, fill="both", expand="true")
+
+    def clear_body(self):
         """
-        Displays the setting options in the body frame
+        Clears the content of frame body removing all the components inside.
         """
-        if not self.card_settings:
-            self.card_settings = ctk.CTkFrame(
-                self.frame_body,
-                fg_color = Colours.BG_SECONDARY,
-                corner_radius=10,
-                border_color=Colours.BORDERS,
-                border_width=1
-            )
-            self.card_settings.pack(padx=20, pady=20, fill="both", expand="true")
+        for component in self.frame_body.winfo_children():
+            component.destroy()
+    
+    
+    def refresh_shop_labels(self):
+        """
+        Callback function. Refresh name and logo of the shop located at the top 
+        frame.
 
-            title = ctk.CTkLabel(
-                self.card_settings,
-                text="SETTINGS",
-                text_color= Colours.PRIMARY_WINE,
-                font=Fonts.TITLE
-            )
+        Inputs:
+            new_name =  New name of the shop typed by the user
+            new_logo_path = Path of the new logo picked by the user
+        """
+        self.session.refresh(self.shop) 
+        
+        # Update label shop name
+        self.label_shop_name.configure(text=self.shop.name)
 
-            title.pack(pady=20)
+        # Update image logo
+        self.label_logo.configure(image=load_ctk_image(self.shop.logo_path))
 
-            label_name = ctk.CTkLabel(
-                self.card_settings,
-                text="Shop Name",
-                text_color=Colours.TEXT_MAIN,
-                font=Fonts.TEXT
-            )
-           
-            entry_name = ctk.CTkEntry(
-                self.card_settings,
-            )
-            
-            label_name.pack()
-            entry_name.pack()
 
-            # Add logo button
-            # Logo preview
-            # Cancel button
-            # Save Button
+    
