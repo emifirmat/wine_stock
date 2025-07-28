@@ -1,8 +1,9 @@
 import pytest
+from decimal import Decimal
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, clear_mappers
 
-from models import Base
+from models import Base, Wine, Colour, Style, Varietal
 
 # Create a db in memory
 @pytest.fixture
@@ -27,3 +28,31 @@ def session():
 
     session.close()
     Base.metadata.drop_all(engine)  # Clear tables
+
+@pytest.fixture
+def sample_color_style_varietal(session):
+    red = Colour(name="Red")
+    dry = Style(name="Dry")
+    malbec = Varietal(name="Malbec")
+
+    session.add_all([red, dry, malbec])
+    session.commit()
+    return red, dry, malbec
+
+@pytest.fixture
+def sample_wine(session, sample_color_style_varietal):
+    red, dry, malbec = sample_color_style_varietal
+    wine = Wine(
+        name="Test Wine",
+        winery=malbec.id,
+        colour_id=red.id,
+        style_id=dry.id,
+        vintage_year=2020,
+        code="TW-001",
+        purchase_price=Decimal("10.00"),
+        selling_price=Decimal("15.00"),
+    )
+
+    session.add(wine)
+    session.commit()
+    return wine

@@ -7,24 +7,27 @@ from PIL import Image
 from helpers import generate_colored_icon
 
 class Colours:
-    PRIMARY_WINE = "#7B2E2E"
+    PRIMARY_WINE = BTN_CLEAR = "#7B2E2E"
     BG_MAIN = "#F9F6F1"
-    BG_SECONDARY = "#FDFCFB"
+    BG_SECONDARY = TEXT_BUTTON= "#FDFCFB"
+    BTN_ADD_LINE = "#88B04B"
     BG_HOVER_NAV = "#F0E5E5"
-    BG_HOVER_BTN_WINE = "#5F2222"
-    BG_HOVER_BTN_STATUS = "#688F2E"
+    BG_HOVER_BTN_CLEAR = "#5F2222"
+    BG_HOVER_BTN_SAVE = "#688F2E"
+    BG_HOVER_BTN_ADD_LINE = "#6F9A3E"
     TEXT_MAIN = "#2E2E2E"
     TEXT_SECONDARY = "#555555"
     BORDERS = "#CCCCCC"
-    STATUS = "#556B2F"
+    COMPANY_NAME = BTN_SAVE = "#556B2F"
     ICONS = "#D4AF37"
 
 class Fonts:
     SHOP_NAME = ("Segoe UI", 40, "bold")
     TITLE = ("Segoe UI", 20, "bold")
     SUBTITLE = ("Segoe UI", 16, "bold")
-    TEXT_MAIN = ("Segoe UI", 15)
+    TEXT_MAIN = TEXT_BUTTON = ("Segoe UI", 15)
     NAVLINK = ("Segoe UI", 15, "bold")
+    TEXT_LABEL = ("Segoe UI", 14)
     TEXT_SECONDARY = ("Segoe UI", 13, "italic")
 
 class Icons:

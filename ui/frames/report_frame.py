@@ -1,21 +1,20 @@
 """
-Classes related with the wine section
+Classes related with the price section
 """
-
 import customtkinter as ctk
 from PIL import Image
 
-from ui.components import TextInput
+from ui.components import TextInput, ImageInput
 from ui.style import Colours, Fonts, Icons
 from helpers import generate_favicon, load_image_from_file, load_ctk_image
-from models import Shop, Wine
+from models import Shop
 
-class WineFrame(ctk.CTkFrame):
+class ReportFrame(ctk.CTkFrame):
     """
-    It contains all the components and logic related to wine CRUD
+    It contains all the components and logic related to report section
     """
     def __init__(
-            self, root: ctk.CTkFrame, session, on_save, **kwargs
+            self, root: ctk.CTkFrame, session, **kwargs
         ):
         super().__init__(root, **kwargs)
         self.configure(
@@ -25,34 +24,28 @@ class WineFrame(ctk.CTkFrame):
             border_width=1
         )
         self.session = session
-        self.wine = session.query(Wine)
+
         self.create_components()
-        #self.on_save = on_save
-        
+
     def create_components(self) -> None:
         """
-        Creates the wine section components
+        Creates the report section components
         """
         # Title
         title = ctk.CTkLabel(
             self,
-            text="WINE MANAGEMENT",
+            text="STOCK",
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TITLE
         )
         title.pack(pady=(20, 0))
 
-        # Introduction
-        text_intro = (
-            "Add, edit, or remove wines from your winery's catalog to "
-            + "keep your selection up to date."
-        )
+        # Warning Text
         introduction = ctk.CTkLabel(
             self,
-            text=text_intro,
-            text_color=Colours.TEXT_SECONDARY,
+            text="This section will be available in a future update.",
+            text_color=Colours.TEXT_MAIN,
             justify="center",
-            font=Fonts.TEXT_SECONDARY
+            font=Fonts.TEXT_MAIN
         )
-        introduction.pack(pady=15)
-        
+        introduction.pack(pady=200)

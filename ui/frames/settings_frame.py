@@ -4,7 +4,7 @@ Classes related with the settings section
 import customtkinter as ctk
 from PIL import Image
 
-from ui.components import TextInput
+from ui.components import TextInput, ImageInput
 from ui.style import Colours, Fonts, Icons
 from helpers import generate_favicon, load_image_from_file, load_ctk_image
 from models import Shop
@@ -30,8 +30,7 @@ class SettingsFrame(ctk.CTkFrame):
         self.on_save = on_save
         
         self.name_input = None
-        self.temp_file_path = None # Original user's new logo filepath
-        self.label_preview = None
+        self.image_input = None
         self.create_components()
 
     def create_components(self) -> None:
@@ -61,56 +60,27 @@ class SettingsFrame(ctk.CTkFrame):
         self.name_input = TextInput(
             self,
             label_text="Shop Name",
-            placeholder=self.shop_name
+            placeholder=self.shop_name,
+            optional=True
         )
         self.name_input.pack(pady=(20))
 
         # Logo input
-        frame_logo_input = ctk.CTkFrame(
+        self.image_input = ImageInput(
             self,
-            fg_color="transparent",
+            label_text="Shop Logo",
+            image_path=self.logo_path,
+            optional=True
         )
-        
-        label_logo = ctk.CTkLabel(
-            frame_logo_input,
-            text="Shop Logo",
-            text_color=Colours.TEXT_MAIN,
-            font=Fonts.TEXT_MAIN,
-            width=100
-        )
-
-        button_logo = ctk.CTkButton(
-            frame_logo_input,
-            text="Choose File",
-            text_color=Colours.BG_MAIN,
-            fg_color=Colours.PRIMARY_WINE,
-            font=Fonts.TEXT_MAIN,
-            corner_radius=10,
-            hover_color=Colours.BG_HOVER_BTN_WINE,
-            command=self.load_logo,
-            width=170
-        )
-
-        self.label_preview = ctk.CTkLabel(
-            frame_logo_input,
-            image=load_ctk_image(self.logo_path),
-            text="",
-            fg_color="transparent",               
-        )
-
-        frame_logo_input.pack(pady=10)
-        
-        label_logo.grid(row=0, column=0, padx=(0, 15), sticky="w")
-        button_logo.grid(row=0, column=1, padx=15)
-        self.label_preview.grid(row=0, column=2, padx=(15, 0))
+        self.image_input.pack(pady=10)
         
         # Save Button
         save_button = ctk.CTkButton(
             self,
             text="Save",
             text_color=Colours.BG_SECONDARY,
-            fg_color=Colours.STATUS,
-            hover_color=Colours.BG_HOVER_BTN_STATUS,
+            fg_color=Colours.BTN_SAVE,
+            hover_color=Colours.BG_HOVER_BTN_SAVE,
             font=Fonts.TEXT_MAIN,
             corner_radius=10,
             command=self.save_changes
@@ -142,7 +112,7 @@ class SettingsFrame(ctk.CTkFrame):
             self.shop.name = new_name 
 
         # Update logo
-        new_logo_path = self.temp_file_path
+        new_logo_path = self.image_input.get_new_path()
         self.shop.logo_path = new_logo_path if new_logo_path else "assets/logos/app_logo.png"
 
         # Sabe changes in db

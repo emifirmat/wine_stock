@@ -25,6 +25,12 @@ def populate_db_model(fields: list[str], model: type, session: Session) -> None:
             session.add(model(name=field))
         session.commit()   
 
+def get_by_id(model: type, id_: int, session: Session):
+    """
+    Get the instance of a model by its Id.
+    """
+    return session.query(model).get(id_)
+
 
 def load_ctk_image(image_path: str, size: tuple[int,int] = (80, 80)) -> ctk.CTkImage:
     """

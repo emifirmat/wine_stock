@@ -5,8 +5,12 @@ from PIL import Image
 from sqlalchemy.orm import Session
 
 from ui.style import Colours, Fonts, Icons
-from ui.settings_frame import SettingsFrame
-from ui.wine_frame import WineFrame
+
+#from ui.frames.wine_frame import HomeFrame
+from ui.frames.home_frame import HomeFrame
+from ui.frames.wine_frame import WineFrame
+from ui.frames.report_frame import ReportFrame
+from ui.frames.settings_frame import SettingsFrame
 from helpers import generate_favicon, load_image_from_file, load_ctk_image
 from models import Shop
 
@@ -34,7 +38,7 @@ class MainWindow:
         # Sidebar
         self.button_home = None
         self.button_wine = None
-        self.button_stock = None
+        self.button_report = None
         self.button_price = None
         self.button_settings = None
         self.create_sidebar_components()
@@ -112,7 +116,7 @@ class MainWindow:
         self.label_shop_name = ctk.CTkLabel(
             self.frame_top,
             text=self.shop.name,
-            text_color=Colours.STATUS,
+            text_color=Colours.BTN_SAVE,
             font=Fonts.SHOP_NAME,
         )
         
@@ -147,6 +151,7 @@ class MainWindow:
             hover_color=Colours.BG_HOVER_NAV,
             corner_radius=10,
             cursor="hand2",
+            command=self.show_home_section
         )
         self.button_wine = ctk.CTkButton(
             self.frame_side,
@@ -162,9 +167,9 @@ class MainWindow:
             cursor="hand2",
             command=self.show_wine_section
         )
-        self.button_stock = ctk.CTkButton(
+        self.button_report = ctk.CTkButton(
             self.frame_side,
-            text="Stock",
+            text="Report",
             text_color=Colours.TEXT_MAIN,
             font=Fonts.NAVLINK,
             image=Icons.STOCK,
@@ -173,21 +178,10 @@ class MainWindow:
             fg_color="transparent",
             hover_color=Colours.BG_HOVER_NAV,
             corner_radius=10,
-            cursor="hand2"
+            cursor="hand2",
+            command=self.show_stock_section
         )
-        self.button_price = ctk.CTkButton(
-            self.frame_side,
-            text="Price",
-            text_color=Colours.TEXT_MAIN,
-            font=Fonts.NAVLINK,
-            image=Icons.PRICE,
-            anchor="w",
-            compound="left",
-            fg_color="transparent",
-            hover_color=Colours.BG_HOVER_NAV,
-            corner_radius=10,
-            cursor="hand2"
-        )
+  
         self.button_settings =  ctk.CTkButton(
             self.frame_side,
             text="Settings",
@@ -207,12 +201,27 @@ class MainWindow:
         for btn in [
             self.button_home, 
             self.button_wine, 
-            self.button_stock, 
-            self.button_price, 
+            self.button_report, 
             self.button_settings
         ]:
             btn.pack(fill="x", expand=True, padx=10, pady=5)
 
+    def show_home_section(self):
+        """Click event that shows the wine section in the body frame"""
+        # Add function to clear body
+        self.clear_body()
+
+        # Display settings frame
+        frame_home = HomeFrame(
+            self.frame_body, 
+            self.session
+        )
+        self.frame_body.grid_rowconfigure(0, weight=1)
+        self.frame_body.grid_columnconfigure(0, weight=1)
+
+        frame_home.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        
+    
     def show_wine_section(self):
         """Click event that shows the wine section in the body frame"""
         # Add function to clear body
@@ -224,8 +233,41 @@ class MainWindow:
             self.session,
             on_save=None,
         )
-        frame_wine.pack(padx=20, pady=20, fill="both", expand="true")
+        self.frame_body.grid_rowconfigure(0, weight=1)
+        self.frame_body.grid_columnconfigure(0, weight=1)
 
+        frame_wine.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+
+    def show_price_section(self):
+        """Click event that shows the price section in the body frame"""
+        # Add function to clear body
+        self.clear_body()
+
+        # Display settings frame
+        frame_price = PriceFrame(
+            self.frame_body, 
+            self.session,
+        )
+        self.frame_body.grid_rowconfigure(0, weight=1)
+        self.frame_body.grid_columnconfigure(0, weight=1)
+
+        frame_price.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+
+    def show_stock_section(self):
+        """Click event that shows the stock section in the body frame"""
+        # Add function to clear body
+        self.clear_body()
+
+        # Display settings frame
+        frame_stock = ReportFrame(
+            self.frame_body, 
+            self.session,
+        )
+        self.frame_body.grid_rowconfigure(0, weight=1)
+        self.frame_body.grid_columnconfigure(0, weight=1)
+
+        frame_stock.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        
 
     def show_settings_section(self):
         """Click event that shows the settings section in the body frame"""

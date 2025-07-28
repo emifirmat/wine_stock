@@ -1,7 +1,8 @@
 import customtkinter as ctk
 
+from decimal import Decimal
 from models import Session, Shop, Wine, Colour, Style, Varietal
-from helpers import populate_db_model
+from helpers import populate_db_model, get_by_id
 
 from ui.main_window import MainWindow
 
@@ -12,8 +13,12 @@ def main():
     # Populate colour and style columns
     wine_colours = ["red", "white", "rosé", "orange", "other"]
     wine_styles = ["still", "sparkling", "fortified", "dessert", "other"]
+    wine_varietals = ["Malbec", "Cabernet Sauvignon", "Torrontés", "Moscato Bianco",
+    "Touriga Nacional", "Baga", "Grenache", "Hondarrabi Zuri", "Tinta Roriz"]
     populate_db_model(wine_colours, Colour, session)
     populate_db_model(wine_styles, Style, session)
+    populate_db_model(wine_varietals, Varietal, session)
+
     # Create default shop values if it is first time using the app
     Shop.get_singleton(session)
 
