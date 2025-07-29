@@ -72,7 +72,7 @@ class Wine(Base):
     varietal = relationship("Varietal", back_populates="wines", passive_deletes=True) 
     movements = relationship("StockMovement", back_populates="wine", cascade="all, delete")
 
-    # Default order
+    # Ordered list
     @classmethod
     def all_ordered(cls, session):
         return session.query(cls).order_by(cls.name.asc()).all()
@@ -84,6 +84,7 @@ class Colour(Base):
     __tablename__ = "colour"
     id = Column(Integer, primary_key=True)
     name = Column(String(MAX_CHARS), nullable=False)
+    
     # Relationships
     wines = relationship("Wine", back_populates="colour")
 
@@ -94,6 +95,7 @@ class Style(Base):
     __tablename__ = "style"
     id = Column(Integer, primary_key=True)
     name = Column(String(MAX_CHARS), nullable=False)
+    
     # Relationships
     wines = relationship("Wine", back_populates="style")
 
@@ -104,6 +106,7 @@ class Varietal(Base):
     __tablename__ = "varietal"
     id = Column(Integer, primary_key=True)
     name = Column(String(MAX_CHARS), nullable=False)
+    
     # Relationships
     wines = relationship("Wine", back_populates="varietal")
 
@@ -117,17 +120,32 @@ class StockMovement(Base):
     wine_id = Column(Integer, ForeignKey("wine.id", ondelete="CASCADE"), nullable=False)
     datetime = Column(DateTime, default=datetime.now, nullable=False)
     transaction_type = Column(
-        Enum("selling", "purchase", name="transaction_type_enum"), nullable=False
+        Enum("sale", "purchase", name="transaction_type_enum"), nullable=False
     )
     quantity = Column(Integer, nullable=False)
     # Price is independent and can be base on either the purchase or selling price.
     price = Column(Numeric(10, 2), nullable=False)
+    
     # Relationships
     wine = relationship("Wine", back_populates="movements") 
 
+    # Ordered list
+    @classmethod
+    def all_ordered(cls, session, filter: str = None):
+        """
+        Returns a list ordered by datetime in desc order.
 
+        Inputs:
+            filter: Returns a filtered version of the list.
+        """
+        ordered_list = session.query(cls).order_by(cls.datetime.desc())
+        
+        if filter:
+            return ordered_list.filter(cls.transaction_type == filter).all()
+        
+        return ordered_list.all()
 
-    
+ 
 Base.metadata.create_all(engine)
 
 # == Session ==

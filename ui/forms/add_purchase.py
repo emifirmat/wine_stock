@@ -1,5 +1,5 @@
 """
-Form that contain the inputs and methods to add a new sale
+Form that contain the inputs and methods to add a new purchase
 """
 import customtkinter as ctk
 import tkinter as tk
@@ -14,9 +14,9 @@ from ui.style import Colours, Fonts, Icons
 from helpers import generate_favicon, load_image_from_file, load_ctk_image
 from models import Shop, Wine, Colour, Style, StockMovement
 
-class AddSaleForm(ctk.CTkScrollableFrame):
+class AddPurchaseForm(ctk.CTkScrollableFrame):
     """
-    Contains all the components and logic related to ADD a Sale.
+    Contains all the components and logic related to ADD a purchase.
     """
     def __init__(
             self, root: ctk.CTkFrame, session, **kwargs
@@ -170,7 +170,6 @@ class AddSaleForm(ctk.CTkScrollableFrame):
             text=" ",
             text_color=Colours.TEXT_MAIN,
             font=Fonts.TEXT_HEADER,
-            #anchor="w",
             width=30,
         )
         header_invisible.grid(row=0, column=6, sticky="w", padx=(0, 20))
@@ -257,11 +256,11 @@ class AddSaleForm(ctk.CTkScrollableFrame):
         """
         confirm_dialog = messagebox.askyesno(
             "Confirm",
-            "Do you want to save this sale?"
+            "Do you want to save this purchase?"
         )
         if not confirm_dialog:
             return
-
+        
         # Iterate over each line
         for line in self.line_list:
             movement = StockMovement(
@@ -278,7 +277,7 @@ class AddSaleForm(ctk.CTkScrollableFrame):
         # Show a message
         messagebox.showinfo(
             "Lines Saved",
-            "All added lines from the wine sale have been successfully saved."
+            "All added lines from the wine purchase have been successfully saved."
         )
 
         # Clear all lines
@@ -296,10 +295,10 @@ class AddSaleForm(ctk.CTkScrollableFrame):
         
         # Get wine price
         wine_instance = self.wine_names_dict[selected_wine_name]
-        selling_price = wine_instance.selling_price
+        purchase_price = wine_instance.purchase_price
         
         # Get subtotal
-        self.subtotal_value = quantity * selling_price
+        self.subtotal_value = quantity * purchase_price
         
         # Update subtotal label
         self.label_subtotal.update_value_text(f"€ {self.subtotal_value}")
@@ -330,7 +329,7 @@ class AddSaleForm(ctk.CTkScrollableFrame):
         
         # Get wine price
         wine_instance = self.wine_names_dict[selected_wine_name]
-        selling_price = wine_instance.selling_price
+        purchase_price = wine_instance.purchase_price
 
         # Update line counter
         self.line_counter += 1
@@ -361,15 +360,15 @@ class AddSaleForm(ctk.CTkScrollableFrame):
 
         self.line_list.append({
             "wine": self.wine_names_dict[selected_wine_name],
-            "transaction_type": "sale",
+            "transaction_type": "purchase",
             "quantity": quantity,
-            "price": selling_price
+            "price": purchase_price
         })
 
         column_line_number.grid(row=0, column=0, padx=(0, 20))
         column_name.grid(row=0, column=1, padx=(0, 20))
 
-        for i, column_text in enumerate([quantity, f"€ {selling_price}", 
+        for i, column_text in enumerate([quantity, f"€ {purchase_price}", 
             f"€ {self.subtotal_value}"], start=2
         ):
             label_column = ctk.CTkLabel(
@@ -450,5 +449,4 @@ class AddSaleForm(ctk.CTkScrollableFrame):
         # Remove line from list of dicts
         del self.line_list[line_index]
             
-
 

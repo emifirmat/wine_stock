@@ -12,7 +12,7 @@ from ui.style import Colours, Fonts, Icons
 from helpers import generate_favicon, load_image_from_file, load_ctk_image
 from models import Shop, Wine, Colour, Style
 
-class WineFrame(ctk.CTkFrame):
+class WineFrame(ctk.CTkScrollableFrame):
     """
     It contains all the components and logic related to wine CRUD
     """
@@ -69,20 +69,24 @@ class WineFrame(ctk.CTkFrame):
         card_add = Card(
             frame_cards,
             title="Add Wine",
+            image_path="assets/cards/add_wine.png",
             on_click=self.show_add_wine_section,
         )
         card_edit = Card(
             frame_cards,
+            image_path="assets/cards/coming_soon.png",
             title="Edit Wine",
             on_click=None,
         )
         card_delete = Card(
             frame_cards,
+            image_path="assets/cards/coming_soon.png",
             title="Remove Wine",
             on_click=None,
         )
         card_list = Card(
             frame_cards,
+            image_path="assets/cards/coming_soon.png",
             title="Show Wine List",
             on_click=None,
         )

@@ -9,7 +9,7 @@ from helpers import generate_colored_icon
 class Colours:
     PRIMARY_WINE = BTN_CLEAR = "#7B2E2E"
     BG_MAIN = "#F9F6F1"
-    BG_SECONDARY = TEXT_BUTTON= "#FDFCFB"
+    BG_SECONDARY = TEXT_BUTTON = "#FDFCFB"
     BTN_ADD_LINE = "#88B04B"
     BG_HOVER_NAV = "#F0E5E5"
     BG_HOVER_BTN_CLEAR = "#5F2222"
@@ -28,6 +28,7 @@ class Fonts:
     TEXT_MAIN = TEXT_BUTTON = ("Segoe UI", 15)
     NAVLINK = ("Segoe UI", 15, "bold")
     TEXT_LABEL = ("Segoe UI", 14)
+    TEXT_HEADER = ("Segoe UI", 14, "bold")
     TEXT_SECONDARY = ("Segoe UI", 13, "italic")
 
 class Icons:
@@ -39,6 +40,13 @@ class Icons:
         light_image=generate_colored_icon(f"{root_path}/statistics.png", Colours.ICONS),
         size=(icon_size),
     )
+
+    PAY = ctk.CTkImage(
+        light_image=generate_colored_icon(f"{root_path}/pay.png", Colours.ICONS),
+        size=(icon_size),
+    )
+
+
     WINE_GLASS = ctk.CTkImage(
         light_image=generate_colored_icon(f"{root_path}/wine_glass.png", Colours.ICONS),
         size=(icon_size),
@@ -51,6 +59,12 @@ class Icons:
         light_image=generate_colored_icon(f"{root_path}/price.png", Colours.ICONS),
         size=(icon_size),
     )
+    
+    REPORT = ctk.CTkImage(
+        light_image=generate_colored_icon(f"{root_path}/report.png", Colours.ICONS),
+        size=(icon_size),
+    )
+
     SETTINGS = ctk.CTkImage(
         light_image=generate_colored_icon(f"{root_path}/settings.png", Colours.ICONS),
         size=(icon_size),

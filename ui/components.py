@@ -198,13 +198,16 @@ class DropdownInput(ctk.CTkFrame):
         self.label.grid(row=0, column=0, sticky="w")
         self.label_optional.grid(row=0, column=1, padx=(0, 10))
         self.dropdown.grid(row=0, column=2)
+    
+   
 
 class DoubleLabel(ctk.CTkFrame):
     """
     A frame that contains a label for title and a label for showing a value
     """
     def __init__(
-        self, root, label_title_text: str, label_value_text: str = "",  **kwargs
+        self, root, label_title_text: str, label_value_text: str = "",  
+        text_variable: str | None = None, **kwargs
     ):
         super().__init__(root, **kwargs)
         self.configure(
@@ -221,14 +224,28 @@ class DoubleLabel(ctk.CTkFrame):
     
         self.label_value = ctk.CTkLabel(
             self,
-            text=label_value_text or "TODO",
+            text=label_value_text or None,
             text_color=Colours.TEXT_MAIN, 
             font=Fonts.TEXT_MAIN,
+            fg_color=Colours.BG_MAIN,
+            corner_radius=10,
+            textvariable=text_variable
         )
 
         # Place components
         self.label_title.grid(row=0, column=0, sticky="w", padx=(0, 10)) 
         self.label_value.grid(row=0, column=1)
+
+    def update_value_text(self, new_text: str) -> None:
+        """
+        Update the text of the label_value.
+
+        Inputs:
+            New Text = New text to include in label_value.
+        """
+        self.label_value.configure(
+            text=new_text
+        )
 
 
 class ImageInput(ctk.CTkFrame):
@@ -355,7 +372,10 @@ class Card(ctk.CTkFrame):
             font=Fonts.SUBTITLE,
             fg_color="transparent",
             hover_color=Colours.BG_HOVER_NAV,
-            command=on_click 
+            width=120,
+            height=50,
+            command=on_click,
+            
         )
         self.image.pack(pady=(5,0))
         self.title.pack(pady=5)

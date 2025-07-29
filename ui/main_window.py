@@ -144,7 +144,7 @@ class MainWindow:
             text="Home",
             text_color=Colours.TEXT_MAIN,
             font=Fonts.NAVLINK,
-            image=Icons.STATISTICS,
+            image=Icons.PAY,
             anchor="w",
             compound="left",
             fg_color="transparent",
@@ -172,14 +172,14 @@ class MainWindow:
             text="Report",
             text_color=Colours.TEXT_MAIN,
             font=Fonts.NAVLINK,
-            image=Icons.STOCK,
+            image=Icons.REPORT,
             anchor="w",
             compound="left",
             fg_color="transparent",
             hover_color=Colours.BG_HOVER_NAV,
             corner_radius=10,
             cursor="hand2",
-            command=self.show_stock_section
+            command=self.show_report_section
         )
   
         self.button_settings =  ctk.CTkButton(
@@ -251,15 +251,15 @@ class MainWindow:
         self.frame_body.grid_rowconfigure(0, weight=1)
         self.frame_body.grid_columnconfigure(0, weight=1)
 
-        frame_price.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
-
+        frame_price.grid(row=0, column=0, padx=20, pady=20, sticky="nsew") 
+    
     def show_stock_section(self):
         """Click event that shows the stock section in the body frame"""
         # Add function to clear body
         self.clear_body()
 
         # Display settings frame
-        frame_stock = ReportFrame(
+        frame_stock = StockFrame(
             self.frame_body, 
             self.session,
         )
@@ -267,7 +267,22 @@ class MainWindow:
         self.frame_body.grid_columnconfigure(0, weight=1)
 
         frame_stock.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
-        
+
+ 
+    def show_report_section(self):
+        """Click event that shows the report section in the body frame"""
+        # Add function to clear body
+        self.clear_body()
+
+        # Display settings frame
+        frame_report = ReportFrame(
+            self.frame_body, 
+            self.session,
+        )
+        self.frame_body.grid_rowconfigure(0, weight=1)
+        self.frame_body.grid_columnconfigure(0, weight=1)
+
+        frame_report.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")       
 
     def show_settings_section(self):
         """Click event that shows the settings section in the body frame"""
