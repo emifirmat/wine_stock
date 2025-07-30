@@ -69,7 +69,7 @@ class WineFrame(ctk.CTkScrollableFrame):
         card_add = Card(
             frame_cards,
             title="Add Wine",
-            image_path="assets/cards/add_wine.png",
+            image_path="assets/cards/add_wine2.png",
             on_click=self.show_add_wine_section,
         )
         card_edit = Card(

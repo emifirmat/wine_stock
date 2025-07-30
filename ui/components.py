@@ -3,6 +3,8 @@ Custom components useful for the app
 """
 import customtkinter as ctk
 import tkinter as tk
+import re
+from decimal import Decimal
 
 from ui.style import Colours, Fonts, Icons
 from helpers import load_ctk_image
@@ -18,7 +20,7 @@ class IntEntry(ctk.CTkEntry):
         self.min_val = from_
         self.max_val = to
         # Register a tkinter function, to validate field
-        validate_cmd = self.register(self._validate_integer) 
+        validate_cmd = self.register(self._validate_value) 
 
         self.configure(
             root, 
@@ -29,7 +31,7 @@ class IntEntry(ctk.CTkEntry):
             textvariable=textvariable
         )       
 
-    def _validate_integer(self, text: str) -> bool:
+    def _validate_value(self, text: str) -> bool:
         """
         After typing, it check if the text is an integer between min and max.
 
@@ -53,6 +55,66 @@ class IntEntry(ctk.CTkEntry):
             return True
         # Number is not an integer
         return False
+    
+class DecimalEntry(ctk.CTkEntry):
+    """
+    Entry component that accepts decimal values.
+    """
+    """
+    Entry component that only accepts integers.
+    """
+    def __init__(self, root, from_: int = None, to: int = None, 
+        textvariable = None, **kwargs
+    ):
+        super().__init__(root, **kwargs)
+        self.min_val = from_
+        self.max_val = to
+        # Register a tkinter function, to validate field
+        validate_cmd = self.register(self._validate_value) 
+
+        self.configure(
+            root, 
+            validate="key", # Every time user types, it will validate
+            # Pass tk function and input contet as argument to valdiate_integer.
+            # %P is from Tkinter and means "new content after typing"
+            validatecommand=(validate_cmd, "%P") ,
+            textvariable=textvariable
+        )       
+
+    def _validate_value(self, text: str) -> bool:
+        """
+        After typing, it check if the text is a decimal number between min and max.
+
+        Input:
+            text: Text typed by the user
+        Returns:
+            True: The text is valid and in range
+            False: The text is invalid or out of range
+        """
+        
+        if text == "" :
+            return True
+        # Reject letters and extra points
+        if text.isalpha() or text.count('.') > 1:
+            return False
+        # Accept a dot, but don't convert to decimal yet
+        if text[-1] == ".":
+            return True
+        # Catch other weird symbols
+        try:   
+            number = Decimal(text)
+        except:
+            return False
+        
+        # Number is lower than min
+        if self.min_val and number < self.min_val:
+            return False
+        # Number is higher than max
+        if self.max_val and number > self.max_val:
+            return False
+        # Number is in range
+        return True
+      
 
 class TextInput(ctk.CTkFrame):
     """
@@ -102,9 +164,13 @@ class TextInput(ctk.CTkFrame):
         """Removes the text typed by the user"""
         self.entry.delete(0, "end") 
 
+    def get(self):
+        """Returns the value (Text) of Entry"""
+        return self.entry.get()
+
 class IntInput(ctk.CTkFrame):
     """
-    A frame that contains a label and a spinbox components
+    A frame that contains a label and an integer entry components
     """
     def __init__(
         self, root, label_text: str, placeholder: str | None = None, from_=None,
@@ -150,6 +216,65 @@ class IntInput(ctk.CTkFrame):
     def clear(self):
         """Removes the text typed by the user"""
         self.int_entry.delete(0, "end") 
+
+    def get(self):
+        """Returns the value (integer) of IntEntry"""
+        return self.int_entry.get()
+
+
+class DecimalInput(ctk.CTkFrame):
+    """
+    A frame that contains a label and an decimal entry components
+    """
+    def __init__(
+        self, root, label_text: str, placeholder: str | None = None, from_=None,
+        to=None, optional: bool = False, textvariable=None, **kwargs
+    ):
+        super().__init__(root, **kwargs)
+        self.configure(
+            fg_color="transparent",
+        )
+        
+        # Create components
+        self.label = ctk.CTkLabel(
+            self,
+            text=label_text,
+            text_color=Colours.TEXT_SECONDARY,
+            font=Fonts.TEXT_LABEL,
+            width=100
+        )
+
+        self.asterisk = "*" if not optional else ""
+        self.label_optional = ctk.CTkLabel(
+            self,
+            text=self.asterisk,
+            text_color=Colours.PRIMARY_WINE,
+            font=Fonts.TEXT_LABEL,
+        )
+
+        self.decimal_entry = DecimalEntry(
+            self,
+            text_color=Colours.TEXT_MAIN, 
+            font=Fonts.TEXT_MAIN,
+            width=150,
+            from_=from_,
+            to=to,
+            textvariable=textvariable
+        )
+        
+        # Place components
+        self.label.grid(row=0, column=0, sticky="w") 
+        self.label_optional.grid(row=0, column=1, padx=(0, 10))
+        self.decimal_entry.grid(row=0, column=2)
+
+    def clear(self):
+        """Removes the text typed by the user"""
+        self.decimal_entry.delete(0, "end") 
+
+    
+    def get(self):
+        """Returns the value (decimal) of DecimalEntry"""
+        return self.decimal_entry.get()
 
 
 class DropdownInput(ctk.CTkFrame):
@@ -199,8 +324,10 @@ class DropdownInput(ctk.CTkFrame):
         self.label_optional.grid(row=0, column=1, padx=(0, 10))
         self.dropdown.grid(row=0, column=2)
     
+    def get(self):
+        """Returns the selected value of DropDown"""
+        return self.dropdown.get()
    
-
 class DoubleLabel(ctk.CTkFrame):
     """
     A frame that contains a label for title and a label for showing a value
