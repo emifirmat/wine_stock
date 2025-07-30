@@ -8,6 +8,7 @@ from PIL import Image
 
 from ui.components import TextInput, IntInput, Card, DropdownInput, ImageInput
 from ui.forms.add_wine import AddWineForm
+from ui.forms.remove_wine import RemoveWineForm
 from ui.style import Colours, Fonts, Icons
 from helpers import generate_favicon, load_image_from_file, load_ctk_image
 from models import Shop, Wine, Colour, Style
@@ -80,9 +81,9 @@ class WineFrame(ctk.CTkScrollableFrame):
         )
         card_delete = Card(
             frame_cards,
-            image_path="assets/cards/coming_soon.png",
+            image_path="assets/cards/remove_wine.png",
             title="Remove Wine",
-            on_click=None,
+            on_click=self.show_remove_wine_section,
         )
         card_list = Card(
             frame_cards,
@@ -122,6 +123,31 @@ class WineFrame(ctk.CTkScrollableFrame):
         )
         add_wine_form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
 
+    def show_remove_wine_section(self) -> None:
+        """
+        Shows the form for removing a wine.
+        """
+        # Clean previous menu
+        self.clear_content()
+
+        # Vertical expansion
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        # Add title
+        title = ctk.CTkLabel(
+            self,
+            text="REMOVE WINE",
+            text_color=Colours.PRIMARY_WINE,
+            font=Fonts.SUBTITLE,
+        )
+        title.grid(row=0, column=0, pady=(20, 0), sticky="n") # Cannot use pack for layout expansion reasons
+
+        remove_wine_form = RemoveWineForm(
+            self,
+            self.session
+        )
+        remove_wine_form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
     
     def clear_content(self) -> None:
         """

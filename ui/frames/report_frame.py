@@ -65,21 +65,21 @@ class ReportFrame(ctk.CTkScrollableFrame):
         # Full report (Both sales and purchases)
         card_full_report = Card(
             frame_cards,
-            image_path="assets/cards/add_purchase.png",
+            image_path="assets/cards/full_report.png",
             title= "Purchases and \nSales Report",
             on_click=self.generate_csv_report,
         )
         # Sales report
         card_sales_report = Card(
             frame_cards,
-            image_path="assets/cards/add_purchase.png",
+            image_path="assets/cards/sales_report.png",
             title= "Sales Report",
             on_click=lambda: self.generate_csv_report("sale"),
         )
         # Purchases report
         card_purchases_report = Card(
             frame_cards,
-            image_path="assets/cards/add_purchase.png",
+            image_path="assets/cards/purchases_report.png",
             title= "Purchases \nReport",
             on_click=lambda: self.generate_csv_report("purchase"),
         )
@@ -101,14 +101,14 @@ class ReportFrame(ctk.CTkScrollableFrame):
         file_path = ctk.filedialog.asksaveasfilename(
             defaultextension=".csv",
             filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-            title="Save CSV Report"
+            title=f"Save CSV {filter or "Full"} Report"
         )
         if not file_path:
             return
         
         # Prepare headers
         fieldnames = ("datetime", "wine_name", "wine_code", "transaction",
-        "quantity", "price")
+        "quantity", "price", "subtotal")
 
         row = {}
 
@@ -127,6 +127,7 @@ class ReportFrame(ctk.CTkScrollableFrame):
                 row["transaction"] = movement.transaction_type
                 row["quantity"] = movement.quantity
                 row["price"] = f"€ {movement.price}"
+                row["subtotal"] = f"€ {movement.quantity * movement.price}"
 
                 writer.writerow(row)
         

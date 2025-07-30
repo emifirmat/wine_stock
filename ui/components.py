@@ -327,6 +327,16 @@ class DropdownInput(ctk.CTkFrame):
     def get(self):
         """Returns the selected value of DropDown"""
         return self.dropdown.get()
+
+    def update_values(self, values: list) -> None:
+        """
+        Updates the available values of the dropdown.
+
+        Inputs:
+            Values: New list of values that will be available in the dropdown
+        """
+        self.dropdown.configure(values=values)
+
    
 class DoubleLabel(ctk.CTkFrame):
     """

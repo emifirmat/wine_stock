@@ -1,4 +1,6 @@
 datetime,wine_name,wine_code,transaction,quantity,price
-2025-07-29 14:29:27.204854,Martini Asti Spumante,IT-SPAR-001,sale,16,€ 16.00
-2025-07-29 14:29:27.204849,Mateus Rosé,PT-ROSE-001,sale,13,€ 10.00
-2025-07-29 14:29:06.042535,Catena Zapata Malbec,AR-MALB-001,sale,1,€ 65.23
+2025-07-30 14:27:31.150375,Susana Balbo Crios Torrontés,AR-TORR-001,sale,1,€ 17.00
+2025-07-30 14:27:14.278960,Château d'Esclans Whispering Angel,FR-ROSE-002,sale,6,€ 27.00
+2025-07-30 14:27:14.278959,Susana Balbo Crios Torrontés,AR-TORR-001,sale,12,€ 17.00
+2025-07-30 14:27:14.278955,Martini Asti Spumante,IT-SPAR-001,sale,8,€ 16.00
+2025-07-30 14:27:14.278812,Catena Zapata Malbec,AR-MALB-001,sale,1,€ 65.23

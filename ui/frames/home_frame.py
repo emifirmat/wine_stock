@@ -10,7 +10,7 @@ from ui.forms.add_purchase import AddPurchaseForm
 from ui.style import Colours, Fonts, Icons
 
 from helpers import generate_favicon, load_image_from_file, load_ctk_image
-from models import Shop
+from models import Shop, Wine
 
 class HomeFrame(ctk.CTkFrame):
     """
@@ -26,7 +26,9 @@ class HomeFrame(ctk.CTkFrame):
             border_color=Colours.BORDERS,
             border_width=1
         )
+        
         self.session = session
+        self.wine_list = self.session.query(Wine).all()
 
         self.create_components()
 
@@ -43,7 +45,23 @@ class HomeFrame(ctk.CTkFrame):
         )
         title.pack(pady=(20, 0))
 
-        # Warning Text
+        if not self.wine_list:
+            # Warning Text
+            text = "Add at least one wine to enable and view this section."
+            
+            warning_text = ctk.CTkLabel(
+                self,
+                text=text,
+                text_color=Colours.TEXT_MAIN,
+                justify="center",
+                font=Fonts.TEXT_MAIN
+            )
+            warning_text.pack(pady=150)
+            
+            # Stop generating components
+            return
+        
+        # Introduction Text
         text = (
             "Add and track wine sales and purchases to keep a clear record of "
             + "your winery's transactions."

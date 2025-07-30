@@ -51,6 +51,7 @@ class AddPurchaseForm(ctk.CTkScrollableFrame):
         self.label_subtotal = None
         self.frame_lines = None
         self.button_clear = None
+        self.button_save = None
         self.inputs_dict = self.create_components()
         self.on_entry_change() # Initial subtotal label update
 
@@ -202,7 +203,7 @@ class AddPurchaseForm(ctk.CTkScrollableFrame):
             cursor="hand2",
             command=self.clear_inputs,
         )
-        button_save = ctk.CTkButton(
+        self.button_save = ctk.CTkButton(
             frame_buttons,
             text="Save",
             fg_color=Colours.BTN_SAVE,
@@ -210,12 +211,12 @@ class AddPurchaseForm(ctk.CTkScrollableFrame):
             font=Fonts.TEXT_BUTTON,
             hover_color=Colours.BG_HOVER_BTN_SAVE,
             corner_radius=10,
-            cursor="hand2",
+            state="disabled",
             command=self.save_values, 
         )
         frame_buttons.grid(row=4, column=0, pady=20, columnspan=2)
         button_clear.grid(row=0, column=0)
-        button_save.grid(row=0, column=1, padx=20)
+        self.button_save.grid(row=0, column=1, padx=20)
 
         return inputs_dict
 
@@ -228,16 +229,18 @@ class AddPurchaseForm(ctk.CTkScrollableFrame):
                 "Confirm",
                 "Clearing the form will discard all current inputs and added lines. Continue?"
             )
-        if confirm_dialog:
-            for input in self.inputs_dict.values():         
-                # Still dropdown doesn't have an empty value, so it makes no sense to
-                # Change its value to the first item.
-                if type(input) is not DropdownInput:
-                    input.clear()
+        if not confirm_dialog:
+            return
+        
+        for input in self.inputs_dict.values():         
+            # Still dropdown doesn't have an empty value, so it makes no sense to
+            # Change its value to the first item.
+            if type(input) is not DropdownInput:
+                input.clear()
 
-            # Remove all lines
-            self.remove_all_lines()
-    
+        # Remove all lines
+        self.remove_all_lines()
+
     def remove_all_lines(self):
         """
         Remove all lines added by the user.
@@ -249,6 +252,9 @@ class AddPurchaseForm(ctk.CTkScrollableFrame):
             if isinstance(label_line_button, ctk.CTkButton):
                 # Click button
                 label_line_button.invoke()
+
+        # Disable save button
+        self.button_save.configure(state="disabled", cursor="arrow")
 
     def save_values(self) -> None:
         """
@@ -283,8 +289,6 @@ class AddPurchaseForm(ctk.CTkScrollableFrame):
         # Clear all lines
         self.remove_all_lines()
 
-
-
     def on_entry_change(self, *args) -> None:
         """
         When a wine is selected or the quantity is changed, variables are updated
@@ -313,9 +317,6 @@ class AddPurchaseForm(ctk.CTkScrollableFrame):
             # Catch empty entry and update process
             return 0 
         
-
-
-
     def add_new_wine_line(self):
         """
         It creates a new line in frame_lines, with the data of the inputs and a 
@@ -402,6 +403,10 @@ class AddPurchaseForm(ctk.CTkScrollableFrame):
         # Update total value
         self.update_total_value()
 
+        # Enable save button
+        if self.button_save.cget("state") == "disabled":
+            self.button_save.configure(state="normal", cursor="hand2")
+
     def update_total_value(self, substract_value: Decimal | None = None):
         """
         Update the total var to keep consistency with operations.
@@ -449,4 +454,6 @@ class AddPurchaseForm(ctk.CTkScrollableFrame):
         # Remove line from list of dicts
         del self.line_list[line_index]
             
-
+        # Disable save button is there are no more lines
+        if self.line_counter == 0:
+            self.button_save.configure(state="disabled", cursor="arrow")

@@ -60,7 +60,7 @@ class Wine(Base):
     varietal_id = Column(Integer, ForeignKey("varietal.id", ondelete="SET NULL")) # Optional
     vintage_year = Column(Integer, nullable=False) 
     origin = Column(String(MAX_CHARS)) # Optional
-    code = Column(String, nullable=False)
+    code = Column(String, unique=True, nullable=False)
     wine_picture_path = Column(String) # Optional
     quantity = Column(Integer, default=0)
     purchase_price = Column(Numeric(10, 2), nullable=False)
