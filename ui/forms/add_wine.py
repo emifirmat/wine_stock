@@ -4,21 +4,17 @@ Form that contain the inputs and methods to add a new wine
 import customtkinter as ctk
 import tkinter.messagebox as messagebox
 from datetime import datetime
-from PIL import Image
 
-from ui.components import (TextInput, IntInput, Card, DropdownInput, ImageInput,
+from ui.components import (TextInput, IntInput, DropdownInput, ImageInput,
     DecimalInput)
-from ui.style import Colours, Fonts, Icons
-from helpers import generate_favicon, load_image_from_file, load_ctk_image
-from models import Shop, Wine, Colour, Style, Varietal
+from ui.style import Colours, Fonts
+from models import Wine, Colour, Style, Varietal
 
 class AddWineForm(ctk.CTkScrollableFrame):
     """
     Contains all the components and logic related to ADD Wine.
     """
-    def __init__(
-            self, root: ctk.CTkFrame, session, on_save = None, **kwargs
-        ):
+    def __init__(self, root: ctk.CTkFrame, session, **kwargs):
         super().__init__(root, **kwargs)
         self.configure(
             fg_color = Colours.BG_SECONDARY,

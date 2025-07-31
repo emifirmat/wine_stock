@@ -1,7 +1,5 @@
-import os
 import platform
 import customtkinter as ctk
-from PIL import Image
 from sqlalchemy.orm import Session
 
 from ui.style import Colours, Fonts, Icons
@@ -11,7 +9,7 @@ from ui.frames.home_frame import HomeFrame
 from ui.frames.wine_frame import WineFrame
 from ui.frames.report_frame import ReportFrame
 from ui.frames.settings_frame import SettingsFrame
-from helpers import generate_favicon, load_image_from_file, load_ctk_image
+from helpers import load_ctk_image, resource_path
 from models import Shop
 
 class MainWindow:
@@ -53,7 +51,7 @@ class MainWindow:
         self.root.geometry(f"{self.SCREEN_WIDTH}x{self.SCREEN_HEIGHT}")
         # Ico file
         if platform.system() == "Windows":
-            self.root.iconbitmap("assets/favicon.ico")    
+            self.root.iconbitmap(resource_path("assets/favicon.ico"))    
         # Body of the window
         self.root.configure(
             fg_color=Colours.BG_MAIN
@@ -233,44 +231,12 @@ class MainWindow:
         frame_wine = WineFrame(
             self.frame_body, 
             self.session,
-            on_save=None,
         )
         self.frame_body.grid_rowconfigure(0, weight=1)
         self.frame_body.grid_columnconfigure(0, weight=1)
 
         frame_wine.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
 
-    def show_price_section(self):
-        """Click event that shows the price section in the body frame"""
-        # Add function to clear body
-        self.clear_body()
-
-        # Display settings frame
-        frame_price = PriceFrame(
-            self.frame_body, 
-            self.session,
-        )
-        self.frame_body.grid_rowconfigure(0, weight=1)
-        self.frame_body.grid_columnconfigure(0, weight=1)
-
-        frame_price.grid(row=0, column=0, padx=20, pady=20, sticky="nsew") 
-    
-    def show_stock_section(self):
-        """Click event that shows the stock section in the body frame"""
-        # Add function to clear body
-        self.clear_body()
-
-        # Display settings frame
-        frame_stock = StockFrame(
-            self.frame_body, 
-            self.session,
-        )
-        self.frame_body.grid_rowconfigure(0, weight=1)
-        self.frame_body.grid_columnconfigure(0, weight=1)
-
-        frame_stock.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
-
- 
     def show_report_section(self):
         """Click event that shows the report section in the body frame"""
         # Add function to clear body

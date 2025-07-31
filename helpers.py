@@ -2,13 +2,22 @@
 Secondary functions used by the main program.
 """
 import shutil
-import uuid
+import sys
 import customtkinter as ctk
 from pathlib import Path
-from typing import Type, TypeVar
 from PIL import Image, ImageOps
 from PIL.Image import Image as PILImage
 from sqlalchemy.orm import Session
+
+
+def resource_path(relative_path: str) -> Path:
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        base_path = Path(sys._MEIPASS)  # Attributed created by PyInstaller 
+    except AttributeError:
+        base_path = Path(__file__).parent  # Dev Mode
+
+    return base_path / relative_path
 
 
 def populate_db_model(fields: list[str], model: type, session: Session) -> None: 
@@ -43,7 +52,7 @@ def load_ctk_image(image_path: str, size: tuple[int,int] = (80, 80)) -> ctk.CTkI
     Returns:
         CTkImage that can be used in other components
     """
-    
+    image_path = resource_path(image_path) # Make it compatible for all OS
     return ctk.CTkImage(
         light_image=Image.open(image_path),
         size=(size),
@@ -57,7 +66,8 @@ def generate_colored_icon(path: str, colour: type) -> PILImage:
         path: Location of the icon image
         colour: Desired colour
     """
-    icon_image = Image.open(path).convert("RGBA")  # This allows a convertion with transparency
+    icon_path = resource_path(path) # Make it compatible for all OS
+    icon_image = Image.open(icon_path).convert("RGBA")  # This allows a convertion with transparency
 
     # Get grayscale keeping transparent background
     grayscale_icon = icon_image.convert("L")
@@ -76,7 +86,8 @@ def generate_favicon(path: str) -> PILImage:
     Parameters:
         path: Location of the png file
     """
-    image = Image.open(path)
+    favicon_path = resource_path(path) # Make it compatible for all OS
+    image = Image.open(favicon_path)
     image.save("assets/favicon.ico", format="ICO", sizes=[(32, 32)])
 
 

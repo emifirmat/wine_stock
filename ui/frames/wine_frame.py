@@ -3,23 +3,18 @@ Classes related with the wine section
 """
 
 import customtkinter as ctk
-from datetime import datetime
-from PIL import Image
 
-from ui.components import TextInput, IntInput, Card, DropdownInput, ImageInput
+from ui.components import Card
 from ui.forms.add_wine import AddWineForm
 from ui.forms.remove_wine import RemoveWineForm
-from ui.style import Colours, Fonts, Icons
-from helpers import generate_favicon, load_image_from_file, load_ctk_image
-from models import Shop, Wine, Colour, Style
+from ui.style import Colours, Fonts
+from models import Wine
 
 class WineFrame(ctk.CTkScrollableFrame):
     """
     It contains all the components and logic related to wine CRUD
     """
-    def __init__(
-            self, root: ctk.CTkFrame, session, on_save, **kwargs
-        ):
+    def __init__(self, root: ctk.CTkFrame, session, **kwargs):
         super().__init__(root, **kwargs)
         self.configure(
             fg_color = Colours.BG_SECONDARY,
@@ -30,7 +25,7 @@ class WineFrame(ctk.CTkScrollableFrame):
         self.session = session
         self.wine = session.query(Wine)
         self.create_components()
-        #self.on_save = on_save   IDK if i will use it (it comes from settings)
+        
         
     def create_components(self) -> None:
         """

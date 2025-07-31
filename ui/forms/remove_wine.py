@@ -4,22 +4,16 @@ Form that contains the components and methods to remove a wine
 import customtkinter as ctk
 import tkinter as tk
 import tkinter.messagebox as messagebox
-from datetime import datetime
-from PIL import Image
 
-from ui.components import (TextInput, IntInput, Card, DropdownInput, ImageInput,
-    DecimalInput, DoubleLabel)
-from ui.style import Colours, Fonts, Icons
-from helpers import generate_favicon, load_image_from_file, load_ctk_image
-from models import Shop, Wine, Colour, Style, Varietal, StockMovement
+from ui.components import DropdownInput, DoubleLabel
+from ui.style import Colours, Fonts
+from models import Wine
 
 class RemoveWineForm(ctk.CTkFrame):
     """
     Contains all the components and logic related to Remove Wine.
     """
-    def __init__(
-            self, root: ctk.CTkFrame, session, on_save = None, **kwargs
-        ):
+    def __init__(self, root: ctk.CTkFrame, session, **kwargs):
         super().__init__(root, **kwargs)
         self.configure(
             fg_color = Colours.BG_SECONDARY,
@@ -114,7 +108,7 @@ class RemoveWineForm(ctk.CTkFrame):
         selected_wine_name = self.wine_name_var.get()
         
         # Update wine_code var
-        if selected_wine_name is not "":
+        if selected_wine_name != "":
             wine_instance = self.wine_names_dict[selected_wine_name]
             self.wine_code_var.set(wine_instance.code) 
         else:
@@ -138,7 +132,7 @@ class RemoveWineForm(ctk.CTkFrame):
             show_info_message = "The wine and stock movements have been successfully removed."
         else:
             confirm_dialog_message = (
-                f"Do you want to remove wine {selected_wine_name}?"
+                f"Do you want to remove the wine {selected_wine_name}?"
             )
             show_info_message = "The wine has been successfully removed."
 

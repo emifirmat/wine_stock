@@ -3,12 +3,10 @@ Classes related with the price section
 """
 import csv
 import customtkinter as ctk
-from PIL import Image
 
-from ui.components import TextInput, ImageInput, Card
-from ui.style import Colours, Fonts, Icons
-from helpers import generate_favicon, load_image_from_file, load_ctk_image
-from models import Shop, StockMovement
+from ui.components import Card
+from ui.style import Colours, Fonts
+from models import StockMovement
 
 class ReportFrame(ctk.CTkScrollableFrame):
     """

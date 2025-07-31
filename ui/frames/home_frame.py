@@ -2,16 +2,14 @@
 Classes related with the home section
 """
 import customtkinter as ctk
-from PIL import Image
 
-from ui.components import TextInput, ImageInput, Card
+from ui.components import Card
 from ui.forms.add_sale import AddSaleForm
 from ui.forms.add_purchase import AddPurchaseForm
 from ui.tables.transactions_table import MovementsTable
-from ui.style import Colours, Fonts, Icons
+from ui.style import Colours, Fonts
 
-from helpers import generate_favicon, load_image_from_file, load_ctk_image
-from models import Shop, Wine,StockMovement
+from models import Wine,StockMovement
 
 class HomeFrame(ctk.CTkScrollableFrame):
     """

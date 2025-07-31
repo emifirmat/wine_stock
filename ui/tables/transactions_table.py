@@ -2,17 +2,10 @@
 Table that contains the movements of the stock
 """
 import customtkinter as ctk
-import tkinter as tk
 import tkinter.messagebox as messagebox
-from datetime import datetime
-from decimal import Decimal
-from PIL import Image
 
-from ui.components import (TextInput, IntInput, Card, DropdownInput, ImageInput,
-    DoubleLabel)
-from ui.style import Colours, Fonts, Icons
-from helpers import generate_favicon, load_image_from_file, load_ctk_image
-from models import Shop, Wine, Colour, Style, StockMovement
+from ui.style import Colours, Fonts
+
 
 class MovementsTable(ctk.CTkScrollableFrame):
     """
@@ -169,11 +162,6 @@ class MovementsTable(ctk.CTkScrollableFrame):
         # Remove line from UI
         parent_frame.destroy()
 
-        # Notify removal
-        messagebox.showinfo(
-            "Transaction Removed",
-            "The transaction has been removed."
-        )
     
 
         

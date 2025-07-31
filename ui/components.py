@@ -2,12 +2,10 @@
 Custom components useful for the app
 """
 import customtkinter as ctk
-import tkinter as tk
-import re
 from decimal import Decimal
 
-from ui.style import Colours, Fonts, Icons
-from helpers import load_ctk_image
+from ui.style import Colours, Fonts
+from helpers import load_ctk_image, resource_path
 
 
 class IntEntry(ctk.CTkEntry):
@@ -149,8 +147,10 @@ class TextInput(ctk.CTkFrame):
 
         self.entry = ctk.CTkEntry(
             self,
+            fg_color=Colours.BG_SECONDARY,
+            text_color=Colours.TEXT_MAIN,
             placeholder_text=placeholder,
-            placeholder_text_color=Colours.TEXT_MAIN,
+            placeholder_text_color=Colours.TEXT_SECONDARY,
             font=Fonts.TEXT_MAIN,
             width=300
         )
@@ -200,6 +200,7 @@ class IntInput(ctk.CTkFrame):
 
         self.int_entry = IntEntry(
             self,
+            fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN, 
             font=Fonts.TEXT_MAIN,
             width=150,
@@ -254,6 +255,7 @@ class DecimalInput(ctk.CTkFrame):
 
         self.decimal_entry = DecimalEntry(
             self,
+            fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN, 
             font=Fonts.TEXT_MAIN,
             width=150,
@@ -316,6 +318,8 @@ class DropdownInput(ctk.CTkFrame):
             button_color=Colours.BG_HOVER_NAV,
             dropdown_fg_color=Colours.BG_MAIN,
             dropdown_hover_color=Colours.BG_HOVER_NAV,
+            dropdown_text_color=Colours.TEXT_MAIN,
+            button_hover_color=Colours.DROPDOWN_HOVER,
             command=command
         )
         
@@ -477,7 +481,7 @@ class Card(ctk.CTkFrame):
     """
 
     def __init__(
-        self, root, title: str, image_path: str ="assets/cards/add_wine.png", description: str | None = None,
+        self, root, title: str, image_path: str ="assets/cards/add_wine.png",
         on_click=None, **kwargs
     ):
         super().__init__(root, **kwargs)
@@ -516,18 +520,6 @@ class Card(ctk.CTkFrame):
         )
         self.image.pack(pady=(5,0))
         self.title.pack(pady=5)
-
-        # Add description (opt)
-        if description:
-            self.description = ctk.CTkLabel(
-                self,
-                text=description,
-                text_color=Colours.TEXT_SECONDARY,
-                font=Fonts.TEXT_SECONDARY,
-                hover_color=Colours.BG_HOVER_NAV,
-                command=on_click 
-            )
-            self.description.pack(pady=5)
 
         # Add binds
         self.add_binds()

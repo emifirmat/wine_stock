@@ -1,10 +1,10 @@
 import customtkinter as ctk
 
 from decimal import Decimal
-from models import Session, Shop, Wine, Colour, Style, Varietal
+from models import Session, Shop, Colour, Style, Varietal, Wine
 from helpers import populate_db_model, get_by_id
-
 from ui.main_window import MainWindow
+
 
 def main():
     

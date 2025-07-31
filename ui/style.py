@@ -2,7 +2,6 @@
 Style file for the app
 """
 import customtkinter as ctk
-from PIL import Image
 
 from helpers import generate_colored_icon
 
@@ -15,6 +14,7 @@ class Colours:
     BG_HOVER_BTN_CLEAR = "#5F2222"
     BG_HOVER_BTN_SAVE = "#688F2E"
     BG_HOVER_BTN_ADD_LINE = "#6F9A3E"
+    DROPDOWN_HOVER = "#D8C4C4"
     TEXT_MAIN = "#2E2E2E"
     TEXT_SECONDARY = "#555555"
     BORDERS = "#CCCCCC"

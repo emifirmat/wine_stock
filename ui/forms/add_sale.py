@@ -4,15 +4,11 @@ Form that contain the inputs and methods to add a new sale
 import customtkinter as ctk
 import tkinter as tk
 import tkinter.messagebox as messagebox
-from datetime import datetime
 from decimal import Decimal
-from PIL import Image
 
-from ui.components import (TextInput, IntInput, Card, DropdownInput, ImageInput,
-    DoubleLabel)
-from ui.style import Colours, Fonts, Icons
-from helpers import generate_favicon, load_image_from_file, load_ctk_image
-from models import Shop, Wine, Colour, Style, StockMovement
+from ui.components import IntInput, DropdownInput, DoubleLabel
+from ui.style import Colours, Fonts
+from models import Wine, StockMovement
 
 class AddSaleForm(ctk.CTkScrollableFrame):
     """
@@ -136,7 +132,6 @@ class AddSaleForm(ctk.CTkScrollableFrame):
             text=" ",
             text_color=Colours.TEXT_MAIN,
             font=Fonts.TEXT_HEADER,
-            #anchor="w",
             width=30,
             
         )
@@ -147,7 +142,6 @@ class AddSaleForm(ctk.CTkScrollableFrame):
             text="Name",
             text_color=Colours.TEXT_MAIN,
             font=Fonts.TEXT_HEADER,
-            #anchor="w",
             width=300,
             
         )
@@ -159,7 +153,6 @@ class AddSaleForm(ctk.CTkScrollableFrame):
                 text=header,
                 text_color=Colours.TEXT_MAIN,
                 font=Fonts.TEXT_HEADER,
-                #anchor="w",
                 width=100,
                 
             )
@@ -171,7 +164,6 @@ class AddSaleForm(ctk.CTkScrollableFrame):
             text=" ",
             text_color=Colours.TEXT_MAIN,
             font=Fonts.TEXT_HEADER,
-            #anchor="w",
             width=30,
         )
         header_invisible.grid(row=0, column=6, sticky="w", padx=(0, 20))

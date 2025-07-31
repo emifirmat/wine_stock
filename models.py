@@ -1,5 +1,5 @@
 from sqlalchemy import (event, create_engine, Column, ForeignKey, Integer, 
-    String, DateTime, Date, Numeric, Enum)
+    String, DateTime, Numeric, Enum)
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from datetime import datetime
 
@@ -9,7 +9,7 @@ MAX_CHARS = 100
 
 # == DB Connection ==
 # Create connection with sqlite db. Echo=True == debugging mode
-engine = create_engine("sqlite:///wineshop.db", echo=True)
+engine = create_engine("sqlite:///wineshop.db", echo=False)
 # Add event listener to activate Foreing Keys in SQLite (it allows using ondelete)
 @event.listens_for(engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):

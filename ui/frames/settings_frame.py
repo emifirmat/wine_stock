@@ -5,8 +5,8 @@ import customtkinter as ctk
 from PIL import Image
 
 from ui.components import TextInput, ImageInput
-from ui.style import Colours, Fonts, Icons
-from helpers import generate_favicon, load_image_from_file, load_ctk_image
+from ui.style import Colours, Fonts
+from helpers import load_ctk_image
 from models import Shop
 
 class SettingsFrame(ctk.CTkFrame):
