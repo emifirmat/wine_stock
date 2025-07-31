@@ -1,9 +1,1 @@
 datetime,wine_name,wine_code,transaction,quantity,price,subtotal
-2025-07-30 14:28:08.808014,Susana Balbo Crios Torrontés,AR-TORR-001,purchase,30,€ 9.50,€ 285.00
-2025-07-30 14:27:54.998779,Château d'Esclans Whispering Angel,FR-ROSE-002,purchase,16,€ 15.00,€ 240.00
-2025-07-30 14:27:54.998762,Susana Balbo Crios Torrontés,AR-TORR-001,purchase,6,€ 9.50,€ 57.00
-2025-07-30 14:27:31.150375,Susana Balbo Crios Torrontés,AR-TORR-001,sale,1,€ 17.00,€ 17.00
-2025-07-30 14:27:14.278960,Château d'Esclans Whispering Angel,FR-ROSE-002,sale,6,€ 27.00,€ 162.00
-2025-07-30 14:27:14.278959,Susana Balbo Crios Torrontés,AR-TORR-001,sale,12,€ 17.00,€ 204.00
-2025-07-30 14:27:14.278955,Martini Asti Spumante,IT-SPAR-001,sale,8,€ 16.00,€ 128.00
-2025-07-30 14:27:14.278812,Catena Zapata Malbec,AR-MALB-001,sale,1,€ 65.23,€ 65.23

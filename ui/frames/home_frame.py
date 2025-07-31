@@ -7,12 +7,13 @@ from PIL import Image
 from ui.components import TextInput, ImageInput, Card
 from ui.forms.add_sale import AddSaleForm
 from ui.forms.add_purchase import AddPurchaseForm
+from ui.tables.transactions_table import MovementsTable
 from ui.style import Colours, Fonts, Icons
 
 from helpers import generate_favicon, load_image_from_file, load_ctk_image
-from models import Shop, Wine
+from models import Shop, Wine,StockMovement
 
-class HomeFrame(ctk.CTkFrame):
+class HomeFrame(ctk.CTkScrollableFrame):
     """
     It contains all the components and logic related to home section
     """
@@ -96,10 +97,18 @@ class HomeFrame(ctk.CTkFrame):
             title= "New Purchase",
             on_click=self.show_add_purchase_section,
         )
+        # New purhase
+        card_remove_transaction = Card(
+            frame_cards,
+            image_path="assets/cards/remove_transaction.png",
+            title= "Remove \nTransaction",
+            on_click=self.show_remove_transaction_section,
+        )
 
         # Place cards
         card_new_sale.grid(row=0, column=0, pady=(0, 15))
         card_new_purchase.grid(row=0, column=1, pady=(0, 15), padx=20)
+        card_remove_transaction.grid(row=1, column=0, pady=(0, 15))
     
 
     def show_add_sale_section(self) -> None:
@@ -162,3 +171,37 @@ class HomeFrame(ctk.CTkFrame):
         """
         for component in self.winfo_children():
             component.destroy()
+
+    def show_remove_transaction_section(self) -> None:
+        """
+        Shows the form for removing a transaction.
+        """
+        # Clean previous menu
+        self.clear_content()
+
+        # Vertical expansion
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        # Add title
+        title = ctk.CTkLabel(
+            self,
+            text="REMOVE TRANSACTION",
+            text_color=Colours.PRIMARY_WINE,
+            font=Fonts.SUBTITLE,
+        )
+        title.grid(row=0, column=0, pady=(20, 0), sticky="n") # Cannot use pack for layout expansion reasons
+
+        # Add form
+        movements_table = MovementsTable(
+            self,
+            self.session,
+            headers=[
+                "datetime", "wine name", "wine code", "transaction", "quantity",
+                "price", "subtotal"
+            ],
+            lines=StockMovement.all_ordered(self.session)
+        )
+        movements_table.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
+
+

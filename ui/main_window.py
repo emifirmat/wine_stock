@@ -42,6 +42,8 @@ class MainWindow:
         self.button_price = None
         self.button_settings = None
         self.create_sidebar_components()
+        # Welcome message
+        self.create_welcome_message()
 
     def setup_main_window(self) -> None:
         """
@@ -322,5 +324,36 @@ class MainWindow:
         # Update image logo
         self.label_logo.configure(image=load_ctk_image(self.shop.logo_path))
 
+    def create_welcome_message(self):
+        """
+        Welcome message that appears in frame_body when user starts the app
+        """
 
-    
+        # Add title
+        title = ctk.CTkLabel(
+            self.frame_body,
+            text="Welcome to WineStock",
+            text_color=Colours.PRIMARY_WINE,
+            font=Fonts.TITLE,
+        )
+        title.grid(row=0, column=0, pady=(20, 0), padx=150, sticky="n") # Cannot use pack for layout expansion reasons
+
+        image = load_ctk_image("assets/logos/app_logo.png", (130, 130)) 
+        label_image = ctk.CTkLabel(
+            self.frame_body,
+            image=image,
+            text="",
+            fg_color="transparent",               
+        )
+        
+        label_image.grid(row=1, column=0, pady=(20, 0), padx=150, sticky="we") # Cannot use pack for layout expansion reasons
+
+        # Add form
+        text = ctk.CTkLabel(
+                self.frame_body,
+                text="Start managing your wine inventory: add sales, record purchases, remove stock movements, and generate reports easily.",
+                text_color=Colours.TEXT_MAIN,
+                font=Fonts.TEXT_MAIN,
+                wraplength=800
+            )
+        text.grid(row=2, column=0, pady=(50, 0), padx=150, sticky="we") # Cannot use pack for layout expansion reasons
