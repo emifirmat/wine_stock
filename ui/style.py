@@ -30,6 +30,7 @@ class Fonts:
     TEXT_LABEL = ("Segoe UI", 14)
     TEXT_HEADER = ("Segoe UI", 14, "bold")
     TEXT_SECONDARY = ("Segoe UI", 13, "italic")
+    TEXT_AUTOCOMPLETE = ("Segoe UI", 9)
 
 class Icons:
     root_path = "assets/icons"

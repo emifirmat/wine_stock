@@ -4,8 +4,7 @@ Classes related with the home section
 import customtkinter as ctk
 
 from ui.components import Card
-from ui.forms.add_sale import AddSaleForm
-from ui.forms.add_purchase import AddPurchaseForm
+from ui.forms.add_transaction import AddTransactionForm
 from ui.tables.transactions_table import MovementsTable
 from ui.style import Colours, Fonts
 
@@ -130,9 +129,10 @@ class HomeFrame(ctk.CTkScrollableFrame):
         title.grid(row=0, column=0, pady=(20, 0), sticky="n") # Cannot use pack for layout expansion reasons
 
         # Add form
-        add_sale_form = AddSaleForm(
+        add_sale_form = AddTransactionForm(
             self,
-            self.session
+            self.session,
+            "sale"
         )
         add_sale_form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
 
@@ -157,9 +157,10 @@ class HomeFrame(ctk.CTkScrollableFrame):
         title.grid(row=0, column=0, pady=(20, 0), sticky="n") # Cannot use pack for layout expansion reasons
 
         # Add form
-        add_purchase_form = AddPurchaseForm(
+        add_purchase_form = AddTransactionForm(
             self,
-            self.session
+            self.session,
+            "purchase"
         )
         add_purchase_form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
 

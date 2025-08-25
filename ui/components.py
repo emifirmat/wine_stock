@@ -2,11 +2,12 @@
 Custom components useful for the app
 """
 import customtkinter as ctk
+import tkinter as tk
 from decimal import Decimal
 
-from ui.style import Colours, Fonts
 from helpers import load_ctk_image, resource_path
-
+from models import Wine
+from ui.style import Colours, Fonts
 
 class IntEntry(ctk.CTkEntry):
     """
@@ -112,16 +113,162 @@ class DecimalEntry(ctk.CTkEntry):
             return False
         # Number is in range
         return True
-      
 
-class TextInput(ctk.CTkFrame):
+
+class AutocompleteEntry(ctk.CTkEntry):
     """
-    A frame that contains a label and an entry components
+    An entry that contains an autocomplete feature according to the wine list.
+    Autcomplete is formed by a frame that contains a listbox.
+    """
+    def __init__(self, root, wine_list, **kwargs):
+        super().__init__(root, **kwargs)
+        self.root = root
+        self.wine_list = wine_list
+        self.listbox = None
+        self.listbox_frame = None
+        self.main_window = self.winfo_toplevel()
+        
+        self.bind("<KeyRelease>", self.show_suggestions)
+
+    def on_click_outside(self, event):
+        """Clicks out of the inbox and entry"""
+        if self.listbox_frame:
+            # Get click's coordinates
+            x, y = event.x_root, event.y_root
+            
+            # Check if the click was in the entry
+            entry_x = self.winfo_rootx()
+            entry_y = self.winfo_rooty()
+            entry_width = self.winfo_width()
+            entry_height = self.winfo_height()
+            
+            in_entry = (entry_x <= x <= entry_x + entry_width and 
+                       entry_y <= y <= entry_y + entry_height)
+            
+            # check if the click was in the listbox
+            if self.listbox_frame and self.listbox_frame.winfo_exists():
+                listbox_x = self.listbox_frame.winfo_rootx()
+                listbox_y = self.listbox_frame.winfo_rooty()
+                listbox_width = self.listbox_frame.winfo_width()
+                listbox_height = self.listbox_frame.winfo_height()
+                
+                in_listbox = (listbox_x <= x <= listbox_x + listbox_width and 
+                            listbox_y <= y <= listbox_y + listbox_height)
+            else:
+                in_listbox = False
+            
+            # destroy listbox if not in entry or listbox
+            if not in_entry and not in_listbox:
+                self.destroy_listbox()
+
+    def show_suggestions(self, event=None):
+        typed = self.get().lower()
+
+        # Clean previous listbox
+        self.destroy_listbox()
+
+        if not typed:
+            return
+     
+        matches = [wine for wine in self.wine_list if typed in wine.lower()]
+    
+        if matches:
+            # Create temporary frame for the listbox
+            self.listbox_frame = tk.Frame(
+                self.main_window,
+                highlightbackground=Colours.BORDERS,
+                highlightthickness=1
+            )
+            
+            # Create listbox
+            self.listbox = tk.Listbox(
+                self.listbox_frame,
+                height=min(5, len(matches)),
+                selectmode="single",
+                font=Fonts.TEXT_AUTOCOMPLETE,
+                bg=Colours.BG_MAIN,
+                selectbackground=Colours.BG_HOVER_NAV,
+                borderwidth=0
+            )
+            
+            # Calculate position relative to main window (top level)
+            x = self.winfo_rootx() - self.main_window.winfo_rootx()
+            y = self.winfo_rooty() - self.main_window.winfo_rooty() + self.winfo_height()
+            
+            # Place frame
+            self.listbox_frame.place(
+                x=x, 
+                y=y, 
+                width=self.winfo_width(),
+                height=min(150, len(matches) * 25)  # Max height 150px
+            )
+            
+            # Add matches in listbox
+            for match in matches:
+                self.listbox.insert(tk.END, match)
+            
+            # Fill frame with listbox
+            self.listbox.pack(fill="both", expand=True)
+            
+            # Put listbox frame at front
+            self.listbox_frame.lift()
+            
+            # Bind selection
+            self.listbox.bind("<<ListboxSelect>>", self.select_suggestion)
+            self.listbox.bind("<Button-1>", lambda e: self.select_on_click(e))
+
+            # Global bind, click outside
+            self.main_window.bind("<Button-1>", self.on_click_outside, add="+")
+        
+
+    def select_suggestion(self, event):
+        """
+        Get the selected element from listbox and update entry.
+        """
+        if self.listbox and self.listbox.curselection():
+            selected = self.listbox.get(self.listbox.curselection())
+            # Clean entry 
+            self.delete(0, tk.END) 
+            # Add selected suggestion in entry
+            self.insert(0, selected)
+            # Clean listbox
+            self.destroy_listbox()
+    
+    def select_on_click(self, event):
+        """Select with one click"""
+        # Get index of the clicked event
+        index = self.listbox.nearest(event.y)
+        if index >= 0:
+            # Clear previous selections
+            self.listbox.selection_clear(0, tk.END)
+            # Set current selection
+            self.listbox.selection_set(index)
+            self.select_suggestion(event)
+    
+    def destroy_listbox(self):
+        """Destroy listbox and its frame"""
+        if self.listbox_frame:
+            self.main_window.unbind("<Button-1>")
+            
+            self.listbox_frame.destroy()
+            self.listbox_frame = None
+            self.listbox = None
+
+    def destroy(self):
+        """
+        Destroys the entry with the listbox if exists.
+        """
+        self.destroy_listbox()
+        super().destroy()
+
+
+class BaseInput(ctk.CTkFrame):
+    """
+    A frame that contains 2 labels (name and *), used as base for inputs with
+    entries
     """
     def __init__(
-        self, root, label_text: str, placeholder: str | None = None, 
-        optional: bool = False,
-        **kwargs
+        self, root, label_text: str, optional: bool = False, **kwargs
     ):
         super().__init__(root, **kwargs)
         self.configure(
@@ -144,7 +291,18 @@ class TextInput(ctk.CTkFrame):
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TEXT_LABEL,
         )
+        
+        # Place components
+        self.label.grid(row=0, column=0, sticky="w") 
+        self.label_optional.grid(row=0, column=1, padx=(0, 10))
 
+class TextInput(BaseInput):
+    """
+    A frame that contains a label and an entry components
+    """
+    def __init__(self, root, placeholder: str | None = None, **kwargs):
+        super().__init__(root, **kwargs)
+        
         self.entry = ctk.CTkEntry(
             self,
             fg_color=Colours.BG_SECONDARY,
@@ -156,8 +314,6 @@ class TextInput(ctk.CTkFrame):
         )
         
         # Place components
-        self.label.grid(row=0, column=0, sticky="w") 
-        self.label_optional.grid(row=0, column=1, padx=(0, 10))
         self.entry.grid(row=0, column=2)
 
     def clear(self):
@@ -168,35 +324,15 @@ class TextInput(ctk.CTkFrame):
         """Returns the value (Text) of Entry"""
         return self.entry.get()
 
-class IntInput(ctk.CTkFrame):
+class IntInput(BaseInput):
     """
     A frame that contains a label and an integer entry components
     """
     def __init__(
-        self, root, label_text: str, placeholder: str | None = None, from_=None,
-        to=None, optional: bool = False, textvariable=None, **kwargs
+        self, root, placeholder: str | None = None, from_: int = None,
+        to: int | None = None, textvariable=None, **kwargs
     ):
         super().__init__(root, **kwargs)
-        self.configure(
-            fg_color="transparent",
-        )
-        
-        # Create components
-        self.label = ctk.CTkLabel(
-            self,
-            text=label_text,
-            text_color=Colours.TEXT_SECONDARY,
-            font=Fonts.TEXT_LABEL,
-            width=100
-        )
-
-        self.asterisk = "*" if not optional else ""
-        self.label_optional = ctk.CTkLabel(
-            self,
-            text=self.asterisk,
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.TEXT_LABEL,
-        )
 
         self.int_entry = IntEntry(
             self,
@@ -210,8 +346,6 @@ class IntInput(ctk.CTkFrame):
         )
         
         # Place components
-        self.label.grid(row=0, column=0, sticky="w") 
-        self.label_optional.grid(row=0, column=1, padx=(0, 10))
         self.int_entry.grid(row=0, column=2)
 
     def clear(self):
@@ -223,35 +357,15 @@ class IntInput(ctk.CTkFrame):
         return self.int_entry.get()
 
 
-class DecimalInput(ctk.CTkFrame):
+class DecimalInput(BaseInput):
     """
     A frame that contains a label and an decimal entry components
     """
     def __init__(
-        self, root, label_text: str, placeholder: str | None = None, from_=None,
-        to=None, optional: bool = False, textvariable=None, **kwargs
+        self, root, placeholder: str | None = None, from_: int | None = None,
+        to: int | None =None, textvariable=None, **kwargs
     ):
         super().__init__(root, **kwargs)
-        self.configure(
-            fg_color="transparent",
-        )
-        
-        # Create components
-        self.label = ctk.CTkLabel(
-            self,
-            text=label_text,
-            text_color=Colours.TEXT_SECONDARY,
-            font=Fonts.TEXT_LABEL,
-            width=100
-        )
-
-        self.asterisk = "*" if not optional else ""
-        self.label_optional = ctk.CTkLabel(
-            self,
-            text=self.asterisk,
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.TEXT_LABEL,
-        )
 
         self.decimal_entry = DecimalEntry(
             self,
@@ -265,8 +379,6 @@ class DecimalInput(ctk.CTkFrame):
         )
         
         # Place components
-        self.label.grid(row=0, column=0, sticky="w") 
-        self.label_optional.grid(row=0, column=1, padx=(0, 10))
         self.decimal_entry.grid(row=0, column=2)
 
     def clear(self):
@@ -278,36 +390,44 @@ class DecimalInput(ctk.CTkFrame):
         """Returns the value (decimal) of DecimalEntry"""
         return self.decimal_entry.get()
 
+class AutoCompleteInput(BaseInput):
+    """
+    A frame that contains a label and an AutoComplete entry components
+    """
+    def __init__(
+        self, root, placeholder: str | None = None, textvariable=None, 
+        wine_list=list[Wine], **kwargs
+    ):
+        super().__init__(root, **kwargs)
 
-class DropdownInput(ctk.CTkFrame):
+        self.autocomplete_entry = AutocompleteEntry(
+            self,
+            wine_list=wine_list,
+            fg_color=Colours.BG_SECONDARY,
+            text_color=Colours.TEXT_MAIN, 
+            font=Fonts.TEXT_MAIN,
+            width=150,
+            textvariable=textvariable,
+        )
+        
+        # Place components
+        self.autocomplete_entry.grid(row=0, column=2)
+
+    def clear(self):
+        """Removes the text typed by the user"""
+        self.autocomplete_entry.delete(0, "end") 
+
+
+class DropdownInput(BaseInput):
     """
     A frame that contains a label and a dropdown components
     """
     def __init__(
-        self, root, label_text: str, values: list[str], variable = None, 
-        command = None, placeholder: str | None = None, optional: bool = False, 
-        **kwargs
+        self, root, values: list[str], variable = None, command = None, 
+        placeholder: str | None = None, **kwargs
     ):
         super().__init__(root, **kwargs)
-        self.configure(
-            fg_color="transparent",
-        )
-        
-        # Create components
-        self.label = ctk.CTkLabel(
-            self,
-            text=label_text,
-            text_color=Colours.TEXT_SECONDARY,
-            font=Fonts.TEXT_LABEL,
-            width=100
-        )
-        self.asterisk = "*" if not optional else ""
-        self.label_optional = ctk.CTkLabel(
-            self,
-            text=self.asterisk,
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.TEXT_LABEL,
-        )
+      
         self.dropdown = ctk.CTkOptionMenu(
             self,
             values=values,
@@ -324,8 +444,6 @@ class DropdownInput(ctk.CTkFrame):
         )
         
         # Place components
-        self.label.grid(row=0, column=0, sticky="w")
-        self.label_optional.grid(row=0, column=1, padx=(0, 10))
         self.dropdown.grid(row=0, column=2)
     
     def get(self):
@@ -389,13 +507,13 @@ class DoubleLabel(ctk.CTkFrame):
         )
 
 
-class ImageInput(ctk.CTkFrame):
+class ImageInput(BaseInput):
     """
     A frame that contains a text label, filedialog button, and image label components
     """
     def __init__(
-        self, root, label_text: str, image_path: str | None = None, 
-        placeholder: str | None = None, optional: bool = False, **kwargs
+        self, root, image_path: str | None = None, placeholder: str | None = None, 
+        **kwargs
     ):
         super().__init__(root, **kwargs)
         self.configure(
@@ -403,20 +521,6 @@ class ImageInput(ctk.CTkFrame):
         )
         
         # Create components
-        self.label = ctk.CTkLabel(
-            self,
-            text=label_text,
-            text_color=Colours.TEXT_SECONDARY,
-            font=Fonts.TEXT_LABEL,
-            width=100
-        )
-        self.asterisk = "*" if not optional else ""
-        self.label_optional = ctk.CTkLabel(
-            self,
-            text=self.asterisk,
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.TEXT_LABEL,
-        )
         self.button = ctk.CTkButton(
             self,
             text="Choose File",
@@ -441,8 +545,6 @@ class ImageInput(ctk.CTkFrame):
         self.temp_file_path = None
 
         # Place components
-        self.label.grid(row=0, column=0, sticky="w")
-        self.label_optional.grid(row=0, column=1, padx=(0, 15))
         self.button.grid(row=0, column=2, padx=15)
         self.label_preview.grid(row=0, column=3, padx=(15, 0))
 
@@ -472,6 +574,76 @@ class ImageInput(ctk.CTkFrame):
         self.label_preview.configure(
             image=None
         )
+
+class ClearSaveButtons(ctk.CTkFrame):
+    """
+    A frame with clear and save buttons
+    """
+    def __init__(self, root, btn_clear_function, btn_save_function, **kwargs):
+        super().__init__(root, **kwargs)
+        self.configure(
+            root,
+            fg_color="transparent"
+        )
+
+        self.btn_clear_function = btn_clear_function
+        self.btn_save_function = btn_save_function
+
+        self.button_clear = ctk.CTkButton(
+            self,
+            text="Clear",
+            fg_color=Colours.PRIMARY_WINE,
+            text_color=Colours.BG_MAIN,
+            font=Fonts.TEXT_MAIN,
+            hover_color=Colours.BG_HOVER_BTN_CLEAR,
+            corner_radius=10,
+            cursor="hand2",
+            command=self.clear_on_click,
+        )
+        self.button_save = ctk.CTkButton(
+            self,
+            text="Save",
+            fg_color=Colours.BTN_SAVE,
+            text_color=Colours.TEXT_BUTTON,
+            font=Fonts.TEXT_BUTTON,
+            hover_color=Colours.BG_HOVER_BTN_SAVE,
+            corner_radius=10,
+            state="disabled",
+            command=self.save_on_click, 
+        )
+        
+        self.button_clear.grid(row=0, column=0)
+        self.button_save.grid(row=0, column=1, padx=20)
+
+    def clear_on_click(self):
+        """
+        Execute callback function for clear button
+        """
+        self.btn_clear_function()
+
+    def save_on_click(self):
+        """
+        Execute callback function for save button
+        """
+        self.btn_save_function()
+
+    def enable_save_button(self):
+        """
+        Enables save button
+        """
+        if self.button_save.cget("state") == "disabled":
+            self.button_save.configure(state="normal", cursor="hand2")
+
+    def disable_save_button(self):
+        """
+        Disables save button
+        """
+        self.button_save.configure(state="disabled", cursor="arrow")
+
+
+
+
+
 
 
 
@@ -556,4 +728,3 @@ class Card(ctk.CTkFrame):
         self.configure(fg_color=Colours.BG_MAIN)
         for control in self.winfo_children():
             control.configure(fg_color="transparent")
-

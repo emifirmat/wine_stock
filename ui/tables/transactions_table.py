@@ -7,7 +7,7 @@ import tkinter.messagebox as messagebox
 from ui.style import Colours, Fonts
 
 
-class MovementsTable(ctk.CTkScrollableFrame):
+class MovementsTable(ctk.CTkFrame):
     """
     Contains the components of the table with the wine purchases and sellings.
     """
@@ -18,7 +18,7 @@ class MovementsTable(ctk.CTkScrollableFrame):
         super().__init__(root, **kwargs)
         self.configure(
             fg_color=Colours.BG_MAIN,
-            scrollbar_button_color=Colours.BG_HOVER_NAV,
+            #scrollbar_button_color=Colours.BG_HOVER_NAV,
             height=500
         )
         

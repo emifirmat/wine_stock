@@ -269,9 +269,11 @@ class MainWindow:
         """
         Clears the content of frame body removing all the components inside.
         """
+        #for component in self.
+
         for component in self.frame_body.winfo_children():
             component.destroy()
-    
+        
     
     def refresh_shop_labels(self):
         """
