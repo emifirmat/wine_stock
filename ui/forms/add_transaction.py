@@ -44,6 +44,8 @@ class AddTransactionForm(ctk.CTkFrame):
 
         # Add components
         self.transaction = transaction_type
+        self.label_error = None
+        self.label_code = None
         self.label_subtotal = None
         self.frame_lines = None
         self.frame_buttons = None
@@ -80,6 +82,12 @@ class AddTransactionForm(ctk.CTkFrame):
             textvariable=self.wine_name_var,
         )
 
+        self.label_code = DoubleLabel(
+            self,
+            label_title_text= "Code",
+            label_value_text="",
+        )
+
         textbox_quantity = IntInput(
             self,
             label_text="Quantity (Bottles)",
@@ -104,16 +112,26 @@ class AddTransactionForm(ctk.CTkFrame):
             command=self.add_new_wine_line 
         )
         
+        self.label_error = ctk.CTkLabel(
+            self,
+            text="",
+            text_color=Colours.ERROR,
+            font=Fonts.TEXT_ERROR
+        )
+
+
+        autocomplete_wine.grid(row=0, column=0, pady=20, sticky="w")
+        self.label_code.grid(row=0, column=1, pady=20, sticky="w")
+        textbox_quantity.grid(row=1, column=0, sticky="w")
+        self.label_subtotal.grid(row=1, column=1, sticky="w")
+        button_add_line.grid(row=2, column=0, columnspan=2, pady=(20, 5))
+        self.label_error.grid(row=3, column=0, columnspan=2, pady=(0, 20))
+
         # Save inputs for later
         inputs_dict = {
             "wine": autocomplete_wine, 
             "quantity": textbox_quantity, 
         }
-
-        autocomplete_wine.grid(row=0, column=0, pady=20, sticky="w", columnspan=2)
-        textbox_quantity.grid(row=1, column=0, sticky="w")
-        self.label_subtotal.grid(row=1, column=1, sticky="w")
-        button_add_line.grid(row=2, column=0, columnspan=2, pady=20)
 
         # =Lines section=
         headers = [" ", "Name", "Quantity", "Price", "Subtotal", " "]
@@ -123,7 +141,7 @@ class AddTransactionForm(ctk.CTkFrame):
             headers,
             on_lines_change=self.on_lines_change
         )
-        self.frame_lines.grid(row=3, column=0, columnspan=2, pady=20)
+        self.frame_lines.grid(row=4, column=0, columnspan=2, pady=20)
 
         # =Buttons=
         self.frame_buttons = ClearSaveButtons(
@@ -132,7 +150,7 @@ class AddTransactionForm(ctk.CTkFrame):
             btn_save_function=self.save_values
         )
       
-        self.frame_buttons.grid(row=4, column=0, pady=20, columnspan=2)
+        self.frame_buttons.grid(row=5, column=0, pady=20, columnspan=2)
 
         return inputs_dict
 
@@ -213,6 +231,7 @@ class AddTransactionForm(ctk.CTkFrame):
         # If used typed invalid wine name, stop the function
         if selected_wine_name not in self.wine_names_dict:
             self.label_subtotal.update_value_text(f"€ -")
+            self.label_code.update_value_text("-")
             return
 
         # Get wine price
@@ -222,8 +241,9 @@ class AddTransactionForm(ctk.CTkFrame):
         # Get subtotal
         self.subtotal_value = quantity * selling_price
         
-        # Update subtotal label
+        # Update labels
         self.label_subtotal.update_value_text(f"€ {self.subtotal_value}")
+        self.label_code.update_value_text(wine_instance.code)
 
     def get_quantity_var(self) -> int:
         """
@@ -241,16 +261,20 @@ class AddTransactionForm(ctk.CTkFrame):
         remove button. It also updates the value in label_total.
         """
         # Get variables
-        selected_wine_name = self.wine_name_var.get()
+        selected_wine_name = self.wine_name_var.get().strip()
+        self.wine_name_var.set(selected_wine_name) # updates variable too
+        
         quantity = self.get_quantity_var()
         
+        # Check if wine name is invalid
         if selected_wine_name not in self.wine_names_dict:
-            print("Invalid wine name")
+            self.label_error.configure(
+                text = "Wine not found. Make sure it's added to the wine list."
+            )
             return
 
-        wine_instance = self.wine_names_dict[selected_wine_name]
-
         # Show transaction on the table
+        wine_instance = self.wine_names_dict[selected_wine_name]
         self.frame_lines.add_new_transaction_line(
             wine_instance, 
             self.transaction,
@@ -258,8 +282,9 @@ class AddTransactionForm(ctk.CTkFrame):
             self.subtotal_value
         )
 
-        # Enable save button
+        # Enable save button and clear errors
         self.frame_buttons.enable_save_button()
+        self.label_error.configure(text = "")
 
     def on_lines_change(self, lines_size: int):
         """

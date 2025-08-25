@@ -485,7 +485,7 @@ class DoubleLabel(ctk.CTkFrame):
             self,
             text=label_value_text or None,
             text_color=Colours.TEXT_MAIN, 
-            font=Fonts.TEXT_MAIN,
+            font=Fonts.TEXT_LABEL,
             fg_color=Colours.BG_MAIN,
             corner_radius=10,
             textvariable=text_variable

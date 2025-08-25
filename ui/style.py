@@ -20,6 +20,7 @@ class Colours:
     BORDERS = "#CCCCCC"
     COMPANY_NAME = BTN_SAVE = "#556B2F"
     ICONS = "#D4AF37"
+    ERROR = "#C52323"
 
 class Fonts:
     SHOP_NAME = ("Segoe UI", 40, "bold")
@@ -30,6 +31,7 @@ class Fonts:
     TEXT_LABEL = ("Segoe UI", 14)
     TEXT_HEADER = ("Segoe UI", 14, "bold")
     TEXT_SECONDARY = ("Segoe UI", 13, "italic")
+    TEXT_ERROR = ("Segoe UI", 12)
     TEXT_AUTOCOMPLETE = ("Segoe UI", 9)
 
 class Icons:
