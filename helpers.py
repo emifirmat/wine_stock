@@ -5,7 +5,7 @@ import shutil
 import sys
 import customtkinter as ctk
 from pathlib import Path
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageDraw
 from PIL.Image import Image as PILImage
 from sqlalchemy.orm import Session
 
@@ -59,7 +59,12 @@ def load_ctk_image(image_path: str, size: tuple[int,int] = (80, 80)) -> ctk.CTkI
     )
 
 
-def generate_colored_icon(path: str, colour: type) -> PILImage:
+def generate_colored_icon(
+        path: str, 
+        colour: type, 
+        rounded: bool = False, 
+        radius: int = 8,
+    ) -> PILImage:
     """
     Changes the colour of an icon image (monochrome).
     Parameters:
@@ -77,6 +82,22 @@ def generate_colored_icon(path: str, colour: type) -> PILImage:
     colored_icon = ImageOps.colorize(grayscale_icon, black=colour, white="white")
     colored_icon.putalpha(alpha)
     
+    if not rounded:
+        return colored_icon
+    
+    # Create a mask to have a rounded image
+    if rounded:
+        mask = Image.new("L", colored_icon.size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.rounded_rectangle(
+            (0, 0, colored_icon.size[0], colored_icon.size[1]),
+            radius=radius,
+            fill=255
+        )
+
+        # Apply mask
+        colored_icon.putalpha(mask)
+
     return colored_icon
 
 

@@ -3,10 +3,10 @@ Classes related with the home section
 """
 import customtkinter as ctk
 
-from ui.components import Card
+from ui.components import Card, ButtonGoBack
 from ui.forms.add_transaction import AddTransactionForm
 from ui.tables.transactions_table import MovementsTable
-from ui.style import Colours, Fonts
+from ui.style import Colours, Fonts, Icons
 
 from models import Wine,StockMovement
 
@@ -15,7 +15,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
     It contains all the components and logic related to home section
     """
     def __init__(
-            self, root: ctk.CTkFrame, session, **kwargs
+            self, root: ctk.CTkFrame, session, main_window, **kwargs
         ):
         super().__init__(root, **kwargs)
         self.configure(
@@ -27,6 +27,8 @@ class HomeFrame(ctk.CTkScrollableFrame):
         
         self.session = session
         self.wine_list = self.session.query(Wine).all()
+        self.main_window = main_window
+        self.button_go_back = None
 
         self.create_components()
 
@@ -107,62 +109,83 @@ class HomeFrame(ctk.CTkScrollableFrame):
         card_new_purchase.grid(row=0, column=1, pady=(0, 15), padx=20)
         card_remove_transaction.grid(row=1, column=0, pady=(0, 15))
     
+    def show_subsection(self, text_title: str, form_class, **kwargs):
+        """
+        Clears body and display a subsection.
+        Parameters:
+            - text_title: Title of the section
+            - form_class: Form to be displayed
+            - kwargs: Additional arguments from the forms
+        """
+        # Clear displayed section
+        self.clear_content()
+
+        # Set up window expansion
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        # Add Go back button
+        self.button_go_back = ButtonGoBack(
+            self.main_window.root,
+            command=self.main_window.show_home_section
+        )
+
+        # Add title
+        title = ctk.CTkLabel(
+            self,
+            text=text_title,
+            text_color=Colours.PRIMARY_WINE,
+            font=Fonts.SUBTITLE,
+        )
+
+        # Place button and title
+        x = self.winfo_rootx() - self.main_window.root.winfo_rootx()
+        y = self.winfo_rooty() - self.main_window.root.winfo_rooty()
+        
+        self.button_go_back.place(x=x, y=y)
+        title.grid(row=0, column=0, pady=(20, 0), sticky="nsew") 
+
+        # Add form
+        form = form_class(
+            self,
+            self.session,
+            **kwargs
+        )
+        form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
 
     def show_add_sale_section(self) -> None:
         """
         Shows the form for adding a sale.
         """
-        # Clean previous menu
-        self.clear_content()
-
-        # Vertical expansion
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-
-        # Add title
-        title = ctk.CTkLabel(
-            self,
-            text="NEW SALE",
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.SUBTITLE,
+        self.show_subsection(
+            "NEW SALE", 
+            AddTransactionForm, 
+            transaction_type="sale"
         )
-        title.grid(row=0, column=0, pady=(20, 0), sticky="n") # Cannot use pack for layout expansion reasons
-
-        # Add form
-        add_sale_form = AddTransactionForm(
-            self,
-            self.session,
-            "sale"
-        )
-        add_sale_form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
 
     def show_add_purchase_section(self) -> None:
         """
         Shows the form for adding a new purchase.
         """
-        # Clean previous menu
-        self.clear_content()
-
-        # Vertical expansion
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-
-        # Add title
-        title = ctk.CTkLabel(
-            self,
-            text="NEW PURCHASE",
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.SUBTITLE,
+        self.show_subsection(
+            "NEW PURCHASE", 
+            AddTransactionForm,
+            transaction_type="purchase",
         )
-        title.grid(row=0, column=0, pady=(20, 0), sticky="n") # Cannot use pack for layout expansion reasons
 
-        # Add form
-        add_purchase_form = AddTransactionForm(
-            self,
-            self.session,
-            "purchase"
+    def show_remove_transaction_section(self) -> None:
+        """
+        Shows the form for removing a transaction.
+        """
+        self.show_subsection(
+            "REMOVE TRANSACTION",
+            MovementsTable, 
+            headers=[
+                "datetime", "wine name", "wine code", "transaction", "quantity",
+                "price", "subtotal"
+            ],
+            lines=StockMovement.all_ordered(self.session)
         )
-        add_purchase_form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
 
     def clear_content(self) -> None:
         """
@@ -171,36 +194,11 @@ class HomeFrame(ctk.CTkScrollableFrame):
         for component in self.winfo_children():
             component.destroy()
 
-    def show_remove_transaction_section(self) -> None:
+    def destroy(self) -> None:
         """
-        Shows the form for removing a transaction.
+        Override function to include the destruction of the button go back.
         """
-        # Clean previous menu
-        self.clear_content()
-
-        # Vertical expansion
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-
-        # Add title
-        title = ctk.CTkLabel(
-            self,
-            text="REMOVE TRANSACTION",
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.SUBTITLE,
-        )
-        title.grid(row=0, column=0, pady=(20, 0), sticky="n") # Cannot use pack for layout expansion reasons
-
-        # Add form
-        movements_table = MovementsTable(
-            self,
-            self.session,
-            headers=[
-                "datetime", "wine name", "wine code", "transaction", "quantity",
-                "price", "subtotal"
-            ],
-            lines=StockMovement.all_ordered(self.session)
-        )
-        movements_table.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
-
+        if self.button_go_back:
+            self.button_go_back.destroy()
+        super().destroy()
 

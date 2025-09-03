@@ -4,10 +4,11 @@ Custom components useful for the app
 import customtkinter as ctk
 import tkinter as tk
 from decimal import Decimal
+from typing import Callable
 
 from helpers import load_ctk_image, resource_path
 from models import Wine
-from ui.style import Colours, Fonts
+from ui.style import Colours, Fonts, Icons
 
 class IntEntry(ctk.CTkEntry):
     """
@@ -129,12 +130,14 @@ class AutocompleteEntry(ctk.CTkEntry):
         self.main_window = self.winfo_toplevel()
         
         self.bind("<KeyRelease>", self.show_suggestions)
+        self.bind("<Button-1>", self.show_suggestions)
 
     def on_click_outside(self, event):
         """Clicks out of the inbox and entry"""
         if self.listbox_frame:
             # Get click's coordinates
-            x, y = event.x_root, event.y_root
+            x = event.x_root
+            y = event.y_root
             
             # Check if the click was in the entry
             entry_x = self.winfo_rootx()
@@ -641,12 +644,6 @@ class ClearSaveButtons(ctk.CTkFrame):
         self.button_save.configure(state="disabled", cursor="arrow")
 
 
-
-
-
-
-
-
 class Card(ctk.CTkFrame):
     """
     A card that contains a picture, a title, and a description
@@ -696,7 +693,6 @@ class Card(ctk.CTkFrame):
         # Add binds
         self.add_binds()
        
-
     def add_binds(self):
         """
         Add bind to the components to work as a one thing
@@ -728,3 +724,79 @@ class Card(ctk.CTkFrame):
         self.configure(fg_color=Colours.BG_MAIN)
         for control in self.winfo_children():
             control.configure(fg_color="transparent")
+
+
+class NavLink(ctk.CTkButton):
+    """
+    A button that works as a navigator link.
+    """
+    def __init__(
+        self, root, text: str = "", image: ctk.CTkImage = None, 
+        command: Callable = None, **kwargs
+    ):
+        super().__init__(root, **kwargs)
+        # Frame
+        self.configure(
+            root,
+            text=text,
+            text_color=Colours.TEXT_MAIN,
+            font=Fonts.NAVLINK,
+            image=image,
+            anchor="w",
+            compound="left",
+            fg_color="transparent",
+            hover_color=Colours.BG_HOVER_NAV,
+            corner_radius=10,
+            cursor="hand2",
+            text_color_disabled=Colours.TEXT_MAIN,
+            command=self.on_click
+        )
+        self.root = root
+        self.callback = command   
+
+    def on_click(self):
+        """Disable active button and execute callback"""
+        
+        # Do nothing if there is no function
+        if self.callback is None:
+            return
+
+        # Set other navlinks enabled
+        for widget in self.root.winfo_children():
+            if isinstance(widget, NavLink) and widget.cget("state") == "disabled":
+                widget.configure(
+                    state="normal",
+                    cursor="hand2",
+                    font=Fonts.NAVLINK,
+                    fg_color="transparent"
+                )
+        
+        self.configure(
+            state="disabled",
+            cursor="arrow",
+            font=Fonts.NAVLINK_ACTIVE,
+            fg_color=Colours.BG_HOVER_NAV
+        )
+
+        self.callback()
+
+class ButtonGoBack(ctk.CTkButton):
+    """ Button to go back to the precious section"""
+    def __init__(self, root, command, **kwargs):
+        super().__init__(root, **kwargs)
+       
+        self.configure(
+            image=Icons.GO_BACK,
+            fg_color=Colours.BG_SECONDARY, # I can't use transparent here
+            text="",
+            hover_color=Colours.BG_SECONDARY,
+            anchor="w",
+            cursor="hand2",
+            width=20,
+            height=30,
+            command=command
+        )
+
+        self.bind("<Enter>", lambda e: self.configure(image=Icons.GO_BACK_HOVER))
+        self.bind("<Leave>", lambda e: self.configure(image=Icons.GO_BACK))
+        

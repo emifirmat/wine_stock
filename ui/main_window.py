@@ -2,8 +2,8 @@ import platform
 import customtkinter as ctk
 from sqlalchemy.orm import Session
 
+from ui.components import NavLink
 from ui.style import Colours, Fonts, Icons
-
 #from ui.frames.wine_frame import HomeFrame
 from ui.frames.home_frame import HomeFrame
 from ui.frames.wine_frame import WineFrame
@@ -139,61 +139,29 @@ class MainWindow:
         title.pack(pady=15)
 
         # Create links with icons
-        self.button_home = ctk.CTkButton(
+        self.button_home = NavLink(
             self.frame_side,
             text="Home",
-            text_color=Colours.TEXT_MAIN,
-            font=Fonts.NAVLINK,
             image=Icons.PAY,
-            anchor="w",
-            compound="left",
-            fg_color="transparent",
-            hover_color=Colours.BG_HOVER_NAV,
-            corner_radius=10,
-            cursor="hand2",
             command=self.show_home_section
         )
-        self.button_wine = ctk.CTkButton(
+        self.button_wine = NavLink(
             self.frame_side,
             text="Wine",
-            text_color=Colours.TEXT_MAIN,
-            font=Fonts.NAVLINK,
             image=Icons.WINE_GLASS,
-            anchor="w",
-            compound="left",
-            fg_color="transparent",
-            hover_color=Colours.BG_HOVER_NAV,
-            corner_radius=10,
-            cursor="hand2",
             command=self.show_wine_section
         )
-        self.button_report = ctk.CTkButton(
+        self.button_report = NavLink(
             self.frame_side,
             text="Report",
-            text_color=Colours.TEXT_MAIN,
-            font=Fonts.NAVLINK,
             image=Icons.REPORT,
-            anchor="w",
-            compound="left",
-            fg_color="transparent",
-            hover_color=Colours.BG_HOVER_NAV,
-            corner_radius=10,
-            cursor="hand2",
             command=self.show_report_section
         )
   
-        self.button_settings =  ctk.CTkButton(
+        self.button_settings = NavLink(
             self.frame_side,
             text="Settings",
-            text_color=Colours.TEXT_MAIN,
-            font=Fonts.NAVLINK,
             image=Icons.SETTINGS,
-            anchor="w",
-            compound="left",
-            fg_color="transparent",
-            hover_color=Colours.BG_HOVER_NAV,
-            corner_radius=10,
-            cursor="hand2",
             command=self.show_settings_section,
         )
 
@@ -206,75 +174,45 @@ class MainWindow:
         ]:
             btn.pack(fill="x", expand=True, padx=10, pady=5)
 
+    def show_section(self, frame_class, **kwargs):
+        """
+        Clears body and display a section frame.
+        Parameters:
+            - frame_class: Class of the frame to be displayed
+            - kwargs: Additional arguments added to the frame
+        """
+        self.clear_body()
+
+        frame = frame_class(self.frame_body, self.session, **kwargs)
+
+        self.frame_body.grid_rowconfigure(0, weight=1)
+        self.frame_body.grid_columnconfigure(0, weight=1)
+
+        frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+
     def show_home_section(self):
-        """Click event that shows the wine section in the body frame"""
-        # Add function to clear body
-        self.clear_body()
-
-        # Display settings frame
-        frame_home = HomeFrame(
-            self.frame_body, 
-            self.session
-        )
-        self.frame_body.grid_rowconfigure(0, weight=1)
-        self.frame_body.grid_columnconfigure(0, weight=1)
-
-        frame_home.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
-        
-    
+        """Click event that shows the home section in the body frame"""        
+        self.show_section(HomeFrame, main_window=self)
+            
     def show_wine_section(self):
-        """Click event that shows the wine section in the body frame"""
-        # Add function to clear body
-        self.clear_body()
-
-        # Display settings frame
-        frame_wine = WineFrame(
-            self.frame_body, 
-            self.session,
-        )
-        self.frame_body.grid_rowconfigure(0, weight=1)
-        self.frame_body.grid_columnconfigure(0, weight=1)
-
-        frame_wine.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        """Click event that shows the wine section in the body frame"""     
+        self.show_section(WineFrame, main_window=self)
 
     def show_report_section(self):
         """Click event that shows the report section in the body frame"""
-        # Add function to clear body
-        self.clear_body()
-
-        # Display settings frame
-        frame_report = ReportFrame(
-            self.frame_body, 
-            self.session,
-        )
-        self.frame_body.grid_rowconfigure(0, weight=1)
-        self.frame_body.grid_columnconfigure(0, weight=1)
-
-        frame_report.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")       
+        self.show_section(ReportFrame)     
 
     def show_settings_section(self):
         """Click event that shows the settings section in the body frame"""
-        # Add function to clear body
-        self.clear_body()
-
-        # Display settings frame
-        frame_settings = SettingsFrame(
-            self.frame_body, 
-            self.session,
-            on_save=self.refresh_shop_labels,
-        )
-        frame_settings.pack(padx=20, pady=20, fill="both", expand="true")
+        self.show_section(SettingsFrame, on_save=self.refresh_shop_labels)
 
     def clear_body(self):
         """
         Clears the content of frame body removing all the components inside.
         """
-        #for component in self.
-
         for component in self.frame_body.winfo_children():
             component.destroy()
         
-    
     def refresh_shop_labels(self):
         """
         Callback function. Refresh name and logo of the shop located at the top 

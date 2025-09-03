@@ -10,7 +10,7 @@ from ui.components import (TextInput, IntInput, DropdownInput, ImageInput,
 from ui.style import Colours, Fonts
 from models import Wine, Colour, Style, Varietal
 
-class AddWineForm(ctk.CTkScrollableFrame):
+class AddWineForm(ctk.CTkFrame):
     """
     Contains all the components and logic related to ADD Wine.
     """
@@ -18,7 +18,6 @@ class AddWineForm(ctk.CTkScrollableFrame):
         super().__init__(root, **kwargs)
         self.configure(
             fg_color = Colours.BG_SECONDARY,
-            scrollbar_button_color=Colours.BG_HOVER_NAV,
             height=500
         )
         

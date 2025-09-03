@@ -18,7 +18,7 @@ class Colours:
     TEXT_MAIN = "#2E2E2E"
     TEXT_SECONDARY = "#555555"
     BORDERS = "#CCCCCC"
-    COMPANY_NAME = BTN_SAVE = "#556B2F"
+    COMPANY_NAME = BTN_SAVE = BTN_ACTIVE = "#556B2F"
     ICONS = "#D4AF37"
     ERROR = "#C52323"
 
@@ -28,6 +28,7 @@ class Fonts:
     SUBTITLE = ("Segoe UI", 16, "bold")
     TEXT_MAIN = TEXT_BUTTON = ("Segoe UI", 15)
     NAVLINK = ("Segoe UI", 15, "bold")
+    NAVLINK_ACTIVE = ("Segoe UI", 15, "bold", "underline")
     TEXT_LABEL = ("Segoe UI", 14)
     TEXT_HEADER = ("Segoe UI", 14, "bold")
     TEXT_SECONDARY = ("Segoe UI", 13, "italic")
@@ -49,7 +50,6 @@ class Icons:
         size=(icon_size),
     )
 
-
     WINE_GLASS = ctk.CTkImage(
         light_image=generate_colored_icon(f"{root_path}/wine_glass.png", Colours.ICONS),
         size=(icon_size),
@@ -70,6 +70,18 @@ class Icons:
 
     SETTINGS = ctk.CTkImage(
         light_image=generate_colored_icon(f"{root_path}/settings.png", Colours.ICONS),
+        size=(icon_size),
+    )
+
+    GO_BACK = ctk.CTkImage(
+        light_image=generate_colored_icon(f"{root_path}/go_back.png", Colours.ICONS),
+        size=(icon_size),
+    )
+
+    GO_BACK_HOVER = ctk.CTkImage(
+        light_image=generate_colored_icon(
+            f"{root_path}/go_back.png", Colours.TEXT_MAIN,
+        ),
         size=(icon_size),
     )
     

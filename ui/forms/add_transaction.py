@@ -236,10 +236,15 @@ class AddTransactionForm(ctk.CTkFrame):
 
         # Get wine price
         wine_instance = self.wine_names_dict[selected_wine_name]
-        selling_price = wine_instance.selling_price
+        if self.transaction == "sale":
+            transaction_price = wine_instance.selling_price
+        elif self.transaction == "purchase":
+            transaction_price = wine_instance.purchase_price
+        else:
+            raise ValueError("Transaction type should be sale or purchase.")
         
         # Get subtotal
-        self.subtotal_value = quantity * selling_price
+        self.subtotal_value = quantity * transaction_price
         
         # Update labels
         self.label_subtotal.update_value_text(f"€ {self.subtotal_value}")

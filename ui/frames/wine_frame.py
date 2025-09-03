@@ -4,7 +4,7 @@ Classes related with the wine section
 
 import customtkinter as ctk
 
-from ui.components import Card
+from ui.components import Card, ButtonGoBack
 from ui.forms.add_wine import AddWineForm
 from ui.forms.remove_wine import RemoveWineForm
 from ui.style import Colours, Fonts
@@ -14,7 +14,7 @@ class WineFrame(ctk.CTkScrollableFrame):
     """
     It contains all the components and logic related to wine CRUD
     """
-    def __init__(self, root: ctk.CTkFrame, session, **kwargs):
+    def __init__(self, root: ctk.CTkFrame, session, main_window, **kwargs):
         super().__init__(root, **kwargs)
         self.configure(
             fg_color = Colours.BG_SECONDARY,
@@ -24,8 +24,9 @@ class WineFrame(ctk.CTkScrollableFrame):
         )
         self.session = session
         self.wine = session.query(Wine)
+        self.main_window = main_window
+        self.button_go_back = None
         self.create_components()
-        
         
     def create_components(self) -> None:
         """
@@ -92,9 +93,13 @@ class WineFrame(ctk.CTkScrollableFrame):
         card_delete.grid(row=1, column=0)
         card_list.grid(row=1, column=1)
     
-    def show_add_wine_section(self) -> None:
+    def show_subsection(self, text_title: str, form_class, **kwargs):
         """
-        Shows the form for adding a wine.
+        Clears body and display a subsection.
+        Parameters:
+            - text_title: Title of the section
+            - form_class: Form to be displayed
+            - kwargs: Additional arguments from the forms
         """
         # Clean previous menu
         self.clear_content()
@@ -103,46 +108,52 @@ class WineFrame(ctk.CTkScrollableFrame):
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
+        # Add Go back button
+        self.button_go_back = ButtonGoBack(
+            self.main_window.root,
+            command=self.main_window.show_wine_section
+        )
+
         # Add title
         title = ctk.CTkLabel(
             self,
-            text="ADD WINE",
+            text=text_title,
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.SUBTITLE,
         )
-        title.grid(row=0, column=0, pady=(20, 0), sticky="n") # Cannot use pack for layout expansion reasons
 
-        add_wine_form = AddWineForm(
+        # Place button and title
+        x = self.winfo_rootx() - self.main_window.root.winfo_rootx()
+        y = self.winfo_rooty() - self.main_window.root.winfo_rooty()
+        
+        self.button_go_back.place(x=x, y=y)
+        title.grid(row=0, column=0, pady=(20, 0), sticky="n")
+
+        # Add form
+        form = form_class(
             self,
             self.session
         )
-        add_wine_form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
+        form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") 
+
+
+    def show_add_wine_section(self) -> None:
+        """
+        Shows the form for adding a wine.
+        """
+        self.show_subsection(
+            "ADD WINE",
+            AddWineForm
+        )
 
     def show_remove_wine_section(self) -> None:
         """
         Shows the form for removing a wine.
         """
-        # Clean previous menu
-        self.clear_content()
-
-        # Vertical expansion
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
-
-        # Add title
-        title = ctk.CTkLabel(
-            self,
-            text="REMOVE WINE",
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.SUBTITLE,
+        self.show_subsection(
+            "REMOVE WINE",
+            RemoveWineForm
         )
-        title.grid(row=0, column=0, pady=(20, 0), sticky="n") # Cannot use pack for layout expansion reasons
-
-        remove_wine_form = RemoveWineForm(
-            self,
-            self.session
-        )
-        remove_wine_form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
     
     def clear_content(self) -> None:
         """
@@ -151,8 +162,13 @@ class WineFrame(ctk.CTkScrollableFrame):
         for component in self.winfo_children():
             component.destroy()
 
-
-        
+    def destroy(self) -> None:
+        """
+        Override function to include the destruction of the button go back.
+        """
+        if self.button_go_back:
+            self.button_go_back.destroy()
+        super().destroy()
 
         
         
