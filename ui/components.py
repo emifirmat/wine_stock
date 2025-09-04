@@ -10,6 +10,33 @@ from helpers import load_ctk_image, resource_path
 from models import Wine
 from ui.style import Colours, Fonts, Icons
 
+
+class TextEntry(ctk.CTkEntry):
+    """
+    Entry component with a max_length validation
+    """
+    def __init__(self, root, max_len: int = 60, **kwargs):
+        super().__init__(root, **kwargs)
+        self.max_len = max_len
+
+        # Register a tkinter function, to validate field
+        validate_cmd = self.register(self._validate_len) 
+
+        self.configure(
+            validate="key", # Every time user types, it will validate
+            # Pass tk function and input contet as argument to valdiate_integer.
+            # %P is from Tkinter and means "new content after typing"
+            validatecommand=(validate_cmd, "%P") ,      
+        )
+
+
+    def _validate_len(self, text: str) -> bool:
+        return len(text) <= self.max_len
+
+
+
+
+
 class IntEntry(ctk.CTkEntry):
     """
     Entry component that only accepts integers.
@@ -23,7 +50,6 @@ class IntEntry(ctk.CTkEntry):
         validate_cmd = self.register(self._validate_value) 
 
         self.configure(
-            root, 
             validate="key", # Every time user types, it will validate
             # Pass tk function and input contet as argument to valdiate_integer.
             # %P is from Tkinter and means "new content after typing"
@@ -72,8 +98,7 @@ class DecimalEntry(ctk.CTkEntry):
         # Register a tkinter function, to validate field
         validate_cmd = self.register(self._validate_value) 
 
-        self.configure(
-            root, 
+        self.configure( 
             validate="key", # Every time user types, it will validate
             # Pass tk function and input contet as argument to valdiate_integer.
             # %P is from Tkinter and means "new content after typing"
@@ -303,17 +328,20 @@ class TextInput(BaseInput):
     """
     A frame that contains a label and an entry components
     """
-    def __init__(self, root, placeholder: str | None = None, **kwargs):
+    def __init__(self, root, placeholder: str | None = None, max_len: int = 60, 
+        **kwargs):
+        
         super().__init__(root, **kwargs)
         
-        self.entry = ctk.CTkEntry(
+        self.entry = TextEntry(
             self,
             fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN,
             placeholder_text=placeholder,
             placeholder_text_color=Colours.TEXT_SECONDARY,
             font=Fonts.TEXT_MAIN,
-            width=300
+            width=300,
+            max_len = max_len
         )
         
         # Place components

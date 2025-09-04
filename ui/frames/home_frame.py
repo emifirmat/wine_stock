@@ -22,7 +22,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
             fg_color = Colours.BG_SECONDARY,
             corner_radius=10,
             border_color=Colours.BORDERS,
-            border_width=1
+            border_width=1,
         )
         
         self.session = session

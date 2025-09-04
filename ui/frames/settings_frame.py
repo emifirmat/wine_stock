@@ -63,7 +63,7 @@ class SettingsFrame(ctk.CTkFrame):
             placeholder=self.shop_name,
             optional=True
         )
-        self.name_input.pack(pady=(20))
+        self.name_input.pack(pady=(20, 0), expand=True)
 
         # Logo input
         self.image_input = ImageInput(
@@ -72,7 +72,7 @@ class SettingsFrame(ctk.CTkFrame):
             image_path=self.logo_path,
             optional=True
         )
-        self.image_input.pack(pady=10)
+        self.image_input.pack(expand=True)
         
         # Save Button
         save_button = ctk.CTkButton(
@@ -83,9 +83,10 @@ class SettingsFrame(ctk.CTkFrame):
             hover_color=Colours.BG_HOVER_BTN_SAVE,
             font=Fonts.TEXT_MAIN,
             corner_radius=10,
+            cursor="hand2",
             command=self.save_changes
         )
-        save_button.pack(side="bottom", pady=(0, 30))
+        save_button.pack(side="bottom", pady=(0, 30), expand=True)
 
     def load_logo(self) -> None:
         """
@@ -107,9 +108,9 @@ class SettingsFrame(ctk.CTkFrame):
         Store and load logo, and update label_preview
         """ 
         # Update name
-        new_name = self.name_input.entry.get() 
+        new_name = self.name_input.entry.get().strip()
         if new_name:
-            self.shop.name = new_name 
+            self.shop.name = new_name
 
         # Update logo
         new_logo_path = self.image_input.get_new_path()

@@ -87,6 +87,7 @@ class WineFrame(ctk.CTkScrollableFrame):
             title="Show Wine List",
             on_click=None,
         )
+
         # Place cards
         card_add.grid(row=0, column=0, pady=(0, 15))
         card_edit.grid(row=0, column=1, padx=20, pady=(0, 15))

@@ -41,20 +41,28 @@ def get_by_id(model: type, id_: int, session: Session):
     return session.query(model).get(id_)
 
 
-def load_ctk_image(image_path: str, size: tuple[int,int] = (80, 80)) -> ctk.CTkImage:
+def load_ctk_image(
+    image_path: str, size: tuple[int,int] = (80, 80), rounded: bool = True
+) -> ctk.CTkImage:
     """
     Loads a ctk image
 
     Parameters:
-        image_path = The path of the image to load
-        size = Desired size of the image
+        image_path: The path of the image to load
+        size: Desired size of the image
+        rounded: If true, the image will have rounded borders.
     
     Returns:
         CTkImage that can be used in other components
     """
     image_path = resource_path(image_path) # Make it compatible for all OS
+    image = Image.open(image_path)
+
+    if rounded:
+        round_image(image)
+
     return ctk.CTkImage(
-        light_image=Image.open(image_path),
+        light_image=image,
         size=(size),
     )
 
@@ -63,7 +71,7 @@ def generate_colored_icon(
         path: str, 
         colour: type, 
         rounded: bool = False, 
-        radius: int = 8,
+        radius: int = 50,
     ) -> PILImage:
     """
     Changes the colour of an icon image (monochrome).
@@ -87,18 +95,28 @@ def generate_colored_icon(
     
     # Create a mask to have a rounded image
     if rounded:
-        mask = Image.new("L", colored_icon.size, 0)
-        draw = ImageDraw.Draw(mask)
-        draw.rounded_rectangle(
-            (0, 0, colored_icon.size[0], colored_icon.size[1]),
-            radius=radius,
-            fill=255
-        )
-
-        # Apply mask
-        colored_icon.putalpha(mask)
+        round_image(colored_icon, radius)
 
     return colored_icon
+
+def round_image(image: PILImage, radius: int = 50):
+    """
+    Take an image and round its border according to the radius.
+    Parameters:
+        - image: The image that will have the border rounded.
+        - radius: The radius of the border.
+    """
+    
+    mask = Image.new("L", image.size, 0)
+    draw = ImageDraw.Draw(mask)
+    draw.rounded_rectangle(
+        (0, 0, image.size[0], image.size[1]),
+        radius=radius,
+        fill=255
+    )
+
+    # Apply mask
+    image.putalpha(mask)
 
 
 def generate_favicon(path: str) -> PILImage:

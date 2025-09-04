@@ -72,6 +72,8 @@ class AddTransactionForm(ctk.CTkFrame):
         """
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
+      
+
 
         # ==Add Components==
         # =Inputs section=

@@ -118,11 +118,17 @@ class MainWindow:
             text=self.shop.name,
             text_color=Colours.BTN_SAVE,
             font=Fonts.SHOP_NAME,
+            wraplength=800,
+            justify="center"
         )
         
+        # Responsiveness
+        self.frame_top.grid_columnconfigure(0, weight=0)
+        self.frame_top.grid_columnconfigure(1, weight=1)
+
         # Place labels
-        self.label_logo.pack(side="left", padx=40, pady=10)
-        self.label_shop_name.place(relx=0.6, rely=0.6, anchor="center")
+        self.label_logo.grid(row=0, column=0, padx=40, pady=10)
+        self.label_shop_name.grid(row=0, column=1, pady=10, sticky="nsew")
 
     def create_sidebar_components(self):
         """
