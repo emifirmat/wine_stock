@@ -93,7 +93,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         card_new_purchase = Card(
             frame_cards,
             image_path="assets/cards/add_purchase.png",
-            title= "New Purchase",
+            title="New Purchase",
             on_click=self.show_add_purchase_section,
         )
         # New purhase

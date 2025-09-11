@@ -7,6 +7,7 @@ import customtkinter as ctk
 from ui.components import Card, ButtonGoBack
 from ui.forms.add_wine import AddWineForm
 from ui.forms.remove_wine import RemoveWineForm
+from ui.tables.wines_table import WinesTable
 from ui.style import Colours, Fonts
 from models import Wine
 
@@ -63,17 +64,17 @@ class WineFrame(ctk.CTkScrollableFrame):
         )
         frame_cards.pack(pady=15)
         
+        card_list = Card(
+            frame_cards,
+            image_path="assets/cards/wine_list.png",
+            title="Show Wine List",
+            on_click=self.show_wine_list_section,
+        )
         card_add = Card(
             frame_cards,
             title="Add Wine",
             image_path="assets/cards/add_wine2.png",
             on_click=self.show_add_wine_section,
-        )
-        card_edit = Card(
-            frame_cards,
-            image_path="assets/cards/coming_soon.png",
-            title="Edit Wine",
-            on_click=None,
         )
         card_delete = Card(
             frame_cards,
@@ -81,18 +82,20 @@ class WineFrame(ctk.CTkScrollableFrame):
             title="Remove Wine",
             on_click=self.show_remove_wine_section,
         )
-        card_list = Card(
+        card_edit = Card(
             frame_cards,
             image_path="assets/cards/coming_soon.png",
-            title="Show Wine List",
+            title="Edit Wine",
             on_click=None,
         )
 
+
         # Place cards
-        card_add.grid(row=0, column=0, pady=(0, 15))
-        card_edit.grid(row=0, column=1, padx=20, pady=(0, 15))
-        card_delete.grid(row=1, column=0)
-        card_list.grid(row=1, column=1)
+        card_list.grid(row=0, column=0, pady=(0, 15))
+        card_add.grid(row=0, column=1)
+        card_delete.grid(row=1, column=0, pady=(0, 15))
+        card_edit.grid(row=1, column=1, padx=20)
+        
     
     def show_subsection(self, text_title: str, form_class, **kwargs):
         """
@@ -133,7 +136,8 @@ class WineFrame(ctk.CTkScrollableFrame):
         # Add form
         form = form_class(
             self,
-            self.session
+            self.session,
+            **kwargs
         )
         form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") 
 
@@ -154,6 +158,20 @@ class WineFrame(ctk.CTkScrollableFrame):
         self.show_subsection(
             "REMOVE WINE",
             RemoveWineForm
+        )
+    
+    def show_wine_list_section(self) -> None:
+        """
+        Shows the form for removing a wine.
+        """
+        self.show_subsection(
+            "WINE LIST",
+            WinesTable,
+            headers=[
+                "code", "picture", "name", "vintage year", "origin", "quantity",
+                "purchase price", "selling price"
+            ],
+            lines=Wine.all_ordered(self.session)
         )
     
     def clear_content(self) -> None:

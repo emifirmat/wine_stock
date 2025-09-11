@@ -73,8 +73,6 @@ class AddTransactionForm(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
       
-
-
         # ==Add Components==
         # =Inputs section=
         autocomplete_wine = AutoCompleteInput(
@@ -120,7 +118,6 @@ class AddTransactionForm(ctk.CTkFrame):
             text_color=Colours.ERROR,
             font=Fonts.TEXT_ERROR
         )
-
 
         autocomplete_wine.grid(row=0, column=0, pady=20, sticky="w")
         self.label_code.grid(row=0, column=1, pady=20, sticky="w")
@@ -202,15 +199,21 @@ class AddTransactionForm(ctk.CTkFrame):
 
         # Iterate over each line
         for line in self.frame_lines.get_line_list():
+            wine = line["wine"]
+            transaction = line["transaction_type"]
+            quantity = line["quantity"]
+
+            # Add movement
             movement = StockMovement(
-                wine=line["wine"],
-                transaction_type=line["transaction_type"],
-                quantity=line["quantity"],
+                wine=wine,
+                transaction_type=transaction,
+                quantity=quantity,
                 price=line["price"]
             )
-            # Save it in the DB    
             self.session.add(movement)
-        
+
+            # Update Stock in wine table
+            wine.quantity = wine.quantity + (quantity if transaction == "purchase" else -quantity)
         self.session.commit()
 
         # Show a message

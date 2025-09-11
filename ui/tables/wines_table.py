@@ -1,13 +1,14 @@
 """
-Table that contains the movements of the stock
+Table that contains the list of added wines with their stock
 """
 import customtkinter as ctk
 import tkinter.messagebox as messagebox
 
 from ui.style import Colours, Fonts
+from helpers import load_ctk_image
 
 
-class MovementsTable(ctk.CTkFrame):
+class WinesTable(ctk.CTkFrame):
     """
     Contains the components of the table with the wine purchases and sellings.
     """
@@ -25,7 +26,7 @@ class MovementsTable(ctk.CTkFrame):
         self.session = session
 
         # Table data
-        self.headers = headers
+        self.headers = headers # code, picture, name, vintage_year, origin, quantity, purchase_price, selling price
         self.header_labels = []
         self.lines = lines
         self.row_header_frame = None
@@ -37,7 +38,7 @@ class MovementsTable(ctk.CTkFrame):
         # Add components
         self.create_components()
 
-    def create_components(self):
+    def create_components(self) :
         """
         Create headers and rows.
         """
@@ -53,7 +54,8 @@ class MovementsTable(ctk.CTkFrame):
                 text_color=Colours.TEXT_MAIN,
                 font=Fonts.TEXT_HEADER,
                 width=120,
-                cursor="hand2"
+                wraplength=120,
+                cursor="hand2" if header != "picture" else "arrow"
             )
             label.grid(row=0, column=i, padx=5)
 
@@ -74,9 +76,9 @@ class MovementsTable(ctk.CTkFrame):
 
     def create_rows(self):
         """
-        Create a row for each existing transaction
+        Create a row for each existing wine
         """
-        # Clean what was before
+        # Clean what was there before
         for widget in self.rows_container.winfo_children():
             widget.destroy()
         
@@ -85,57 +87,39 @@ class MovementsTable(ctk.CTkFrame):
             row_frame = ctk.CTkFrame(self.rows_container, fg_color="transparent")
             row_frame.pack(fill="x", pady=2)
 
+            # Peepare image path
+            if line.wine_picture_path:
+                image_path = line.wine_picture_path  
+            else: 
+                image_path = "assets/user_images/wines/default_wine.png"
+
             # Columns
-            line_properties = [
-                line.datetime.replace(microsecond=0), line.wine.name, line.wine.code,
-                line.transaction_type.capitalize(), line.quantity, f"€ {line.price}",
-                f"€ {line.quantity * line.price}"
+            wine_properties = [
+                line.code, image_path, line.name, line.vintage_year, line.origin, 
+                line.quantity, f"€ {line.purchase_price}", f"€ {line.selling_price}"
             ]
-            for i, line_property in enumerate(line_properties):
-                label_datetime = ctk.CTkLabel(
-                    row_frame, 
-                    text=line_property,
-                    text_color=Colours.TEXT_MAIN,
-                    font=Fonts.TEXT_LABEL,
-                    width=120,
-                    wraplength=120,
-                )
-                
-                label_datetime.grid(row=0, column=i, padx=5)
-            
-            # Remove Button
-            remove_button = ctk.CTkButton(
-                row_frame,
-                text="X",
-                fg_color=Colours.BTN_CLEAR,
-                text_color=Colours.TEXT_BUTTON,
-                hover_color=Colours.BG_HOVER_BTN_CLEAR,
-                width=30,
-                cursor="hand2",
-                command=lambda f=row_frame, l=line: self.remove_line(f, l) # Pass f, l to get the current value and not last one.
-            )
-            remove_button.grid(row=0, column=len(line_properties), padx=5)
-
-    def remove_line(self, parent_frame, instance) -> None:
-        """
-        Removes the line where the button that triggered the event was clicked
-        """
-        # Ask user for confirmation
-        confirm_dialog = messagebox.askyesno(
-            "Confirm Removal",
-            (f"Do you want to remove the {instance.transaction_type} for € " 
-            + f"{instance.quantity * instance.price}?")
-        )
-        if not confirm_dialog:
-            return
-
-        # Remove line from db
-        self.session.delete(instance)
-        self.session.commit()
-        # Remove line from UI
-        parent_frame.destroy()
-        # Remove line from list
-        self.lines.remove(instance)
+            for i, wine_property in enumerate(wine_properties):
+                # Text labels
+                if wine_property != image_path: 
+                    label = ctk.CTkLabel(
+                        row_frame, 
+                        text=wine_property,
+                        text_color=Colours.TEXT_MAIN,
+                        font=Fonts.TEXT_LABEL,
+                        width=120,
+                        wraplength=120,
+                    )
+                # Image label
+                else:
+                    label = ctk.CTkLabel(
+                        row_frame, 
+                        image=load_ctk_image(image_path),
+                        text="",
+                        width=120,
+                        wraplength=120,
+                    )
+    
+                label.grid(row=0, column=i, padx=5)            
 
     def on_header_click(self, event, col_index: int):
         """
@@ -148,13 +132,17 @@ class MovementsTable(ctk.CTkFrame):
         if not (0 <= event.x <= event_label.winfo_width() and 0 <= event.y <= event_label.winfo_height()):
             return
         
+        # Ignore picture header
+        clean_text = event_label.cget("text").replace("↑", "").replace("↓", "")
+        if clean_text == "PICTURE":
+            return
+
         # Clean arrow in all labels
         for lbl in self.header_labels:
             lbl_text = lbl.cget("text").replace("↑", "").replace("↓", "")
             lbl.configure(text=lbl_text)
 
         # Add arrow depending on order
-        clean_text = event_label.cget("text").replace("↑", "").replace("↓", "")
         arrow = "↓" if self.sort_reverse else "↑"
         event_label.configure(text=clean_text + arrow)
 
@@ -166,13 +154,14 @@ class MovementsTable(ctk.CTkFrame):
         Order rows based on the clicked header.
         """
         sorting_keys = {
-            0: lambda l: l.datetime,
-            1: lambda l: l.wine.name.lower(),
-            2: lambda l: l.wine.code.upper(),
-            3: lambda l: l.transaction_type,
-            4: lambda l: l.quantity,
-            5: lambda l: l.price,
-            6: lambda l: l.quantity * l.price
+            0: lambda l: l.code.upper(),
+            1: None,
+            2: lambda l: l.name.lower(),
+            3: lambda l: l.vintage_year,
+            4: lambda l: l.origin.lower(),
+            5: lambda l: l.quantity,
+            6: lambda l: l.purchase_price,
+            7: lambda l: l.selling_price
         }
  
         # Sort

@@ -15,7 +15,7 @@ from models import Shop
 class MainWindow:
     """Main window of the app"""
     SCREEN_WIDTH = 1200
-    SCREEN_HEIGHT = 700
+    SCREEN_HEIGHT = 750
     
     def __init__(self, root: ctk.CTk, session: Session):
         # Main window
