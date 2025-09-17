@@ -5,7 +5,8 @@ import customtkinter as ctk
 
 from ui.components import Card, ButtonGoBack
 from ui.forms.add_transaction import AddTransactionForm
-from ui.tables.transactions_table import MovementsTable
+from ui.forms.remove_transaction import RemoveTransactionForm
+from ui.tables.transactions_table import TransactionsTable
 from ui.style import Colours, Fonts, Icons
 
 from models import Wine,StockMovement
@@ -151,7 +152,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
             self.session,
             **kwargs
         )
-        form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") # Cannot use pack for layout expansion reasons
+        form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") 
 
     def show_add_sale_section(self) -> None:
         """
@@ -179,12 +180,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         """
         self.show_subsection(
             "REMOVE TRANSACTION",
-            MovementsTable, 
-            headers=[
-                "datetime", "wine name", "wine code", "transaction", "quantity",
-                "price", "subtotal"
-            ],
-            lines=StockMovement.all_ordered(self.session)
+            RemoveTransactionForm, 
         )
 
     def clear_content(self) -> None:

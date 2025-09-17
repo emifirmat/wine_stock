@@ -7,7 +7,7 @@ import tkinter.messagebox as messagebox
 from ui.style import Colours, Fonts
 
 
-class MovementsTable(ctk.CTkFrame):
+class TransactionsTable(ctk.CTkFrame):
     """
     Contains the components of the table with the wine purchases and sellings.
     """
@@ -28,6 +28,8 @@ class MovementsTable(ctk.CTkFrame):
         self.headers = headers
         self.header_labels = []
         self.lines = lines
+        self.rows_lines_map = {}
+        self.rows_info = {}
         self.row_header_frame = None
         self.rows_container = None
         
@@ -81,9 +83,9 @@ class MovementsTable(ctk.CTkFrame):
             widget.destroy()
         
         # Movements
-        for line in self.lines: 
+        for i, line in enumerate(self.lines): 
             row_frame = ctk.CTkFrame(self.rows_container, fg_color="transparent")
-            row_frame.pack(fill="x", pady=2)
+            row_frame.grid(row=i, pady=2)
 
             # Columns
             line_properties = [
@@ -91,8 +93,8 @@ class MovementsTable(ctk.CTkFrame):
                 line.transaction_type.capitalize(), line.quantity, f"€ {line.price}",
                 f"€ {line.quantity * line.price}"
             ]
-            for i, line_property in enumerate(line_properties):
-                label_datetime = ctk.CTkLabel(
+            for j, line_property in enumerate(line_properties):
+                label = ctk.CTkLabel(
                     row_frame, 
                     text=line_property,
                     text_color=Colours.TEXT_MAIN,
@@ -101,7 +103,7 @@ class MovementsTable(ctk.CTkFrame):
                     wraplength=120,
                 )
                 
-                label_datetime.grid(row=0, column=i, padx=5)
+                label.grid(row=0, column=j, padx=5)
             
             # Remove Button
             remove_button = ctk.CTkButton(
@@ -115,6 +117,10 @@ class MovementsTable(ctk.CTkFrame):
                 command=lambda f=row_frame, l=line: self.remove_line(f, l) # Pass f, l to get the current value and not last one.
             )
             remove_button.grid(row=0, column=len(line_properties), padx=5)
+
+            # Save row info for future actions (sort, etc)
+            self.rows_lines_map[line] = row_frame 
+            self.rows_info[row_frame] = row_frame.grid_info()
 
     def remove_line(self, parent_frame, instance) -> None:
         """
@@ -182,4 +188,43 @@ class MovementsTable(ctk.CTkFrame):
         self.sort_reverse = not self.sort_reverse
         
         # Refresh rows
-        self.create_rows()
+        self.reorder_rows()
+
+    def reorder_rows(self):
+        """
+        Modify the place of the rows without detroying the widgets.
+        """
+        for i, line in enumerate(self.lines):
+            # Get widget
+            row = self.rows_lines_map[line]
+            grid_info = self.rows_info[row]
+             
+            # If widget is hidden, skip
+            if not row.winfo_ismapped():
+                continue
+
+            # Update grid info
+            grid_info["row"] = i
+
+            # Replace widget
+            row.grid_forget()
+            row.grid(**grid_info)
+            
+
+
+    def update_by_filter(self, filtered_names):
+        """
+        Update the table by filters
+        """
+        # Iterate over rows
+        for row in self.rows_container.winfo_children():
+            # Get text in label wine name
+            label_name = row.winfo_children()[1].cget("text")
+            
+            # If the wine name matches the filter, show it in the table
+            if label_name in filtered_names:
+                row_grid_info = self.rows_info[row]
+                row.grid(**row_grid_info)
+            else:
+                # If not matched, hide it
+                row.grid_forget()

@@ -259,11 +259,11 @@ class AddTransactionForm(ctk.CTkFrame):
         """
         Returns the quantity typed by the user or 0 if it is empty.
         """
+        value = self.quantity_var.get()
         try:
-            return self.quantity_var.get()
-        except:
-            # Catch empty entry and update process
-            return 0 
+            return int(value)
+        except (ValueError, TypeError):
+            return 0
 
     def add_new_wine_line(self):
         """
