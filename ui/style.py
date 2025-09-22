@@ -32,6 +32,7 @@ class Fonts:
     TEXT_LABEL = ("Segoe UI", 14)
     TEXT_HEADER = ("Segoe UI", 14, "bold")
     TEXT_SECONDARY = ("Segoe UI", 13, "italic")
+    TEXT_HEADER_CALENDAR = ("Segoe UI", 13, "bold")
     TEXT_ERROR = ("Segoe UI", 12)
     TEXT_AUTOCOMPLETE = ("Segoe UI", 9)
 

@@ -1,8 +1,11 @@
 """
 Custom components useful for the app
 """
+import calendar
 import customtkinter as ctk
+import datetime
 import tkinter as tk
+import re
 from decimal import Decimal
 from typing import Callable
 
@@ -15,8 +18,13 @@ class TextEntry(ctk.CTkEntry):
     """
     Entry component with a max_length validation
     """
-    def __init__(self, root, max_len: int = 60, **kwargs):
-        super().__init__(root, **kwargs)
+    def __init__(self, root, placeholder:str, max_len: int = 60, **kwargs):
+        super().__init__(
+            root, 
+            placeholder_text=placeholder, 
+            placeholder_text_color=Colours.TEXT_SECONDARY,
+            **kwargs)
+
         self.max_len = max_len
 
         # Register a tkinter function, to validate field
@@ -34,16 +42,18 @@ class TextEntry(ctk.CTkEntry):
         return len(text) <= self.max_len
 
 
-
-
-
 class IntEntry(ctk.CTkEntry):
     """
     Entry component that only accepts integers.
     """
-    def __init__(self, root, from_: int = None, to: int = None, 
-        textvariable = None, **kwargs):
-        super().__init__(root, **kwargs)
+    def __init__(self, root, placeholder:str, from_: int = None, to: int = None, 
+        textvariable = None, **kwargs
+    ):
+        super().__init__(root, 
+            placeholder_text=placeholder, 
+            placeholder_text_color=Colours.TEXT_SECONDARY,
+            **kwargs
+        )
         self.min_val = from_
         self.max_val = to
         # Register a tkinter function, to validate field
@@ -67,7 +77,7 @@ class IntEntry(ctk.CTkEntry):
             True: The text is valid and in range
             False: The text is invalid or out of range
         """
-        if text =="":
+        if text == "":
             return True
         if text.isdigit():
             number = int(text)
@@ -89,10 +99,15 @@ class DecimalEntry(ctk.CTkEntry):
     """
     Entry component that only accepts integers.
     """
-    def __init__(self, root, from_: int = None, to: int = None, 
+    def __init__(self, root, placeholder:str, from_: int = None, to: int = None, 
         textvariable = None, **kwargs
     ):
-        super().__init__(root, **kwargs)
+        super().__init__(
+            root, 
+            placeholder_text=placeholder, 
+            placeholder_text_color=Colours.TEXT_SECONDARY,
+            **kwargs
+        )
         self.min_val = from_
         self.max_val = to
         # Register a tkinter function, to validate field
@@ -128,7 +143,7 @@ class DecimalEntry(ctk.CTkEntry):
         # Catch other weird symbols
         try:   
             number = Decimal(text)
-        except:
+        except (ValueError, TypeError):
             return False
         
         # Number is lower than min
@@ -141,13 +156,198 @@ class DecimalEntry(ctk.CTkEntry):
         return True
 
 
+class DateEntry(ctk.CTkEntry):
+    """
+    Entry component that only accepts dates from a topup calendar.
+    """
+    def __init__(self, root, textvariable: str | None = None, **kwargs):
+        self.text_var = textvariable or tk.StringVar()
+        
+        super().__init__(root, textvariable=textvariable, **kwargs)     
+
+        self.year = None
+        self.month = None
+        self.top_level = None
+
+        # Show calendar on click
+        self.bind("<Button-1>", self.open_calendar)
+
+    def open_calendar(self, event=None):
+        """
+        Creates a top level with the calendar.
+        """
+        # Get current date details
+        today = datetime.date.today()
+        self.year = today.year
+        self.month = today.month
+        
+        # Destroy any previous toplevel (important)
+        # Note: Only way to keep calendar at the front with multiple clicks
+        # deiconify, topmost, focus force, lift and sending main window at the 
+        # back didn't work.
+        if self.top_level:
+            self.top_level.destroy()
+            self.top_level = None
+
+        # Create TopLevel
+        self.top_level = ctk.CTkToplevel(
+            self,
+            fg_color=Colours.BG_MAIN,
+        )
+        self.top_level.title("Pick Date")
+        
+        # Locate TopLevel
+        tl_width = 300
+        tl_height = 210
+        x = self.winfo_rootx() - (tl_width - self.winfo_width()) // 2
+        y = self.winfo_rooty() + self.winfo_height()
+        self.top_level.geometry(f"{tl_width}x{tl_height}+{x}+{y}")
+        self.top_level.resizable(False, False)
+       
+        # Build calendar
+        self.build_calendar()
+    
+    def build_calendar(self):
+        """
+        Build each component of the calendar: Headers, navigation buttons, buttons
+        representing days. Before building it, it removes any previous toplevel.
+        """
+        for widget in self.top_level.winfo_children():
+            widget.destroy()
+
+        calendar_ = calendar.monthcalendar(self.year, self.month)
+
+        # Header (middle position)
+        header = ctk.CTkLabel(
+            self.top_level, 
+            text=f"{calendar.month_name[self.month]} {self.year}",
+            font=Fonts.TEXT_HEADER_CALENDAR
+        )
+        header.grid(row=0, column=2, columnspan=3, pady=5)
+
+        # Navigation buttons (besides header)
+        year_prev_btn = ctk.CTkButton(
+            self.top_level, 
+            text="<<", 
+            width=30, 
+            fg_color=Colours.BG_HOVER_NAV,
+            text_color=Colours.TEXT_MAIN,
+            hover_color=Colours.DROPDOWN_HOVER,
+            command=self.prev_year
+        )
+        month_prev_btn = ctk.CTkButton(
+            self.top_level, 
+            text="<", 
+            width=30, 
+            fg_color=Colours.BG_HOVER_NAV,
+            text_color=Colours.TEXT_MAIN,
+            hover_color=Colours.DROPDOWN_HOVER,
+            command=self.prev_month
+        )         
+        month_next_btn = ctk.CTkButton(
+            self.top_level, 
+            text=">", 
+            width=30, 
+            fg_color=Colours.BG_HOVER_NAV,
+            text_color=Colours.TEXT_MAIN,
+            hover_color=Colours.DROPDOWN_HOVER,
+            command=self.next_month
+        )
+        year_next_btn = ctk.CTkButton(
+            self.top_level, 
+            text=">>", 
+            width=30, 
+            fg_color=Colours.BG_HOVER_NAV,
+            text_color=Colours.TEXT_MAIN,
+            hover_color=Colours.DROPDOWN_HOVER,
+            command=self.next_year
+        )
+        year_prev_btn.grid(row=0, column=0)
+        month_prev_btn.grid(row=0, column=1)
+        month_next_btn.grid(row=0, column=5)
+        year_next_btn.grid(row=0, column=6)
+
+        # Days
+        for i, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
+            label = ctk.CTkLabel(self.top_level, text=day)
+            label.grid(row=1, column=i, padx=2, pady=2)
+
+        # Days of the month
+        for r, week in enumerate(calendar_, start=2):
+            for c, day in enumerate(week):
+                if day != 0:
+                    button = ctk.CTkButton(
+                        self.top_level, 
+                        text=str(day), 
+                        width=40, 
+                        height=25,
+                        fg_color=Colours.BG_SECONDARY,
+                        text_color=Colours.TEXT_SECONDARY,
+                        hover_color=Colours.BG_HOVER_NAV,
+                        command=lambda d=day: self.select_date(d)
+                    )
+                    button.grid(row=r, column=c, padx=1, pady=1)
+
+    def prev_month(self):
+        """
+        Builds the calendar after the user clicks on month_prev_btn
+        """
+        if self.month == 1:
+            self.month = 12
+            self.year -= 1
+        else:
+            self.month -= 1
+        self.build_calendar()
+
+    def next_month(self):
+        """
+        Builds the calendar after the user clicks on month_next_btn
+        """
+        if self.month == 12:
+            self.month = 1
+            self.year += 1
+        else:
+            self.month += 1
+        self.build_calendar()
+
+    def prev_year(self):
+        """
+        Builds the calendar after the user clicks on year_prev_btn
+        """
+        self.year -= 1
+        self.build_calendar()
+
+    def next_year(self):
+        """
+        Builds the calendar after the user clicks on year_next_btn
+        """
+        self.year += 1
+        self.build_calendar()
+
+    def select_date(self, day):
+        """
+        Obtains the date clicked by the user, stores it in the tkvariable and
+        destroys the toplevel.
+        """
+        # Get date and show it on the input
+        selected = datetime.date(self.year, self.month, day)
+        self.text_var.set(selected.strftime("%d/%m/%Y"))
+        # Destroy top level
+        self.top_level.destroy()
+        self.top_level = None # Important to prevent errors
+
 class AutocompleteEntry(ctk.CTkEntry):
     """
     An entry that contains an autocomplete feature according to the wine list.
     Autcomplete is formed by a frame that contains a listbox.
     """
-    def __init__(self, root, wine_list, **kwargs):
-        super().__init__(root, **kwargs)
+    def __init__(self, root, placeholder:str, wine_list, **kwargs):
+        super().__init__(
+            root, 
+            placeholder_text=placeholder, 
+            placeholder_text_color=Colours.TEXT_SECONDARY,
+            **kwargs
+        )
         self.root = root
         self.wine_list = wine_list
         self.listbox = None
@@ -337,11 +537,10 @@ class TextInput(BaseInput):
             self,
             fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN,
-            placeholder_text=placeholder,
-            placeholder_text_color=Colours.TEXT_SECONDARY,
+            placeholder=placeholder,
             font=Fonts.TEXT_MAIN,
             width=300,
-            max_len = max_len
+            max_len = max_len,
         )
         
         # Place components
@@ -373,7 +572,8 @@ class IntInput(BaseInput):
             width=150,
             from_=from_,
             to=to,
-            textvariable=textvariable
+            textvariable=textvariable,
+            placeholder=placeholder,
         )
         
         # Place components
@@ -386,7 +586,6 @@ class IntInput(BaseInput):
     def get(self):
         """Returns the value (integer) of IntEntry"""
         return self.int_entry.get()
-
 
 class DecimalInput(BaseInput):
     """
@@ -406,7 +605,8 @@ class DecimalInput(BaseInput):
             width=150,
             from_=from_,
             to=to,
-            textvariable=textvariable
+            textvariable=textvariable,
+            placeholder=placeholder,
         )
         
         # Place components
@@ -439,6 +639,7 @@ class AutoCompleteInput(BaseInput):
             font=Fonts.TEXT_MAIN,
             width=150,
             textvariable=textvariable,
+            placeholder=placeholder,
         )
         
         # Place components
@@ -448,6 +649,38 @@ class AutoCompleteInput(BaseInput):
         """Removes the text typed by the user"""
         self.autocomplete_entry.delete(0, "end") 
 
+class DateInput(BaseInput):
+    """
+    A frame that contains a label and an decimal entry components
+    """
+    def __init__(
+        self, root, textvariable=None, **kwargs
+    ):
+        super().__init__(root, **kwargs)
+
+        self.date_entry = DateEntry(
+            self,
+            fg_color=Colours.BG_SECONDARY,
+            text_color=Colours.TEXT_MAIN, 
+            font=Fonts.TEXT_MAIN,
+            width=150,
+            textvariable=textvariable,
+            state="readonly"
+        )
+
+        self.date_entry.grid(row=0, column=2)
+
+    def clear(self):
+        """Removes the text typed by the user"""
+        self.date_entry.configure(state="normal")
+        self.date_entry.delete(0, "end") 
+        self.date_entry.configure(state="readonly")
+ 
+
+    def get(self):
+        """Returns the value (decimal) of DecimalEntry"""
+        return self.date_entry.get()
+
 
 class DropdownInput(BaseInput):
     """
@@ -455,7 +688,7 @@ class DropdownInput(BaseInput):
     """
     def __init__(
         self, root, values: list[str], variable = None, command = None, 
-        placeholder: str | None = None, **kwargs
+        **kwargs
     ):
         super().__init__(root, **kwargs)
       
@@ -478,8 +711,14 @@ class DropdownInput(BaseInput):
         self.dropdown.grid(row=0, column=2)
     
     def get(self):
-        """Returns the selected value of DropDown"""
+        """Returns the selected value of Dropdown"""
         return self.dropdown.get()
+    
+    def set_to_first_value(self):
+        """
+        Returns the first value of the Dropdown
+        """
+        return self.dropdown.set(self.dropdown.cget("values")[0])
 
     def update_values(self, values: list) -> None:
         """
@@ -543,8 +782,7 @@ class ImageInput(BaseInput):
     A frame that contains a text label, filedialog button, and image label components
     """
     def __init__(
-        self, root, image_path: str | None = None, placeholder: str | None = None, 
-        **kwargs
+        self, root, image_path: str | None = None, **kwargs
     ):
         super().__init__(root, **kwargs)
         self.configure(

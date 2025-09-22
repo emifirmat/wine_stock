@@ -3,6 +3,7 @@ Table that contains the movements of the stock
 """
 import customtkinter as ctk
 import tkinter.messagebox as messagebox
+from datetime import datetime, date
 
 from ui.style import Colours, Fonts
 
@@ -10,9 +11,14 @@ from ui.style import Colours, Fonts
 class TransactionsTable(ctk.CTkFrame):
     """
     Contains the components of the table with the wine purchases and sellings.
+    Uses incremental data loading and it can sort and filter rows.
     """
+    INITIAL_ROWS = 40 
+    LOAD_MORE_ROWS = 30
+    
     def __init__(
-            self, root: ctk.CTkFrame, session, headers: list[str], lines, **kwargs
+            self, root: ctk.CTkFrame, session, headers: list[str], lines: list, 
+            **kwargs
         ):
         # Set up form frame
         super().__init__(root, **kwargs)
@@ -26,103 +32,187 @@ class TransactionsTable(ctk.CTkFrame):
 
         # Table data
         self.headers = headers
-        self.header_labels = []
         self.lines = lines
-        self.rows_lines_map = {}
-        self.rows_info = {}
-        self.row_header_frame = None
+        self.filtered_lines = lines.copy()
+        self.visible_rows_count = self.INITIAL_ROWS
+        self.line_widget_map = {}
+        
+        # Table UI
+        self.header_labels = []
         self.rows_container = None
+        self.load_more_btn = None
+        self.lbl_no_results = None
+        self.create_components()
         
         # Sorting data
         self.sort_reverse = False
+        self.last_sort = None
 
-        # Add components
-        self.create_components()
+        # Show rows
+        self.refresh_visible_rows()
 
     def create_components(self):
         """
-        Create headers and rows.
+        Create headers, rows container, and "no results" message.
         """
-        # ==Add Components==
-        # headers
-        row_header_frame = ctk.CTkFrame(self, fg_color="transparent")
-        row_header_frame.pack(fill="x", pady=2)
+        # Headers
+        header_frame = ctk.CTkFrame(self, fg_color="transparent")
+        header_frame.pack(fill="x", pady=2)
 
         for i, header in enumerate(self.headers):
+            # Create label
             label = ctk.CTkLabel(
-                row_header_frame, 
+                header_frame, 
                 text=header.upper(),
                 text_color=Colours.TEXT_MAIN,
                 font=Fonts.TEXT_HEADER,
-                width=120,
+                width=110,
                 cursor="hand2"
             )
             label.grid(row=0, column=i, padx=5)
 
-            # Bind
+            # Bind label with a click
             label.bind(
                 "<Button-1>", 
                 lambda e, col_index=i: self.on_header_click(e, col_index)
             )
 
+            # Add label in header_labels 
             self.header_labels.append(label)
 
         # Rows container
         self.rows_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.rows_container.pack(fill="both", expand=True)
+        self.rows_container.pack(fill="both", expand=True) 
 
-        # Rows
-        self.create_rows()
-
-    def create_rows(self):
-        """
-        Create a row for each existing transaction
-        """
-        # Clean what was before
-        for widget in self.rows_container.winfo_children():
-            widget.destroy()
+        # No results label  
+        self.lbl_no_results = ctk.CTkLabel(
+            self.rows_container,
+            text="No results found.",
+            font=Fonts.TEXT_LABEL,
+            text_color=Colours.TEXT_MAIN,
+            anchor="center",
+        )
         
-        # Movements
-        for i, line in enumerate(self.lines): 
-            row_frame = ctk.CTkFrame(self.rows_container, fg_color="transparent")
-            row_frame.grid(row=i, pady=2)
+        # Let columns expand to fill the width
+        for i in range(7):
+            self.rows_container.grid_columnconfigure(i, weight=1)
+        
+    def refresh_visible_rows(self):
+        """
+        Creates/shows only visible rows.
+        """
+        # Hide all the widgets
+        for widget in self.rows_container.winfo_children():
+            widget.grid_forget()
+        
+        # If there is no filtered_lines, show message "no results"
+        if not self.filtered_lines:
+            self.lbl_no_results.grid(row=0, column=0, sticky="ew", columnspan=7)  
+            return
+        
+        # Show/create the slice's widgets
+        rows_to_show = min(self.visible_rows_count, len(self.filtered_lines))
+        visible_slice = self.filtered_lines[:rows_to_show]
+        
+        for i, line in enumerate(visible_slice):
+            # Get existing widget
+            if line in self.line_widget_map:
+                widget = self.line_widget_map[line]
+            # Create new widget
+            else:
+                widget = self.create_row_widget(line)
+                self.line_widget_map[line] = widget
+            # Show widget    
+            widget.grid(row=i, pady=2)
+        
+        # Add "load more" button
+        self.create_load_more_button()
 
-            # Columns
-            line_properties = [
-                line.datetime.replace(microsecond=0), line.wine.name, line.wine.code,
-                line.transaction_type.capitalize(), line.quantity, f"€ {line.price}",
-                f"€ {line.quantity * line.price}"
-            ]
-            for j, line_property in enumerate(line_properties):
-                label = ctk.CTkLabel(
-                    row_frame, 
-                    text=line_property,
-                    text_color=Colours.TEXT_MAIN,
-                    font=Fonts.TEXT_LABEL,
-                    width=120,
-                    wraplength=120,
-                )
-                
-                label.grid(row=0, column=j, padx=5)
-            
-            # Remove Button
-            remove_button = ctk.CTkButton(
-                row_frame,
-                text="X",
-                fg_color=Colours.BTN_CLEAR,
-                text_color=Colours.TEXT_BUTTON,
-                hover_color=Colours.BG_HOVER_BTN_CLEAR,
-                width=30,
-                cursor="hand2",
-                command=lambda f=row_frame, l=line: self.remove_line(f, l) # Pass f, l to get the current value and not last one.
+    def create_row_widget(self, line) -> ctk.CTkFrame:
+        """
+        Create a row for the line called by refresh visible rows.
+        Parameters:
+            line: Instance of a stock_movement (purchase or sale)
+        Returns:
+            row_frame: A ctkframe containing the labels of the line (row)
+        """
+        # Crate row frame
+        row_frame = ctk.CTkFrame(self.rows_container, fg_color="transparent")
+        # Note: row_frame is placed by refresh_visible_rows
+
+        # Create labels of the row
+        line_columns = [
+            line.datetime.replace(microsecond=0), line.wine.name, line.wine.code,
+            line.transaction_type.capitalize(), line.quantity, f"€ {line.price}",
+            f"€ {line.quantity * line.price}"
+        ]
+        for j, line_column in enumerate(line_columns):
+            label = ctk.CTkLabel(
+                row_frame, 
+                text=line_column,
+                text_color=Colours.TEXT_MAIN,
+                font=Fonts.TEXT_LABEL,
+                width=110,
+                wraplength=110,
             )
-            remove_button.grid(row=0, column=len(line_properties), padx=5)
+            
+            label.grid(row=0, column=j, padx=5)
+        
+        # Create button "Remove"
+        button_remove = ctk.CTkButton(
+            row_frame,
+            text="X",
+            fg_color=Colours.BTN_CLEAR,
+            text_color=Colours.TEXT_BUTTON,
+            hover_color=Colours.BG_HOVER_BTN_CLEAR,
+            width=30,
+            cursor="hand2",
+            command=lambda f=row_frame, l=line: self.remove_line(f, l) # Pass f, l to get the current value and not last one.
+        )
+        button_remove.grid(row=0, column=len(line_columns), padx=5)
 
-            # Save row info for future actions (sort, etc)
-            self.rows_lines_map[line] = row_frame 
-            self.rows_info[row_frame] = row_frame.grid_info()
+        return row_frame
 
-    def remove_line(self, parent_frame, instance) -> None:
+    def create_load_more_button(self):
+        """
+        Creates or updates button "Load More"
+        """
+        # Destroy existing button
+        if self.load_more_btn:
+            self.load_more_btn.destroy()
+            self.load_more_btn = None
+
+        # Only show button if there are more rows to show
+        remaining_rows = len(self.filtered_lines) - self.visible_rows_count
+        text_content = (
+            f"Load {min(remaining_rows, self.LOAD_MORE_ROWS)} More Rows "
+            f"({remaining_rows} left)"
+        )
+                        
+        if remaining_rows > 0:
+            self.load_more_btn = ctk.CTkButton(
+                self.rows_container,
+                text=text_content,
+                fg_color=Colours.BTN_SAVE,
+                hover_color=Colours.BG_HOVER_BTN_SAVE,
+                font=Fonts.TEXT_BUTTON,
+                text_color=Colours.TEXT_BUTTON,
+                height=35,
+                cursor="hand2",
+                command=self.load_more_rows
+            )
+            # Place it at the end of the table
+            self.load_more_btn.grid(row=self.visible_rows_count, pady=15, sticky="ew")
+
+    def load_more_rows(self):
+        """Load more rows incrementally"""
+        # Increase count
+        self.visible_rows_count += self.LOAD_MORE_ROWS
+        
+        # Refresh rows
+        self.refresh_visible_rows()
+
+    def remove_line(self, parent_frame: ctk.CTkFrame, instance) -> None:
         """
         Removes the line where the button that triggered the event was clicked
         """
@@ -138,10 +228,16 @@ class TransactionsTable(ctk.CTkFrame):
         # Remove line from db
         self.session.delete(instance)
         self.session.commit()
+       
         # Remove line from UI
         parent_frame.destroy()
-        # Remove line from list
+
+        # Remove line from lines list
         self.lines.remove(instance)
+        self.filtered_lines.remove(instance)
+
+        # Update load more button
+        self.create_load_more_button()
 
     def on_header_click(self, event, col_index: int):
         """
@@ -151,7 +247,10 @@ class TransactionsTable(ctk.CTkFrame):
         event_label = event.widget.master
 
         # Prevents an error when user click on label but not on the text
-        if not (0 <= event.x <= event_label.winfo_width() and 0 <= event.y <= event_label.winfo_height()):
+        if (not (
+            0 <= event.x <= event_label.winfo_width() 
+            and 0 <= event.y <= event_label.winfo_height()
+        )):
             return
         
         # Clean arrow in all labels
@@ -167,9 +266,12 @@ class TransactionsTable(ctk.CTkFrame):
         # Sort rows
         self.sort_by(col_index)
 
-    def sort_by(self, col_index):
+        # Refresh rows
+        self.refresh_visible_rows()   
+
+    def sort_by(self, col_index: int, new_sort: bool = True):
         """
-        Order rows based on the clicked header.
+        Order lines based on the clicked header.
         """
         sorting_keys = {
             0: lambda l: l.datetime,
@@ -180,51 +282,45 @@ class TransactionsTable(ctk.CTkFrame):
             5: lambda l: l.price,
             6: lambda l: l.quantity * l.price
         }
- 
-        # Sort
-        self.lines.sort(key=sorting_keys[col_index], reverse=self.sort_reverse)
+
+        # Sort the list of filtered lines
+        reverse = self.sort_reverse if new_sort else not self.sort_reverse
+        self.filtered_lines.sort(key=sorting_keys[col_index], reverse=reverse)
         
-        # Toggle reverse mode
-        self.sort_reverse = not self.sort_reverse
+        # Toggle reverse mode and save last sort
+        if new_sort:
+            self.sort_reverse = not self.sort_reverse
+            self.last_sort = col_index     
+
+    def apply_filters(
+            self, filtered_names, filtered_codes, transaction_type, date_from, 
+            date_to
+        ):
+        """
+        Update the table by filters. 
+        """
+        # Convert date strings to date
+        date_from = datetime.strptime(date_from, "%d/%m/%Y").date() if date_from else date(1900, 1, 1)
+        date_to = datetime.strptime(date_to, "%d/%m/%Y").date() if date_to else datetime.today().date()
         
-        # Refresh rows
-        self.reorder_rows()
+        # Update filtered lines
+        self.filtered_lines = []
+   
+        for line in self.lines:
+            if (                
+                line.wine.name.lower() in filtered_names
+                and line.wine.code.lower() in filtered_codes
+                and (line.transaction_type.capitalize() == transaction_type or not transaction_type)
+                and date_from <= line.datetime.date() <= date_to
+            ):
+                self.filtered_lines.append(line)
 
-    def reorder_rows(self):
-        """
-        Modify the place of the rows without detroying the widgets.
-        """
-        for i, line in enumerate(self.lines):
-            # Get widget
-            row = self.rows_lines_map[line]
-            grid_info = self.rows_info[row]
-             
-            # If widget is hidden, skip
-            if not row.winfo_ismapped():
-                continue
+        # Sort rows
+        if self.last_sort:
+            self.sort_by(self.last_sort, new_sort=False)
 
-            # Update grid info
-            grid_info["row"] = i
+        # restart index and rows
+        self.visible_rows_count = self.INITIAL_ROWS
+        self.refresh_visible_rows()
 
-            # Replace widget
-            row.grid_forget()
-            row.grid(**grid_info)
-            
-
-
-    def update_by_filter(self, filtered_names):
-        """
-        Update the table by filters
-        """
-        # Iterate over rows
-        for row in self.rows_container.winfo_children():
-            # Get text in label wine name
-            label_name = row.winfo_children()[1].cget("text")
-            
-            # If the wine name matches the filter, show it in the table
-            if label_name in filtered_names:
-                row_grid_info = self.rows_info[row]
-                row.grid(**row_grid_info)
-            else:
-                # If not matched, hide it
-                row.grid_forget()
+        
