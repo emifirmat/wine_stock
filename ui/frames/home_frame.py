@@ -9,7 +9,7 @@ from ui.forms.remove_transaction import RemoveTransactionForm
 from ui.tables.transactions_table import TransactionsTable
 from ui.style import Colours, Fonts, Icons
 
-from models import Wine,StockMovement
+from db.models import Wine,StockMovement
 
 class HomeFrame(ctk.CTkScrollableFrame):
     """

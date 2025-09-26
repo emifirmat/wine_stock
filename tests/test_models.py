@@ -2,7 +2,7 @@ import pytest
 from decimal import Decimal
 from datetime import datetime
 
-from models import Shop, Wine, Colour, Style, Varietal, StockMovement
+from db.models import Shop, Wine, Colour, Style, Varietal, StockMovement
     
 def test_shop_singleton(session):
     # Verify singleton creates a default shop
@@ -61,7 +61,7 @@ def test_create_wine(session, sample_color_style_varietal):
     assert abs(wine.purchase_price - Decimal("12.23")) < Decimal("0.01")
     assert wine.selling_price == Decimal("99")
 
-def test_create_stock_movement(session, sample_wine: Wine, sample_color_style_varietal):
+def test_create_stock_movement(session, sample_wine: Wine):
     
     movement = StockMovement(
         wine_id=sample_wine.id,
@@ -80,3 +80,81 @@ def test_create_stock_movement(session, sample_wine: Wine, sample_color_style_va
     assert result.quantity == 10
     assert result.price == Decimal("12.23")
     assert isinstance(result.datetime, datetime)
+
+def test_stock_movement_insert_updates_wine_quantity(session, sample_wine: Wine):
+
+    initial_qty = sample_wine.quantity
+
+    # Purchase should increase stock
+    purchase = StockMovement(
+        wine_id=sample_wine.id,
+        transaction_type="purchase",
+        quantity=5,
+        price=Decimal("10.00"),
+    )
+    session.add(purchase)
+    session.commit()
+    session.refresh(sample_wine)
+    assert sample_wine.quantity == initial_qty + 5
+
+    # Sale should decrease stock
+    sale = StockMovement(
+        wine_id=sample_wine.id,
+        transaction_type="sale",
+        quantity=2,
+        price=Decimal("15.00"),
+    )
+    session.add(sale)
+    session.commit()
+    session.refresh(sample_wine)
+    assert sample_wine.quantity == initial_qty + 5 - 2
+
+
+def test_stock_movement_update_adjusts_wine_quantity(session, sample_wine: Wine):
+    initial_qty = sample_wine.quantity
+
+    movement = StockMovement(
+        wine_id=sample_wine.id,
+        transaction_type="purchase",
+        quantity=10,
+        price=Decimal("12.00"),
+    )
+    session.add(movement)
+    session.commit()
+    session.refresh(sample_wine)
+    assert sample_wine.quantity == initial_qty + 10
+
+    # Change to "sale" with a different quantity
+    movement.transaction_type = "sale"
+    movement.quantity = 4
+    session.commit()
+    session.refresh(sample_wine)
+
+    # Expected effect:
+    # - Revert old value: -10 (previously purchase of 10)
+    # - Apply new value: -4 (now sale of 4)
+    assert sample_wine.quantity == initial_qty - 4
+
+
+def test_stock_movement_delete_reverts_wine_quantity(session, sample_wine: Wine):
+
+    initial_qty = sample_wine.quantity
+
+    movement = StockMovement(
+        wine_id=sample_wine.id,
+        transaction_type="purchase",
+        quantity=7,
+        price=Decimal("11.00"),
+    )
+    session.add(movement)
+    session.commit()
+    session.refresh(sample_wine)
+    assert sample_wine.quantity == initial_qty + 7
+
+    # Delete the movement
+    session.delete(movement)
+    session.commit()
+    session.refresh(sample_wine)
+
+    # Stock should return to the initial value
+    assert sample_wine.quantity == initial_qty

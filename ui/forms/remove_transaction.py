@@ -11,7 +11,7 @@ from ui.components import (IntInput, DropdownInput, DoubleLabel, AutoCompleteInp
     ClearSaveButtons, DateInput)
 from ui.style import Colours, Fonts
 from ui.tables.transactions_table import TransactionsTable
-from models import Wine, StockMovement
+from db.models import Wine, StockMovement
 
 class RemoveTransactionForm(ctk.CTkFrame):
     """

@@ -10,7 +10,7 @@ from ui.frames.wine_frame import WineFrame
 from ui.frames.report_frame import ReportFrame
 from ui.frames.settings_frame import SettingsFrame
 from helpers import load_ctk_image, resource_path
-from models import Shop
+from db.models import Shop
 
 class MainWindow:
     """Main window of the app"""

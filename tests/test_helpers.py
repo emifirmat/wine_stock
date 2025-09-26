@@ -1,5 +1,5 @@
 import pytest
-from models import Colour
+from db.models import Colour
 from helpers import populate_db_model
 
 

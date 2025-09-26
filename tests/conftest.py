@@ -3,7 +3,7 @@ from decimal import Decimal
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, clear_mappers
 
-from models import Base, Wine, Colour, Style, Varietal
+from db.models import Base, Wine, Colour, Style, Varietal
 
 # Create a db in memory
 @pytest.fixture

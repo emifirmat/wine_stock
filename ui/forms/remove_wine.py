@@ -7,7 +7,7 @@ import tkinter.messagebox as messagebox
 
 from ui.components import DropdownInput, DoubleLabel
 from ui.style import Colours, Fonts
-from models import Wine
+from db.models import Wine
 
 class RemoveWineForm(ctk.CTkFrame):
     """

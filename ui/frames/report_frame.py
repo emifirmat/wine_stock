@@ -6,7 +6,7 @@ import customtkinter as ctk
 
 from ui.components import Card
 from ui.style import Colours, Fonts
-from models import StockMovement
+from db.models import StockMovement
 
 class ReportFrame(ctk.CTkScrollableFrame):
     """

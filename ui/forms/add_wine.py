@@ -8,7 +8,7 @@ from datetime import datetime
 from ui.components import (TextInput, IntInput, DropdownInput, ImageInput,
     DecimalInput)
 from ui.style import Colours, Fonts
-from models import Wine, Colour, Style, Varietal
+from db.models import Wine, Colour, Style, Varietal
 
 class AddWineForm(ctk.CTkFrame):
     """

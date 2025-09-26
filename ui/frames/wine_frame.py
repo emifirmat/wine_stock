@@ -9,7 +9,7 @@ from ui.forms.add_wine import AddWineForm
 from ui.forms.remove_wine import RemoveWineForm
 from ui.tables.wines_table import WinesTable
 from ui.style import Colours, Fonts
-from models import Wine
+from db.models import Wine
 
 class WineFrame(ctk.CTkScrollableFrame):
     """

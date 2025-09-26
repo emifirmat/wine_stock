@@ -10,7 +10,7 @@ from ui.components import (IntInput, DropdownInput, DoubleLabel, AutoCompleteInp
     ClearSaveButtons)
 from ui.style import Colours, Fonts
 from ui.tables.add_line_table import AddLineTable
-from models import Wine, StockMovement
+from db.models import Wine, StockMovement
 
 class AddTransactionForm(ctk.CTkFrame):
     """
@@ -33,24 +33,23 @@ class AddTransactionForm(ctk.CTkFrame):
         
         # TK variables
         self.wine_name_var = tk.StringVar()
-        self.quantity_var = tk.IntVar(value=1)
+        self.quantity_var = tk.StringVar(value=1)
      
         # Listen to any change on their values
         self.wine_name_var.trace_add("write", self.on_entry_change)
         self.quantity_var.trace_add("write", self.on_entry_change)
         self.subtotal_value = None
-        self.line_counter = 0
-        self.line_list = [] # It contains dicts
+        self.temp_stock = {}
 
         # Add components
         self.transaction = transaction_type
         self.label_error = None
         self.label_code = None
+        self.label_stock = None
         self.label_subtotal = None
-        self.frame_lines = None
+        self.table_lines = None
         self.frame_buttons = None
         self.inputs_dict = self.create_components()
-        #self.on_entry_change() # Initial subtotal label update
 
     def get_wine_names_dict(self) -> dict[str:int]:
         """
@@ -70,11 +69,10 @@ class AddTransactionForm(ctk.CTkFrame):
         Returns:
             A list containing all the created inputs the form.
         """
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+        for i in range(3):
+            self.grid_columnconfigure(i, weight=1)
       
-        # ==Add Components==
-        # =Inputs section=
+        # ==Inputs section==
         autocomplete_wine = AutoCompleteInput(
             self,
             label_text="Wine",
@@ -85,7 +83,13 @@ class AddTransactionForm(ctk.CTkFrame):
         self.label_code = DoubleLabel(
             self,
             label_title_text= "Code",
-            label_value_text="",
+            label_value_text="-",
+        )
+
+        self.label_stock = DoubleLabel(
+            self,
+            label_title_text= "Stock",
+            label_value_text="-",
         )
 
         textbox_quantity = IntInput(
@@ -97,8 +101,9 @@ class AddTransactionForm(ctk.CTkFrame):
         self.label_subtotal = DoubleLabel(
             self,
             label_title_text="Subtotal",
-            label_value_text="€ -"
+            label_value_text="€ -",
         )
+        self.label_subtotal.bold_value_text()
         
         button_add_line = ctk.CTkButton(
             self,
@@ -122,9 +127,10 @@ class AddTransactionForm(ctk.CTkFrame):
         autocomplete_wine.grid(row=0, column=0, pady=20, sticky="w")
         self.label_code.grid(row=0, column=1, pady=20, sticky="w")
         textbox_quantity.grid(row=1, column=0, sticky="w")
-        self.label_subtotal.grid(row=1, column=1, sticky="w")
-        button_add_line.grid(row=2, column=0, columnspan=2, pady=(20, 5))
-        self.label_error.grid(row=3, column=0, columnspan=2, pady=(0, 20))
+        self.label_stock.grid(row=1, column=1, sticky="w")
+        self.label_subtotal.grid(row=1, column=2, sticky="w")
+        button_add_line.grid(row=2, column=0, columnspan=3, pady=(20, 5))
+        self.label_error.grid(row=3, column=0, columnspan=3, pady=(0, 20))
 
         # Save inputs for later
         inputs_dict = {
@@ -132,15 +138,15 @@ class AddTransactionForm(ctk.CTkFrame):
             "quantity": textbox_quantity, 
         }
 
-        # =Lines section=
+        # ==Lines section==
         headers = [" ", "Name", "Quantity", "Price", "Subtotal", " "]
-        self.frame_lines = AddLineTable(
+        self.table_lines = AddLineTable(
             self, 
             self.session, 
             headers,
             on_lines_change=self.on_lines_change
         )
-        self.frame_lines.grid(row=4, column=0, columnspan=2, pady=20)
+        self.table_lines.grid(row=4, column=0, columnspan=3, pady=20)
 
         # =Buttons=
         self.frame_buttons = ClearSaveButtons(
@@ -149,7 +155,7 @@ class AddTransactionForm(ctk.CTkFrame):
             btn_save_function=self.save_values
         )
       
-        self.frame_buttons.grid(row=5, column=0, pady=20, columnspan=2)
+        self.frame_buttons.grid(row=5, column=0, pady=20, columnspan=3)
 
         return inputs_dict
 
@@ -179,12 +185,15 @@ class AddTransactionForm(ctk.CTkFrame):
         Remove all lines added by the user.
         """
         # Remove all lines
-        for line in self.frame_lines.winfo_children()[2:]:
+        for line in self.table_lines.winfo_children()[2:]:
             # Access to line_number button to remove all lines
             label_line_button = line.winfo_children()[-1]
             if isinstance(label_line_button, ctk.CTkButton):
                 # Click button
                 label_line_button.invoke()
+        
+        # Clean temp stock dict
+        self.temp_stock.clear()
 
     def save_values(self) -> None:
         """
@@ -198,7 +207,7 @@ class AddTransactionForm(ctk.CTkFrame):
             return
 
         # Iterate over each line
-        for line in self.frame_lines.get_line_list():
+        for line in self.table_lines.get_line_list():
             wine = line["wine"]
             transaction = line["transaction_type"]
             quantity = line["quantity"]
@@ -212,8 +221,6 @@ class AddTransactionForm(ctk.CTkFrame):
             )
             self.session.add(movement)
 
-            # Update Stock in wine table
-            wine.quantity = wine.quantity + (quantity if transaction == "purchase" else -quantity)
         self.session.commit()
 
         # Show a message
@@ -224,6 +231,12 @@ class AddTransactionForm(ctk.CTkFrame):
 
         # Clear all lines
         self.remove_all_lines()
+        
+        # Update stock label
+        wine_name = self.wine_name_var.get().strip()
+        wine_instance = self.session.query(Wine).filter(Wine.name.ilike(wine_name)).first()
+        self.label_stock.update_value_text(wine_instance.quantity)
+        
 
     def on_entry_change(self, *args) -> None:
         """
@@ -237,6 +250,7 @@ class AddTransactionForm(ctk.CTkFrame):
         if selected_wine_name not in self.wine_names_dict:
             self.label_subtotal.update_value_text(f"€ -")
             self.label_code.update_value_text("-")
+            self.label_stock.update_value_text("-")
             return
 
         # Get wine price
@@ -254,6 +268,11 @@ class AddTransactionForm(ctk.CTkFrame):
         # Update labels
         self.label_subtotal.update_value_text(f"€ {self.subtotal_value}")
         self.label_code.update_value_text(wine_instance.code)
+        
+        wine_name_lower = selected_wine_name.lower()
+        if wine_name_lower not in self.temp_stock:
+                self.temp_stock[wine_name_lower] = wine_instance.quantity
+        self.label_stock.update_value_text(self.temp_stock[wine_name_lower])
 
     def get_quantity_var(self) -> int:
         """
@@ -272,6 +291,7 @@ class AddTransactionForm(ctk.CTkFrame):
         """
         # Get variables
         selected_wine_name = self.wine_name_var.get().strip()
+        wine_name_lower = self.wine_name_var.get().strip().lower()
         self.wine_name_var.set(selected_wine_name) # updates variable too
         
         quantity = self.get_quantity_var()
@@ -283,25 +303,58 @@ class AddTransactionForm(ctk.CTkFrame):
             )
             return
 
-        # Show transaction on the table
+        # If stock becomes negative, warn the user
         wine_instance = self.wine_names_dict[selected_wine_name]
-        self.frame_lines.add_new_transaction_line(
+        if self.transaction == "purchase":
+            self.temp_stock[wine_name_lower] += quantity
+        elif self.transaction == "sale":
+            self.temp_stock[wine_name_lower] -= quantity
+        
+        if self.temp_stock[wine_name_lower] < 0:
+            user_reply = messagebox.askyesno(
+                title="Negative stock",
+                message = (
+                    "Adding this transaction will result in a negative stock level."
+                    "\nDo you want to proceed anyway?"
+                )
+            )
+            if not user_reply:
+                self.temp_stock[wine_name_lower] += quantity
+                return
+        
+        # Show transaction on the table
+        self.table_lines.add_new_transaction_line(
             wine_instance, 
             self.transaction,
             quantity, 
             self.subtotal_value
         )
 
+        # Update stock
+        self.label_stock.update_value_text(self.temp_stock[wine_name_lower])
+
         # Enable save button and clear errors
         self.frame_buttons.enable_save_button()
-        self.label_error.configure(text = "")
+        self.label_error.configure(text="")
 
-    def on_lines_change(self, lines_size: int):
+    def on_lines_change(self, lines_size: int, wine_name_lower: str, quantity: int):
         """
-        Check the number of lines and disable save button if it is 0.
+        Check the number of lines and disable save button if it is 0. Also, it
+        updates temp stock.
         Inputs:
             - lines_size: Number of existing lines in the table
+            - wine_name_lower: Name of the wine (lowercase) of the deleted
+            transaction, used for temp stock.
+            - Quantity: Number of wines of the deleted transaction, used for temp
+            stock.
         """
         # Disable save button
         if lines_size == 0:
             self.frame_buttons.disable_save_button()
+        # Update stock
+        if self.transaction == "sale":
+            self.temp_stock[wine_name_lower] += quantity
+        elif self.transaction == "purchase":
+            self.temp_stock[wine_name_lower] -= quantity
+        if self.wine_name_var.get().strip().lower() == wine_name_lower:
+            self.label_stock.update_value_text(self.temp_stock[wine_name_lower])

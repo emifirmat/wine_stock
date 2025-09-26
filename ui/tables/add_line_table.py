@@ -7,7 +7,7 @@ import tkinter as tk
 import tkinter.messagebox as messagebox
 from decimal import Decimal
 
-from models import Wine
+from db.models import Wine
 from ui.style import Colours, Fonts
 from ui.components import DoubleLabel
 
@@ -43,9 +43,6 @@ class AddLineTable(ctk.CTkFrame):
         """
         Create Inputs and buttons.
         """
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
-
         # Headers
         row_header_frame = ctk.CTkFrame(
             self,
@@ -53,7 +50,7 @@ class AddLineTable(ctk.CTkFrame):
         )
         row_header_frame.pack(fill="x", pady=2)
         
-        widths = [50, 300, 100, 100, 100, 30]
+        widths = [50, 200, 100, 100, 100, 30]
         for i, (header, width) in enumerate(zip(self.headers, widths)):
             label = ctk.CTkLabel(
                 row_header_frame, 
@@ -61,8 +58,9 @@ class AddLineTable(ctk.CTkFrame):
                 text_color=Colours.TEXT_MAIN,
                 font=Fonts.TEXT_HEADER,
                 width=width,
+                wraplength=width
             )
-            label.grid(row=0, column=i, padx=5)
+            label.grid(row=0, column=i, padx=(0, 10))
 
         # Total amount
         total = DoubleLabel(
@@ -70,7 +68,7 @@ class AddLineTable(ctk.CTkFrame):
             label_title_text="Total",
             text_variable=self.total_var
         )
-        total.label_value.configure(font=Fonts.TEXT_HEADER)
+        total.bold_value_text()
         total.pack(side="bottom", anchor="se")
 
     def add_new_transaction_line(self, wine_instance: Wine, transaction_type: str, 
@@ -114,6 +112,7 @@ class AddLineTable(ctk.CTkFrame):
             text_color=Colours.TEXT_MAIN,
             font=Fonts.TEXT_LABEL,
             width=50,
+            wraplength=50
         )
 
         column_name = ctk.CTkLabel(
@@ -121,11 +120,12 @@ class AddLineTable(ctk.CTkFrame):
             text=wine_instance.name,
             text_color=Colours.TEXT_MAIN,
             font=Fonts.TEXT_LABEL,
-            width=300,
+            width=200,
+            wraplength=200
         )
 
-        column_line_number.grid(row=0, column=0, padx=(0, 20))
-        column_name.grid(row=0, column=1, padx=(0, 20))
+        column_line_number.grid(row=0, column=0, padx=(0, 10))
+        column_name.grid(row=0, column=1, padx=(0, 10))
 
         for i, column_text in enumerate([quantity, f"€ {price}", 
             f"€ {subtotal}"], start=2
@@ -136,9 +136,10 @@ class AddLineTable(ctk.CTkFrame):
                 text_color=Colours.TEXT_MAIN,
                 font=Fonts.TEXT_LABEL,
                 width=100,
+                wraplength=100
             
             )
-            label_column.grid(row=0, column=i, padx=(0, 20))
+            label_column.grid(row=0, column=i, padx=(0, 10))
 
         button_remove = ctk.CTkButton(
             frame_line,
@@ -165,31 +166,35 @@ class AddLineTable(ctk.CTkFrame):
             subtotal.
             - subtotal: Result of doing quantity x price.
         """
+        wine_name = parent_frame.winfo_children()[1].cget("text").lower().strip() 
+        quantity = parent_frame.winfo_children()[2].cget("text")
+        
         line_table_index = parent_frame.winfo_children()[0].cget("text")
         line_table_index = int(line_table_index.replace(".","")) - 1
-        current = line_table_index
+        current_index = line_table_index
         
         # Refresh total value
         self.update_total_value(subtotal, substract=True)
 
         # Update rest of the lines indices (first 2 indices are headers and total)
-        # As children are 0base, and enum 1based, I don't need to add + 1
+        # As children are 0-based, and enum 1based, I don't need to add + 1
         for line in self.winfo_children()[line_table_index + 2:]:
             label_line_number = line.winfo_children()[0]
             if isinstance(label_line_number, ctk.CTkLabel):
                 label_line_number.configure(
-                    text=f"{current}."
+                    text=f"{current_index}."
                 )
-                current += 1
+                current_index += 1
 
         # Remove line
         parent_frame.destroy()
-        del self.line_list[line_table_index - 1]
+        del self.line_list[line_table_index]
         self.line_counter -= 1
         
-        # Callback Disable save button is there are no more lines
+        # Callback disable save button if there are no more lines and reduce 
+        # temp stock 
         if self.on_lines_change:
-            self.on_lines_change(len(self.line_list))
+            self.on_lines_change(len(self.line_list), wine_name, int(quantity))
 
     def update_total_value(self, subtotal: Decimal, substract: bool = False):
         """

@@ -7,7 +7,7 @@ from PIL import Image
 from ui.components import TextInput, ImageInput
 from ui.style import Colours, Fonts
 from helpers import load_ctk_image
-from models import Shop
+from db.models import Shop
 
 class SettingsFrame(ctk.CTkFrame):
     """

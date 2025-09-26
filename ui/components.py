@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import Callable
 
 from helpers import load_ctk_image, resource_path
-from models import Wine
+from db.models import Wine
 from ui.style import Colours, Fonts, Icons
 
 
@@ -776,6 +776,11 @@ class DoubleLabel(ctk.CTkFrame):
             text=new_text
         )
 
+    def bold_value_text(self):
+        """
+        Makes the label that contains the value bold.
+        """
+        self.label_value.configure(font=Fonts.TEXT_HEADER)
 
 class ImageInput(BaseInput):
     """

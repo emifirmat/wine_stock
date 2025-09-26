@@ -1,7 +1,8 @@
 import customtkinter as ctk
 
+import db.events
 from decimal import Decimal
-from models import Session, Shop, Colour, Style, Varietal, Wine
+from db.models import Session, Shop, Colour, Style, Varietal, Wine
 from helpers import populate_db_model, get_by_id
 from ui.main_window import MainWindow
 
