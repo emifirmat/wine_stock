@@ -14,6 +14,30 @@ from db.models import Wine
 from ui.style import Colours, Fonts, Icons
 
 
+class FixedSizeToplevel(ctk.CTkToplevel):
+    """
+    Toplevel that resizes to its original width and height if the user tries to
+    change it.
+    """
+    def __init__(self, root, width: int, height: int, **kwargs):
+        super().__init__(root, **kwargs)
+        self.original_width = width
+        self.original_height = height
+        self.geometry(f"{width}x{height}")
+
+        self.resizable(False, False)
+        self.bind("<Configure>", self.on_configure)
+
+    def on_configure(self, event):
+        """
+        Restore the size if was changed
+        """
+        if event.width != self.original_width or event.height != self.original_height:
+            self.after(
+                10, 
+                lambda: self.geometry(f"{self.original_width}x{self.original_height}+{self.winfo_x()}+{self.winfo_y()}")
+            )
+
 class TextEntry(ctk.CTkEntry):
     """
     Entry component with a max_length validation
@@ -559,7 +583,7 @@ class IntInput(BaseInput):
     A frame that contains a label and an integer entry components
     """
     def __init__(
-        self, root, placeholder: str | None = None, from_: int = None,
+        self, root, placeholder: str | None = None, from_: int | None = None,
         to: int | None = None, textvariable=None, **kwargs
     ):
         super().__init__(root, **kwargs)
@@ -781,6 +805,17 @@ class DoubleLabel(ctk.CTkFrame):
         Makes the label that contains the value bold.
         """
         self.label_value.configure(font=Fonts.TEXT_HEADER)
+
+    def set_columns_layout(self, title_width, value_width, anchor):
+        """
+        """
+        self.label_title.configure(
+            width=title_width, wraplength=title_width, anchor=anchor
+        )
+        self.label_value.configure(
+            width=value_width, wraplength=value_width, anchor=anchor
+        )
+
 
 class ImageInput(BaseInput):
     """

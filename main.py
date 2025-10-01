@@ -14,8 +14,8 @@ def main():
     # Populate colour and style columns
     wine_colours = ["red", "white", "rosé", "orange", "other"]
     wine_styles = ["still", "sparkling", "fortified", "dessert", "other"]
-    wine_varietals = ["Malbec", "Cabernet Sauvignon", "Torrontés", "Moscato Bianco",
-    "Touriga Nacional", "Baga", "Grenache", "Hondarrabi Zuri", "Tinta Roriz"]
+    wine_varietals = ["malbec", "cabernet sauvignon", "torrontés", "moscato bianco",
+    "touriga nacional", "baga", "grenache", "hondarrabi zuri", "tinta roriz"]
     populate_db_model(wine_colours, Colour, session)
     populate_db_model(wine_styles, Style, session)
     populate_db_model(wine_varietals, Varietal, session)

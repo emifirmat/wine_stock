@@ -44,10 +44,7 @@ class AddLineTable(ctk.CTkFrame):
         Create Inputs and buttons.
         """
         # Headers
-        row_header_frame = ctk.CTkFrame(
-            self,
-            fg_color="transparent"
-        )
+        row_header_frame = ctk.CTkFrame(self, fg_color="transparent")
         row_header_frame.pack(fill="x", pady=2)
         
         widths = [50, 200, 100, 100, 100, 30]

@@ -7,7 +7,7 @@ import customtkinter as ctk
 from ui.components import Card, ButtonGoBack
 from ui.forms.add_wine import AddWineForm
 from ui.forms.remove_wine import RemoveWineForm
-from ui.tables.wines_table import WinesTable
+from ui.forms.show_wine import ShowWineForm
 from ui.style import Colours, Fonts
 from db.models import Wine
 
@@ -166,12 +166,7 @@ class WineFrame(ctk.CTkScrollableFrame):
         """
         self.show_subsection(
             "WINE LIST",
-            WinesTable,
-            headers=[
-                "code", "picture", "name", "vintage year", "origin", "quantity",
-                "purchase price", "selling price"
-            ],
-            lines=Wine.all_ordered(self.session)
+            ShowWineForm,
         )
     
     def clear_content(self) -> None:

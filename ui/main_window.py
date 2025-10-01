@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 
 from ui.components import NavLink
 from ui.style import Colours, Fonts, Icons
-#from ui.frames.wine_frame import HomeFrame
 from ui.frames.home_frame import HomeFrame
 from ui.frames.wine_frame import WineFrame
 from ui.frames.report_frame import ReportFrame
@@ -83,7 +82,7 @@ class MainWindow:
 
         # Set expansion behaviour for main window
         self.root.grid_rowconfigure(1, weight=1) # Only second row grows
-        self.root.grid_columnconfigure(1, weight=1) # ONly second col grows
+        self.root.grid_columnconfigure(1, weight=1) # Only second col grows
 
         # Place and show frames
         self.frame_top.grid(
