@@ -188,7 +188,11 @@ class MainWindow:
         """
         self.clear_body()
 
-        frame = frame_class(self.frame_body, self.session, **kwargs)
+        frame = frame_class(
+            self.frame_body, 
+            self.session, 
+            **kwargs
+        )
 
         self.frame_body.grid_rowconfigure(0, weight=1)
         self.frame_body.grid_columnconfigure(0, weight=1)

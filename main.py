@@ -12,10 +12,10 @@ def main():
     # == DB config ==
     session = Session()    
     # Populate colour and style columns
-    wine_colours = ["red", "white", "rosé", "orange", "other"]
-    wine_styles = ["still", "sparkling", "fortified", "dessert", "other"]
-    wine_varietals = ["malbec", "cabernet sauvignon", "torrontés", "moscato bianco",
-    "touriga nacional", "baga", "grenache", "hondarrabi zuri", "tinta roriz"]
+    wine_colours = ["red", "rosé", "orange", "white", "other"]
+    wine_styles = ["dessert", "fortified", "sparkling", "still", "other"]
+    wine_varietals = ["baga", "cabernet sauvignon", "grenache", "hondarrabi zuri", 
+    "malbec", "moscato bianco", "tinta roriz", "torrontés", "touriga nacional","other"]
     populate_db_model(wine_colours, Colour, session)
     populate_db_model(wine_styles, Style, session)
     populate_db_model(wine_varietals, Varietal, session)

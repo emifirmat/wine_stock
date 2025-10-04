@@ -11,7 +11,7 @@ from ui.components import (IntInput, DropdownInput, DoubleLabel, AutoCompleteInp
     ClearSaveButtons, DateInput)
 from ui.style import Colours, Fonts
 from ui.tables.wines_table import WinesTable
-from db.models import Wine, StockMovement
+from db.models import Wine, Colour, Style, Varietal
 
 class ShowWineForm(ctk.CTkFrame):
     """
@@ -28,12 +28,17 @@ class ShowWineForm(ctk.CTkFrame):
         self.session = session
         self.wine_names_dict = self.get_wine_names_dict()
         self.wine_names_list = list(self.wine_names_dict.keys()) # ordered
-        self.wine_codes_list = [wine.code for wine in Wine.all_ordered(self.session)]
-        self.wine_winery_list = set([wine.winery for wine in Wine.all_ordered(self.session)])
-        self.wine_varietal_list = [wine.varietal.name for wine in Wine.all_ordered(self.session)]
-        self.wine_origin_list = set([wine.origin for wine in Wine.all_ordered(self.session)])
-        
-
+        self.wine_codes_list = [
+            wine.code for wine in Wine.column_ordered(self.session, "code", "code")
+        ]
+        self.wine_winery_list = [
+            wine.winery 
+            for wine in Wine.column_ordered(self.session, "winery", "winery", "winery")
+        ]
+        self.wine_origin_list = [
+            wine.origin 
+            for wine in Wine.column_ordered(self.session, "origin", "origin", "origin")
+        ]
 
         # TK variables
         self.wine_name_var = tk.StringVar()
@@ -126,7 +131,10 @@ class ShowWineForm(ctk.CTkFrame):
         dropdown_colours = DropdownInput(
             filter_frame,
             label_text= "Colour",
-            values=["", "Red", "White", "Rosé", "Orange", "Other"],
+            values=[""] + [
+                w_colour.name.capitalize()
+                for w_colour in self.session.query(Colour).all()
+            ],
             optional=True,
             command=self.on_entry_change, # It doesn't need variable trace
         )
@@ -134,7 +142,10 @@ class ShowWineForm(ctk.CTkFrame):
         dropdown_styles = DropdownInput(
             filter_frame,
             label_text= "Style",
-            values=["", "Still", "Sparkling", "Fortified", "Dessert", "Other"],
+            values=[""] + [
+                style.name.capitalize() 
+                for style in self.session.query(Style).all()
+            ],
             optional=True,
             command=self.on_entry_change,
         )
@@ -142,7 +153,10 @@ class ShowWineForm(ctk.CTkFrame):
         dropdown_varietals = DropdownInput(
             filter_frame,
             label_text= "Varietal",
-            values=[""] + self.wine_varietal_list,
+            values=[""] + [
+                varietal.name.capitalize() 
+                for varietal in self.session.query(Varietal).all()
+            ],
             optional=True,
             command=self.on_entry_change,
         )
@@ -266,7 +280,7 @@ class ShowWineForm(ctk.CTkFrame):
             wo.lower() for wo in self.wine_origin_list 
             if wine_origin in wo.lower()
         ]
-        
+
         # If there is no match, stop the function
         if (len(filtered_names) == 0 
             and len(filtered_codes) == 0
@@ -275,12 +289,12 @@ class ShowWineForm(ctk.CTkFrame):
             and wine_style == ""
             and wine_varietal == ""
             and wine_year == ""
-            and wine_origin == 0
+            and len(filtered_origin) == 0
         ):
             return
 
         # else, update the table
         self.wines_table.apply_filters(
             filtered_names, filtered_codes, filtered_wineries, wine_colour, 
-            wine_style, wine_varietal, wine_year, wine_origin
+            wine_style, wine_varietal, wine_year, filtered_origin
         )

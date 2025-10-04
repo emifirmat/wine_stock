@@ -78,14 +78,14 @@ class WinesTable(DataTable, SortMixin):
  
     def apply_filters(
             self, filtered_names, filtered_codes, filtered_wineries, wine_colour, 
-            wine_style, wine_varietal, wine_year, wine_origin
+            wine_style, wine_varietal, wine_year, filtered_origin
         ):
         """
         Update the table by filters. 
         """
         # Update filtered lines
         self.filtered_lines = []
-   
+
         for line in self.lines:
             if (                
                 line.name.lower() in filtered_names
@@ -95,7 +95,7 @@ class WinesTable(DataTable, SortMixin):
                 and (line.style.name.capitalize() == wine_style or not wine_style)
                 and (line.varietal.name.capitalize() == wine_varietal or not wine_varietal)
                 and (str(line.vintage_year) == wine_year or not wine_year)
-                and (line.origin.lower() == wine_origin or not wine_origin)
+                and line.origin.lower() in filtered_origin
 
             ):
                 self.filtered_lines.append(line)
@@ -188,7 +188,7 @@ class WinesTable(DataTable, SortMixin):
         text_values = [
             line.name, line.code, line.winery, line.colour.name.capitalize(), 
             line.style.name.capitalize(), line.varietal.name, line.vintage_year, 
-            line.origin, line.quantity, f"€ {line.purchase_price}", 
+            line.origin, str(line.quantity), f"€ {line.purchase_price}", 
             f"€ {line.selling_price}"
         ]
         

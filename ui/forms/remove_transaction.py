@@ -31,7 +31,9 @@ class RemoveTransactionForm(ctk.CTkFrame):
         self.session = session
         self.wine_names_dict = self.get_wine_names_dict()
         self.wine_names_list = list(self.wine_names_dict.keys()) # ordered
-        self.wine_codes_list = [wine.code for wine in Wine.all_ordered(self.session)]
+        self.wine_codes_list = [
+            wine.code for wine in Wine.column_ordered(self.session, "code", "code")
+        ]
         
         # TK variables
         self.wine_name_var = tk.StringVar()

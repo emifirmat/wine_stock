@@ -1,5 +1,5 @@
 from sqlalchemy import (event, create_engine, Column, ForeignKey, Integer, 
-    String, DateTime, Numeric, Enum)
+    String, DateTime, Numeric, Enum, text)
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from datetime import datetime
 
@@ -62,7 +62,7 @@ class Wine(Base):
     origin = Column(String(MAX_CHARS)) # Optional
     code = Column(String, unique=True, nullable=False)
     wine_picture_path = Column(String) # Optional
-    quantity = Column(Integer, default=0)
+    quantity = Column(Integer, default=0, server_default=text("0"))
     purchase_price = Column(Numeric(10, 2), nullable=False)
     selling_price = Column(Numeric(10, 2), nullable=False)
 
@@ -74,8 +74,42 @@ class Wine(Base):
 
     # Ordered list
     @classmethod
-    def all_ordered(cls, session):
-        return session.query(cls).order_by(cls.name.asc()).all()
+    def all_ordered(cls, session, order_by="name", distinct=None):
+        # Check order_by has the correct field
+        
+        for field in [order_by, distinct]:
+            if field and not hasattr(cls, field):
+                raise ValueError(f"Field {field} doesn't exist in the model {cls.__name__}")
+        
+        # Return sorted query
+        if distinct: # Unique values
+            return session.query(cls)\
+                .distinct()\
+                .order_by(getattr(cls, order_by).asc())\
+                .all()
+        else: # Values can be repeated
+            return session.query(cls)\
+                .order_by(getattr(cls, order_by).asc())\
+                .all()
+
+    @classmethod
+    def column_ordered(cls, session, column, order_by="name", distinct=None):
+        # Check order_by has the correct field
+        for field in [order_by, distinct]:
+            if field and not hasattr(cls, field):
+                raise ValueError(f"Field {field} doesn't exist in the model {cls.__name__}")
+        
+        # Return sorted query
+        if distinct: # Unique values
+            return session.query(getattr(cls, column))\
+                .distinct()\
+                .order_by(getattr(cls, order_by).asc())\
+                .all()
+        else: # Values can be repeated
+            return session.query(getattr(cls, column))\
+                .order_by(getattr(cls, order_by).asc())\
+                .all()
+    
 
 class Colour(Base):
     """
@@ -88,6 +122,11 @@ class Colour(Base):
     # Relationships
     wines = relationship("Wine", back_populates="colour")
 
+    @classmethod
+    def all_ordered(cls, session):
+        return session.query(cls).order_by(cls.name.asc()).all()
+
+
 class Style(Base):
     """
     Style table, contains style name of the wine
@@ -98,6 +137,11 @@ class Style(Base):
     
     # Relationships
     wines = relationship("Wine", back_populates="style")
+
+    @classmethod
+    def all_ordered(cls, session):
+        return session.query(cls).order_by(cls.name.asc()).all()
+
 
 class Varietal(Base):
     """
@@ -127,6 +171,11 @@ class Varietal(Base):
             session.add(instance)
             session.commit()
         return instance
+    
+    @classmethod
+    def all_ordered(cls, session):
+        return session.query(cls).order_by(cls.name.asc()).all()
+
 
 class StockMovement(Base):
     """
