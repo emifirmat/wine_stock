@@ -137,6 +137,7 @@ class WineFrame(ctk.CTkScrollableFrame):
         form = form_class(
             self,
             self.session,
+            fg_color=Colours.BG_SECONDARY,
             **kwargs
         )
         form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") 

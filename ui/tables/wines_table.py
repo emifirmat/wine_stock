@@ -43,13 +43,10 @@ class WinesTable(DataTable, SortMixin):
             - A list with the values of the instance formatted to be used as
             the text of a label.
         """
-        if line.wine_picture_path:
-            image_path = line.wine_picture_path  
-        else: 
-            image_path = "assets/user_images/wines/default_wine.png"
+
         return [
-            line.code, image_path, line.name, str(line.vintage_year), 
-            line.origin, str(line.quantity), f"€ {line.purchase_price}", 
+            line.code, line.picture_path_display, line.name, str(line.vintage_year), 
+            line.origin_display, str(line.quantity), f"€ {line.purchase_price}", 
             f"€ {line.selling_price}"
         ]
 
@@ -93,7 +90,7 @@ class WinesTable(DataTable, SortMixin):
                 and line.winery.lower() in filtered_wineries
                 and (line.colour.name.capitalize() == wine_colour or not wine_colour)
                 and (line.style.name.capitalize() == wine_style or not wine_style)
-                and (line.varietal.name.capitalize() == wine_varietal or not wine_varietal)
+                and (line.varietal_display.capitalize() == wine_varietal or not wine_varietal)
                 and (str(line.vintage_year) == wine_year or not wine_year)
                 and line.origin.lower() in filtered_origin
 
@@ -167,15 +164,9 @@ class WinesTable(DataTable, SortMixin):
             - top_level: Container of the labels (images and details)
             - line: Instance of the DB class Wine
         """
-        # Setup Image
-        if line.wine_picture_path:
-            image_path = line.wine_picture_path  
-        else: 
-            image_path = "assets/user_images/wines/default_wine.png"
-
         ctk.CTkLabel(
             top_level, 
-            image=load_ctk_image(image_path, size=(120, 120)),
+            image=load_ctk_image(line.picture_path_display, size=(120, 120)),
             text="",  
         ).pack(padx=5, pady=(15, 0))
 
@@ -186,9 +177,9 @@ class WinesTable(DataTable, SortMixin):
         ]
 
         text_values = [
-            line.name, line.code, line.winery, line.colour.name.capitalize(), 
-            line.style.name.capitalize(), line.varietal.name, line.vintage_year, 
-            line.origin, str(line.quantity), f"€ {line.purchase_price}", 
+            line.name, line.code, line.winery, line.colour.name.title(), 
+            line.style.name.title(), line.varietal_display.title(), line.vintage_year, 
+            line.origin_display, str(line.quantity), f"€ {line.purchase_price}", 
             f"€ {line.selling_price}"
         ]
         

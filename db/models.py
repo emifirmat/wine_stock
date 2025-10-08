@@ -17,6 +17,27 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
+# == Mixins ==
+class NamedModelMixin:
+    
+    @classmethod
+    def all_ordered(cls, session):
+        return session.query(cls).order_by(cls.name.asc()).all()
+    
+    @classmethod
+    def get_name(cls, session, **filters):
+        """
+        Return the instance or create a new one.
+
+        Inputs:
+            session: DB session to make query
+            **filters: Key-pair values used to filter the query
+        """
+        if not filters["name"]:
+            raise ValueError("Attribute 'name' should have a value.")
+        return session.query(cls).filter_by(**filters).first()
+
+
 # == Create tables ==
 Base = declarative_base()
 
@@ -61,7 +82,7 @@ class Wine(Base):
     vintage_year = Column(Integer, nullable=False) 
     origin = Column(String(MAX_CHARS)) # Optional
     code = Column(String, unique=True, nullable=False)
-    wine_picture_path = Column(String) # Optional
+    picture_path = Column(String) # Optional
     quantity = Column(Integer, default=0, server_default=text("0"))
     purchase_price = Column(Numeric(10, 2), nullable=False)
     selling_price = Column(Numeric(10, 2), nullable=False)
@@ -109,9 +130,35 @@ class Wine(Base):
             return session.query(getattr(cls, column))\
                 .order_by(getattr(cls, order_by).asc())\
                 .all()
+
+    @property
+    def picture_path_display(self):
+        """
+        Displays the origin of the wine or N/A.
+        """
+        if self.picture_path:
+            return self.picture_path
+        else:
+            return "assets/user_images/wines/default_wine.png"
+    
+    
+    @property
+    def origin_display(self):
+        """
+        Displays the origin of the wine or N/A.
+        """
+        return self.origin if self.origin else "N/A"
+    
+    @property
+    def varietal_display(self):
+        """
+        Displays the varietal name of the wine or N/A.
+        """
+        return self.varietal.name if self.varietal else "N/A"
+       
     
 
-class Colour(Base):
+class Colour(Base, NamedModelMixin):
     """
     Colour table, contains colour name of the wine
     """
@@ -122,12 +169,8 @@ class Colour(Base):
     # Relationships
     wines = relationship("Wine", back_populates="colour")
 
-    @classmethod
-    def all_ordered(cls, session):
-        return session.query(cls).order_by(cls.name.asc()).all()
 
-
-class Style(Base):
+class Style(Base, NamedModelMixin):
     """
     Style table, contains style name of the wine
     """
@@ -138,12 +181,8 @@ class Style(Base):
     # Relationships
     wines = relationship("Wine", back_populates="style")
 
-    @classmethod
-    def all_ordered(cls, session):
-        return session.query(cls).order_by(cls.name.asc()).all()
 
-
-class Varietal(Base):
+class Varietal(Base, NamedModelMixin):
     """
     Varietal table, contains varietal name of the main grape used for the wine.
     """
@@ -153,29 +192,7 @@ class Varietal(Base):
     
     # Relationships
     wines = relationship("Wine", back_populates="varietal")
-
-    @classmethod
-    def get_or_create(cls, session, **kwargs):
-        """
-        Return the instance or create a new one.
-
-        Inputs:
-            session: DB session to make query
-            **kwargs: KEy-pair values used to filter the query
-        """
-        instance = session.query(cls).filter_by(**kwargs).first()
-        # Create instance if it doesn't exist
-        if not instance:
-            parameters = {**kwargs}
-            instance = cls(**parameters)
-            session.add(instance)
-            session.commit()
-        return instance
     
-    @classmethod
-    def all_ordered(cls, session):
-        return session.query(cls).order_by(cls.name.asc()).all()
-
 
 class StockMovement(Base):
     """

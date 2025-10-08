@@ -14,6 +14,64 @@ from db.models import Wine
 from ui.style import Colours, Fonts, Icons
 
 
+class EntryInputMixin:
+    """
+    Mixin that adds methods that belong to the entries.
+    """
+    def set_entry_width(self, entry_width: int):
+        """
+        Set the width of the entry.
+        Parameters:
+            - entry_width: Width of the column entry.
+        """
+        self.entry.configure(
+            width=entry_width
+        )
+    
+    def clear(self):
+        """
+        Removes the text typed by the user.
+        """
+        self.entry.delete(0, "end") 
+
+    def get(self):
+        """
+        Returns the value (Text) of Entry.
+        """
+        return self.entry.get()
+
+    def set_input_width(self, input_width: int):
+        """
+        Sets the total with of the input, used for aligment. It will create an 
+        empty label to cover the remaning width.
+        Parameters:
+            - input_width: Total width of the input.
+        Requirements:
+            - The class should be aa CTkFrame containing the rest of the widgets.
+            - The class must define self.label
+            - The class must define self.entry
+        """
+        # Wait for the program to render widgets before gettign info
+        self.update_idletasks()
+        
+        # Calculate widths
+        label_width = self.label.winfo_width()
+        label_asterisk_width = self.label_optional.winfo_width()
+        entry_width = self.entry.winfo_width()
+        empty_label_width = input_width - (label_width + entry_width + label_asterisk_width)
+
+        if empty_label_width < 0:
+            raise ValueError("input_width should be higher than label_width + entry_width")
+
+        # Create empty label for aligment
+        empty_label = ctk.CTkLabel(
+            self, # frame that contains all ctk components
+            text="",
+            width=empty_label_width
+        )
+        empty_label.grid(row=0, column=3)
+
+
 class FixedSizeToplevel(ctk.CTkToplevel):
     """
     Toplevel that resizes to its original width and height if the user tries to
@@ -60,7 +118,6 @@ class TextEntry(ctk.CTkEntry):
             # %P is from Tkinter and means "new content after typing"
             validatecommand=(validate_cmd, "%P") ,      
         )
-
 
     def _validate_len(self, text: str) -> bool:
         return len(text) <= self.max_len
@@ -158,12 +215,15 @@ class DecimalEntry(ctk.CTkEntry):
         
         if text == "" :
             return True
-        # Reject letters and extra points
-        if text.isalpha() or text.count('.') > 1:
+
+        # Accept only numbers and dor ("123", "0.5", ".5", "5.")
+        if not re.fullmatch(r"\d*\.?\d*", text):
             return False
-        # Accept a dot, but don't convert to decimal yet
-        if text[-1] == ".":
+        
+        # Accept edge cases of dot
+        if text.endswith('.'):
             return True
+     
         # Catch other weird symbols
         try:   
             number = Decimal(text)
@@ -472,7 +532,6 @@ class AutocompleteEntry(ctk.CTkEntry):
             # Global bind, click outside
             self.main_window.bind("<Button-1>", self.on_click_outside, add="+")
         
-
     def select_suggestion(self, event):
         """
         Get the selected element from listbox and update entry.
@@ -533,7 +592,9 @@ class BaseInput(ctk.CTkFrame):
             text=label_text,
             text_color=Colours.TEXT_SECONDARY,
             font=Fonts.TEXT_LABEL,
-            width=100
+            width=90,
+            wraplength=90,
+            anchor="w"
         )
 
         self.asterisk = "*" if not optional else ""
@@ -542,13 +603,26 @@ class BaseInput(ctk.CTkFrame):
             text=self.asterisk,
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TEXT_LABEL,
+            width=10,
+            anchor="w"
         )
         
         # Place components
         self.label.grid(row=0, column=0, sticky="w") 
         self.label_optional.grid(row=0, column=1, padx=(0, 10))
 
-class TextInput(BaseInput):
+    def set_label_layout(self, label_width: int):
+        """
+        Set the width of the label.
+        Parameters:
+            - label_width: Width of the column label.
+        """
+        self.label.configure(
+            width=label_width, wraplength=label_width
+        )
+
+
+class TextInput(BaseInput, EntryInputMixin):
     """
     A frame that contains a label and an entry components
     """
@@ -570,15 +644,8 @@ class TextInput(BaseInput):
         # Place components
         self.entry.grid(row=0, column=2)
 
-    def clear(self):
-        """Removes the text typed by the user"""
-        self.entry.delete(0, "end") 
 
-    def get(self):
-        """Returns the value (Text) of Entry"""
-        return self.entry.get()
-
-class IntInput(BaseInput):
+class IntInput(BaseInput, EntryInputMixin):
     """
     A frame that contains a label and an integer entry components
     """
@@ -588,7 +655,7 @@ class IntInput(BaseInput):
     ):
         super().__init__(root, **kwargs)
 
-        self.int_entry = IntEntry(
+        self.entry = IntEntry(
             self,
             fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN, 
@@ -601,17 +668,10 @@ class IntInput(BaseInput):
         )
         
         # Place components
-        self.int_entry.grid(row=0, column=2)
+        self.entry.grid(row=0, column=2)
 
-    def clear(self):
-        """Removes the text typed by the user"""
-        self.int_entry.delete(0, "end") 
 
-    def get(self):
-        """Returns the value (integer) of IntEntry"""
-        return self.int_entry.get()
-
-class DecimalInput(BaseInput):
+class DecimalInput(BaseInput, EntryInputMixin):
     """
     A frame that contains a label and an decimal entry components
     """
@@ -621,7 +681,7 @@ class DecimalInput(BaseInput):
     ):
         super().__init__(root, **kwargs)
 
-        self.decimal_entry = DecimalEntry(
+        self.entry = DecimalEntry(
             self,
             fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN, 
@@ -634,18 +694,10 @@ class DecimalInput(BaseInput):
         )
         
         # Place components
-        self.decimal_entry.grid(row=0, column=2)
+        self.entry.grid(row=0, column=2)
 
-    def clear(self):
-        """Removes the text typed by the user"""
-        self.decimal_entry.delete(0, "end") 
 
-    
-    def get(self):
-        """Returns the value (decimal) of DecimalEntry"""
-        return self.decimal_entry.get()
-
-class AutoCompleteInput(BaseInput):
+class AutoCompleteInput(BaseInput, EntryInputMixin):
     """
     A frame that contains a label and an AutoComplete entry components
     """
@@ -655,7 +707,7 @@ class AutoCompleteInput(BaseInput):
     ):
         super().__init__(root, **kwargs)
 
-        self.autocomplete_entry = AutocompleteEntry(
+        self.entry = AutocompleteEntry(
             self,
             wine_list=wine_list,
             fg_color=Colours.BG_SECONDARY,
@@ -667,13 +719,10 @@ class AutoCompleteInput(BaseInput):
         )
         
         # Place components
-        self.autocomplete_entry.grid(row=0, column=2)
+        self.entry.grid(row=0, column=2)
 
-    def clear(self):
-        """Removes the text typed by the user"""
-        self.autocomplete_entry.delete(0, "end") 
 
-class DateInput(BaseInput):
+class DateInput(BaseInput, EntryInputMixin):
     """
     A frame that contains a label and an decimal entry components
     """
@@ -682,7 +731,7 @@ class DateInput(BaseInput):
     ):
         super().__init__(root, **kwargs)
 
-        self.date_entry = DateEntry(
+        self.entry = DateEntry(
             self,
             fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN, 
@@ -692,18 +741,13 @@ class DateInput(BaseInput):
             state="readonly"
         )
 
-        self.date_entry.grid(row=0, column=2)
+        self.entry.grid(row=0, column=2)
 
     def clear(self):
         """Removes the text typed by the user"""
-        self.date_entry.configure(state="normal")
-        self.date_entry.delete(0, "end") 
-        self.date_entry.configure(state="readonly")
- 
-
-    def get(self):
-        """Returns the value (decimal) of DecimalEntry"""
-        return self.date_entry.get()
+        self.entry.configure(state="normal")
+        self.entry.delete(0, "end") 
+        self.entry.configure(state="readonly")
 
 
 class DropdownInput(BaseInput):
@@ -752,6 +796,34 @@ class DropdownInput(BaseInput):
             Values: New list of values that will be available in the dropdown
         """
         self.dropdown.configure(values=values)
+
+    def set_input_width(self, input_width: int):
+        """
+        Sets the total with of the dropdown, used for aligment. It will create an 
+        empty label to cover the remaning width.
+        Parameters:
+            - input_width: Total width of the input.
+   
+        """
+        # Wait for the program to render widgets before gettign info
+        self.update_idletasks()
+        
+        # Calculate widths
+        label_width = self.label.winfo_width()
+        label_asterisk_width = self.label_optional.winfo_width()
+        dropdown_width = self.dropdown.winfo_width()
+        empty_label_width = input_width - (label_width + dropdown_width + label_asterisk_width)
+
+        if empty_label_width < 0:
+            raise ValueError("input_width should be higher than labels width + dropdown width")
+
+        # Create empty label for aligment
+        empty_label = ctk.CTkLabel(
+            self, # frame that contains all ctk components
+            text="",
+            width=empty_label_width
+        )
+        empty_label.grid(row=0, column=3)
 
    
 class DoubleLabel(ctk.CTkFrame):
@@ -806,8 +878,13 @@ class DoubleLabel(ctk.CTkFrame):
         """
         self.label_value.configure(font=Fonts.TEXT_HEADER)
 
-    def set_columns_layout(self, title_width, value_width, anchor):
+    def set_columns_layout(self, title_width: int, value_width: int, anchor: str):
         """
+        Set the width and anchor of both the label title and label value.
+        Parameters;
+            - title_width: Width of the column label_title.
+            - value_width: Width of the column label_value.
+            - anchor: Position of the text.
         """
         self.label_title.configure(
             width=title_width, wraplength=title_width, anchor=anchor
@@ -848,13 +925,15 @@ class ImageInput(BaseInput):
             self,
             image=image,
             text="",
+            width=100,
+            height=80,
             fg_color=Colours.BG_MAIN,               
         )
         
         self.temp_file_path = None
 
         # Place components
-        self.button.grid(row=0, column=2, padx=15)
+        self.button.grid(row=0, column=2, padx=5)
         self.label_preview.grid(row=0, column=3, padx=(15, 0))
 
     def load_logo(self) -> None:
@@ -883,6 +962,35 @@ class ImageInput(BaseInput):
         self.label_preview.configure(
             image=None
         )
+
+    def set_input_width(self, input_width: int):
+        """
+        Sets the total with of the image input, used for aligment. It will create an 
+        empty label to cover the remaning width.
+        Parameters:
+            - input_width: Total width of the input.
+        """
+        # Wait for the program to render widgets before gettign info
+        self.update_idletasks()
+        
+        # Calculate widths
+        label_width = self.label.winfo_width()
+        label_asterisk_width = self.label_optional.winfo_width()
+        label_preview_width = self.label_preview.winfo_width()
+        button_width = self.button.winfo_width()
+        empty_label_width = input_width - (label_width + label_preview_width + 
+            label_asterisk_width + button_width + 25)
+
+        if empty_label_width < 0:
+            raise ValueError("input_width should be higher than labels width")
+
+        # Create empty label for aligment
+        empty_label = ctk.CTkLabel(
+            self, # frame that contains all ctk components
+            text="",
+            width=empty_label_width
+        )
+        empty_label.grid(row=0, column=4)
 
 class ClearSaveButtons(ctk.CTkFrame):
     """
@@ -1086,6 +1194,7 @@ class NavLink(ctk.CTkButton):
 
         self.callback()
 
+
 class ButtonGoBack(ctk.CTkButton):
     """ Button to go back to the precious section"""
     def __init__(self, root, command, **kwargs):
@@ -1106,3 +1215,4 @@ class ButtonGoBack(ctk.CTkButton):
         self.bind("<Enter>", lambda e: self.configure(image=Icons.GO_BACK_HOVER))
         self.bind("<Leave>", lambda e: self.configure(image=Icons.GO_BACK))
         
+

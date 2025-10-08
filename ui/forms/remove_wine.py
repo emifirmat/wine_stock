@@ -15,10 +15,7 @@ class RemoveWineForm(ctk.CTkFrame):
     """
     def __init__(self, root: ctk.CTkFrame, session, **kwargs):
         super().__init__(root, **kwargs)
-        self.configure(
-            fg_color = Colours.BG_SECONDARY,
-            height=500
-        )
+        self.configure(height=500)
         
         self.session = session
         self.wine_names_dict = self.get_wine_names_dict()

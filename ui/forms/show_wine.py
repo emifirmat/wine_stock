@@ -22,7 +22,7 @@ class ShowWineForm(ctk.CTkFrame):
         ):
         # Set up form frame
         super().__init__(root, **kwargs)
-        self.configure(fg_color = Colours.BG_SECONDARY, height=500)
+        self.configure(height=500)
         
         # Include db instances
         self.session = session
@@ -85,7 +85,7 @@ class ShowWineForm(ctk.CTkFrame):
         # ==Filters section==
         filter_frame = ctk.CTkFrame(
             self,
-            fg_color = "transparent",
+            fg_color ="transparent",
             border_width=1,
             border_color=Colours.BORDERS
         )
@@ -114,7 +114,7 @@ class ShowWineForm(ctk.CTkFrame):
      
         autocomplete_code = AutoCompleteInput(
             filter_frame,
-            label_text= "Code",
+            label_text="Code",
             wine_list=self.wine_codes_list,
             textvariable=self.wine_code_var,
             optional=True
@@ -122,7 +122,7 @@ class ShowWineForm(ctk.CTkFrame):
 
         autocomplete_winery = AutoCompleteInput(
             filter_frame,
-            label_text= "Winery",
+            label_text="Winery",
             wine_list=self.wine_winery_list,
             textvariable=self.wine_winery_var,
             optional=True
@@ -130,7 +130,7 @@ class ShowWineForm(ctk.CTkFrame):
 
         dropdown_colours = DropdownInput(
             filter_frame,
-            label_text= "Colour",
+            label_text="Colour",
             values=[""] + [
                 w_colour.name.capitalize()
                 for w_colour in self.session.query(Colour).all()
@@ -141,7 +141,7 @@ class ShowWineForm(ctk.CTkFrame):
 
         dropdown_styles = DropdownInput(
             filter_frame,
-            label_text= "Style",
+            label_text="Style",
             values=[""] + [
                 style.name.capitalize() 
                 for style in self.session.query(Style).all()
@@ -152,7 +152,7 @@ class ShowWineForm(ctk.CTkFrame):
         
         dropdown_varietals = DropdownInput(
             filter_frame,
-            label_text= "Varietal",
+            label_text="Varietal",
             values=[""] + [
                 varietal.name.capitalize() 
                 for varietal in self.session.query(Varietal).all()
@@ -163,14 +163,14 @@ class ShowWineForm(ctk.CTkFrame):
 
         input_year = IntInput(
             filter_frame,
-            label_text= "Year",
+            label_text="Year",
             textvariable=self.wine_year_var,
             optional=True
         )
 
         autocomplete_origin = AutoCompleteInput(
             filter_frame,
-            label_text= "Origin",
+            label_text="Origin",
             wine_list=self.wine_origin_list,
             textvariable=self.wine_origin_var,
             optional=True

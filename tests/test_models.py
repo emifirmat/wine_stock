@@ -56,7 +56,7 @@ def test_create_wine(session, sample_color_style_varietal):
     assert wine.varietal.name == "Malbec"
     assert wine.vintage_year == 2018
     assert wine.code == "R-001"
-    assert wine.wine_picture_path is None
+    assert wine.picture_path is None
     assert wine.quantity == 53
     assert abs(wine.purchase_price - Decimal("12.23")) < Decimal("0.01")
     assert wine.selling_price == Decimal("99")

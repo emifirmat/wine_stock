@@ -139,19 +139,21 @@ class DataTable(ctk.CTkFrame, ABC):
         # Note: row_frame is placed by refresh_visible_rows
 
         # Create labels of the row
-        line_columns = self.get_line_columns(line)
-        for j, line_column in enumerate(line_columns):
+        line_values = self.get_line_columns(line)
+        for j, line_value in enumerate(line_values):
             # Text labels
-            if not line_column.startswith("assets/user_images/wines"): 
+            if not (isinstance(line_value, str) 
+                and line_value.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
+            ): 
                 label_config = {
-                    "text": line_column,
+                    "text": line_value,
                     "text_color": Colours.TEXT_MAIN,
                     "font": Fonts.TEXT_LABEL,   
                 }
            # Image labels
             else:
                 label_config = {
-                    "image": load_ctk_image(line_column),
+                    "image": load_ctk_image(line_value),
                     "text": "",   
                 }
             
