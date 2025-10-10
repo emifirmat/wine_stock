@@ -98,7 +98,7 @@ class RemoveTransactionForm(ctk.CTkFrame):
         autocomplete_wine = AutoCompleteInput(
             filter_frame,
             label_text="Wine",
-            wine_list=self.wine_names_list,
+            item_list=self.wine_names_list,
             textvariable=self.wine_name_var,
             optional=True
         )
@@ -106,7 +106,7 @@ class RemoveTransactionForm(ctk.CTkFrame):
         autocomplete_code = AutoCompleteInput(
             filter_frame,
             label_text= "Code",
-            wine_list=self.wine_codes_list,
+            item_list=self.wine_codes_list,
             textvariable=self.wine_code_var,
             optional=True
         )
@@ -168,7 +168,7 @@ class RemoveTransactionForm(ctk.CTkFrame):
             self.session,
             headers=[
                 "datetime", "wine name", "wine code", "transaction", "quantity",
-                "price", "subtotal"
+                "price", "subtotal", "actions"
             ],
             lines=StockMovement.all_ordered(self.session)
         )

@@ -20,13 +20,13 @@ class TransactionsTable(DataTable, SortMixin):
         super().__init__(root, *args, **kwargs)
 
         # Create table
-        self.column_width = 115
+        self.column_widths = [115, 120, 100, 115, 100, 80, 100, 100]
         self.remove_lines = True
         self.create_components()
         self.setup_sorting()
         self.refresh_visible_rows()
 
-    def customize_row(self, line, row_frame):
+    def customize_row(self, line, frame_row):
         """
         Create a row for the line called by refresh visible rows.
         Parameters:
@@ -34,17 +34,27 @@ class TransactionsTable(DataTable, SortMixin):
         Returns:
             row_frame: A ctkframe containing the labels of the line (row)
         """
+        column_index = len(self.headers)
+        label = ctk.CTkLabel(
+            frame_row,
+            width= self.column_widths[-1],
+            text=""
+        )
+        label.grid(row=0, column=column_index, padx=5, sticky="ew")
+        
         button_remove = ctk.CTkButton(
-            row_frame,
+            label,
             text="X",
+            anchor="center",
             fg_color=Colours.BTN_CLEAR,
             text_color=Colours.TEXT_BUTTON,
             hover_color=Colours.BG_HOVER_BTN_CLEAR,
             width=30,
             cursor="hand2",
-            command=lambda f=row_frame, l=line: self.remove_line(f, l) # Pass f, l to get the current value and not last one.
+            command=lambda f=frame_row, l=line: self.remove_line(f, l) # Pass f, l to get the current value and not last one.
         )
-        button_remove.grid(row=0, column=len(self.headers), padx=5)
+        button_remove.grid(row=0, column=0, padx=5)
+        frame_row.grid_columnconfigure(column_index, weight=1)
     
     def remove_line(self, parent_frame: ctk.CTkFrame, instance) -> None:
         """

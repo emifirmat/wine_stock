@@ -1,5 +1,5 @@
 from sqlalchemy import (event, create_engine, Column, ForeignKey, Integer, 
-    String, DateTime, Numeric, Enum, text)
+    String, DateTime, Numeric, Enum, text, func)
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 from datetime import datetime
 
@@ -22,7 +22,17 @@ class NamedModelMixin:
     
     @classmethod
     def all_ordered(cls, session):
-        return session.query(cls).order_by(cls.name.asc()).all()
+        """
+        Sorts the instances obtained from a query in asceding order case 
+        insensitive.
+            - query(cls).all(): returns all the results from the query on table cls.
+            - order_by(cls.name).asc(): sorts the results of the query by the name 
+            attribute in ascending order.
+            - func.lower(cls.name): makes the attribute name lower case (used to
+            add case insensitive capalities to the query).
+
+        """
+        return session.query(cls).order_by(func.lower(cls.name)).asc().all()
     
     @classmethod
     def get_name(cls, session, **filters):
@@ -106,11 +116,11 @@ class Wine(Base):
         if distinct: # Unique values
             return session.query(cls)\
                 .distinct()\
-                .order_by(getattr(cls, order_by).asc())\
+                .order_by(func.lower(getattr(cls, order_by)).asc())\
                 .all()
         else: # Values can be repeated
             return session.query(cls)\
-                .order_by(getattr(cls, order_by).asc())\
+                .order_by(func.lower(getattr(cls, order_by)).asc())\
                 .all()
 
     @classmethod
@@ -124,11 +134,11 @@ class Wine(Base):
         if distinct: # Unique values
             return session.query(getattr(cls, column))\
                 .distinct()\
-                .order_by(getattr(cls, order_by).asc())\
+                .order_by(func.lower(getattr(cls, order_by)).asc())\
                 .all()
         else: # Values can be repeated
             return session.query(getattr(cls, column))\
-                .order_by(getattr(cls, order_by).asc())\
+                .order_by(func.lower(getattr(cls, order_by)).asc())\
                 .all()
 
     @property

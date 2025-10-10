@@ -7,7 +7,7 @@ from typing import Callable, Dict, List
 
 from db.models import Wine
 from helpers import load_ctk_image
-from ui.components import DoubleLabel, FixedSizeToplevel
+from ui.components import DoubleLabel, FixedSizeToplevel, ActionMenuButton
 from ui.style import Colours, Fonts
 from ui.tables.mixins import SortMixin
 from ui.tables.data_table import DataTable
@@ -28,7 +28,7 @@ class WinesTable(DataTable, SortMixin):
         self.opened_toplevels = {}
 
         # Create table
-        self.column_width = 98
+        self.column_widths = [100, 120, 100, 90, 95, 95, 90, 90, 80]
         self.remove_lines = True
         self.create_components()
         self.setup_sorting()
@@ -43,7 +43,6 @@ class WinesTable(DataTable, SortMixin):
             - A list with the values of the instance formatted to be used as
             the text of a label.
         """
-
         return [
             line.code, line.picture_path_display, line.name, str(line.vintage_year), 
             line.origin_display, str(line.quantity), f"€ {line.purchase_price}", 
@@ -70,7 +69,8 @@ class WinesTable(DataTable, SortMixin):
             4: lambda l: l.origin.lower(),
             5: lambda l: l.quantity,
             6: lambda l: l.purchase_price,
-            7: lambda l: l.selling_price
+            7: lambda l: l.selling_price,
+            8: None
         }
  
     def apply_filters(
@@ -105,25 +105,30 @@ class WinesTable(DataTable, SortMixin):
         self.visible_rows_count = self.INITIAL_ROWS
         self.refresh_visible_rows()
 
-    def customize_row(self, line: Wine, row_frame: ctk.CTkFrame):
+    def customize_row(self, line: Wine, frame_row: ctk.CTkFrame):
         """
-        Create a row for the line called by refresh visible rows.
+        Creates additional components for the row line called by refresh visible rows.
         Parameters:
-            line: Instance of a stock_movement (purchase or sale)
+            line: Instance of the Wine class 
         Returns:
             row_frame: A ctkframe containing the labels of the line (row)
         """
-        button_details = ctk.CTkButton(
-            row_frame,
-            text="+",
-            fg_color=Colours.BTN_SAVE,
-            text_color=Colours.TEXT_BUTTON,
-            hover_color=Colours.BG_HOVER_BTN_SAVE,
-            width=30,
-            cursor="hand2",
-            command=lambda l=line: self.show_details(l) 
+        column_index = len(self.headers)
+        label = ctk.CTkLabel(
+            frame_row,
+            width= self.column_widths[-1],
+            text=""
         )
-        button_details.grid(row=0, column=len(self.headers), padx=5)
+        label.grid(row=0, column=column_index, padx=5, sticky="ew")
+
+        ActionMenuButton(
+            label,
+            on_show=lambda w=line: self.show_details(w),
+            on_edit=lambda w=line: self.edit_wine(w),
+            on_delete=lambda w=line: self.delete_wine(w),
+        ).grid(row=0, column=0, padx=5)
+
+        frame_row.grid_columnconfigure(column_index, weight=1)
 
     def show_details(self, line: Wine):
         """
@@ -200,3 +205,50 @@ class WinesTable(DataTable, SortMixin):
         """
         self.opened_toplevels[line] = False
         toplevel.destroy()
+
+    def edit_wine(self, wine):
+        #TODO
+        pass
+
+    def delete_wine(self, wine):
+        """
+        Removes the wine from the DB and table.
+        """   
+        # Ask for confirmation
+        movements_count = len(wine.movements)
+        if movements_count > 0:
+            confirm_dialog_message = (
+                f"There are {movements_count} stock movements related with the wine "
+                f"{wine.name}. Do you want to remove them all?"
+            )
+            show_info_message = "The wine and stock movements have been successfully removed."
+        else:
+            confirm_dialog_message = (
+                f"Do you want to remove the wine '{wine.name}'?"
+            )
+            show_info_message = "The wine has been successfully removed."
+
+        confirm_dialog = messagebox.askyesno(
+            "Confirm Removal",
+            confirm_dialog_message
+        )
+        if not confirm_dialog:
+            return
+        
+        # Remove it from the DB    
+        self.session.delete(wine)
+        self.session.commit()
+
+        # Remove it from the lists (data)
+        self.lines.remove(wine)
+        self.filtered_lines.remove(wine)
+      
+        # Remove it from the UI table
+        self.line_widget_map[wine].destroy()
+        del self.line_widget_map[wine]
+
+        # Show a message
+        messagebox.showinfo(
+            "Wine Removed",
+            show_info_message
+        )

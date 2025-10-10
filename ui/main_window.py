@@ -152,13 +152,13 @@ class MainWindow:
         )
         self.button_wine = NavLink(
             self.frame_side,
-            text="Wine",
+            text="Wines",
             image=Icons.WINE_GLASS,
             command=self.show_wine_section
         )
         self.button_report = NavLink(
             self.frame_side,
-            text="Report",
+            text="Reports",
             image=Icons.REPORT,
             command=self.show_report_section
         )

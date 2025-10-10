@@ -107,7 +107,7 @@ class ShowWineForm(ctk.CTkFrame):
         autocomplete_wine = AutoCompleteInput(
             filter_frame,
             label_text="Wine",
-            wine_list=self.wine_names_list,
+            item_list=self.wine_names_list,
             textvariable=self.wine_name_var,
             optional=True
         )
@@ -115,7 +115,7 @@ class ShowWineForm(ctk.CTkFrame):
         autocomplete_code = AutoCompleteInput(
             filter_frame,
             label_text="Code",
-            wine_list=self.wine_codes_list,
+            item_list=self.wine_codes_list,
             textvariable=self.wine_code_var,
             optional=True
         )
@@ -123,7 +123,7 @@ class ShowWineForm(ctk.CTkFrame):
         autocomplete_winery = AutoCompleteInput(
             filter_frame,
             label_text="Winery",
-            wine_list=self.wine_winery_list,
+            item_list=self.wine_winery_list,
             textvariable=self.wine_winery_var,
             optional=True
         )
@@ -171,7 +171,7 @@ class ShowWineForm(ctk.CTkFrame):
         autocomplete_origin = AutoCompleteInput(
             filter_frame,
             label_text="Origin",
-            wine_list=self.wine_origin_list,
+            item_list=self.wine_origin_list,
             textvariable=self.wine_origin_var,
             optional=True
         )
@@ -217,11 +217,11 @@ class ShowWineForm(ctk.CTkFrame):
             self.session,
             headers=[
                 "code", "picture", "name", "vintage year", "origin", "quantity",
-                "purchase price", "selling price"
+                "purchase price", "selling price", "actions"
             ],
             lines=Wine.all_ordered(self.session)
         )
-        self.wines_table.grid(row=1, column=0, pady=(10, 0), sticky="nsew")
+        self.wines_table.grid(row=1, column=0, pady=(10, 20), sticky="nsew")
 
         return inputs_dict
 

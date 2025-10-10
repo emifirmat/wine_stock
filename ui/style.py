@@ -42,6 +42,7 @@ class Fonts:
 class Icons:
     root_path = "assets/icons"
     icon_size = (28, 28)
+    small_icon_size = (18, 18)
     
     STATISTICS = ctk.CTkImage(
         # IF in the future I set dark mode, I have to add dark image
@@ -89,3 +90,31 @@ class Icons:
         size=(icon_size),
     )
     
+    DOTS = ctk.CTkImage(
+        light_image=generate_colored_icon(
+            f"{root_path}/dots.png", Colours.TEXT_MAIN,
+        ),
+        size=(icon_size),
+    )
+
+    SHOW = ctk.CTkImage(
+        light_image=generate_colored_icon(
+            f"{root_path}/show.png", Colours.TEXT_MAIN,
+        ),
+        size=((small_icon_size)),
+    )
+
+    EDIT = ctk.CTkImage(
+        light_image=generate_colored_icon(
+            f"{root_path}/edit.png", Colours.TEXT_MAIN,
+        ),
+        size=((small_icon_size)),
+    )
+
+    DELETE = ctk.CTkImage(
+        light_image=generate_colored_icon(
+            f"{root_path}/delete.png", Colours.TEXT_MAIN,
+        ),
+        size=((small_icon_size)),
+    )
+

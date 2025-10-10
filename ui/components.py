@@ -9,49 +9,54 @@ import re
 from decimal import Decimal
 from typing import Callable
 
-from helpers import load_ctk_image, resource_path
+from helpers import load_ctk_image, resource_path, generate_colored_icon
 from db.models import Wine
 from ui.style import Colours, Fonts, Icons
 
 
 class EntryInputMixin:
     """
-    Mixin that adds methods that belong to the entries.
+    Mixin that provides utility methods for handling entry widgets.
     """
-    def set_entry_width(self, entry_width: int):
+    def set_entry_width(self, entry_width: int) -> None:
         """
-        Set the width of the entry.
+        Sets the width of the entry widget.
         Parameters:
-            - entry_width: Width of the column entry.
+            - entry_width: The width to apply to the entry widget.
         """
         self.entry.configure(
             width=entry_width
         )
     
-    def clear(self):
+    def clear(self) -> None:
         """
-        Removes the text typed by the user.
+        Removes the current text from the entry widget.
         """
         self.entry.delete(0, "end") 
 
-    def get(self):
+    def get(self) -> str:
         """
-        Returns the value (Text) of Entry.
+        Returns the current value of the entry widget.
+        Returns:
+            str: The text currently contained in the entry
         """
         return self.entry.get()
 
-    def set_input_width(self, input_width: int):
+    def set_input_width(self, input_width: int) -> None:
         """
-        Sets the total with of the input, used for aligment. It will create an 
-        empty label to cover the remaning width.
+        Sets the total width of the input for alignment purposes.
+        Creates an empty label to fill the remaining width.
         Parameters:
-            - input_width: Total width of the input.
+            - input_width: Total width of the input container.
+        Raises:
+            ValueError: If the total width is smaller than the sum of its components.
         Requirements:
-            - The class should be aa CTkFrame containing the rest of the widgets.
-            - The class must define self.label
-            - The class must define self.entry
+            - The class must inherit from CTkFrame.
+            - The class must define `self.label`, `self.label_optional`, and 
+            `self.entry`.
+            
         """
-        # Wait for the program to render widgets before gettign info
+        # Ensure widgets are rendered before measuring
         self.update_idletasks()
         
         # Calculate widths
@@ -61,7 +66,7 @@ class EntryInputMixin:
         empty_label_width = input_width - (label_width + entry_width + label_asterisk_width)
 
         if empty_label_width < 0:
-            raise ValueError("input_width should be higher than label_width + entry_width")
+            raise ValueError("input_width must be greater than label_width + entry_width")
 
         # Create empty label for aligment
         empty_label = ctk.CTkLabel(
@@ -74,8 +79,8 @@ class EntryInputMixin:
 
 class FixedSizeToplevel(ctk.CTkToplevel):
     """
-    Toplevel that resizes to its original width and height if the user tries to
-    change it.
+    A toplevel window that retains its original width and height even if resized
+    by the user.
     """
     def __init__(self, root, width: int, height: int, **kwargs):
         super().__init__(root, **kwargs)
@@ -86,19 +91,23 @@ class FixedSizeToplevel(ctk.CTkToplevel):
         self.resizable(False, False)
         self.bind("<Configure>", self.on_configure)
 
-    def on_configure(self, event):
+    def on_configure(self, event: tk.Event) -> None:
         """
-        Restore the size if was changed
+        Restores the window size if it was changed by the user.
+        Parameters:
+            - event: The configure event triggered by resizing.
         """
         if event.width != self.original_width or event.height != self.original_height:
             self.after(
                 10, 
-                lambda: self.geometry(f"{self.original_width}x{self.original_height}+{self.winfo_x()}+{self.winfo_y()}")
+                lambda: self.geometry(
+                    f"{self.original_width}x{self.original_height}+{self.winfo_x()}+{self.winfo_y()}"
+                )
             )
 
 class TextEntry(ctk.CTkEntry):
     """
-    Entry component with a max_length validation
+    An entry widget with a maximum length validation.
     """
     def __init__(self, root, placeholder:str, max_len: int = 60, **kwargs):
         super().__init__(
@@ -120,15 +129,24 @@ class TextEntry(ctk.CTkEntry):
         )
 
     def _validate_len(self, text: str) -> bool:
+        """
+        Validates that the input text does not exceed the maximum allowed length.
+
+        Parameters:
+            - text: The current text in the entry.
+
+        Returns:
+            - bool: True if valid, False otherwise.
+        """
         return len(text) <= self.max_len
 
 
 class IntEntry(ctk.CTkEntry):
     """
-    Entry component that only accepts integers.
+    An entry widget that only accepts integer values.
     """
-    def __init__(self, root, placeholder:str, from_: int = None, to: int = None, 
-        textvariable = None, **kwargs
+    def __init__(self, root, placeholder: str, from_: int | None = None, 
+        to: int | None = None, textvariable: tk.StringVar | None = None, **kwargs
     ):
         super().__init__(root, 
             placeholder_text=placeholder, 
@@ -150,13 +168,13 @@ class IntEntry(ctk.CTkEntry):
 
     def _validate_value(self, text: str) -> bool:
         """
-        After typing, it check if the text is an integer between min and max.
+        Validates that the input is an integer within the allowed range.
 
-        Input:
-            text: Text typed by the user
+        Parameters:
+            - text: Text typed by the user
         Returns:
-            True: The text is valid and in range
-            False: The text is invalid or out of range
+            - bool: True if valid, False otherwise.
+            
         """
         if text == "":
             return True
@@ -175,13 +193,10 @@ class IntEntry(ctk.CTkEntry):
     
 class DecimalEntry(ctk.CTkEntry):
     """
-    Entry component that accepts decimal values.
+    An entry widget that accepts decimal values within a specified range.
     """
-    """
-    Entry component that only accepts integers.
-    """
-    def __init__(self, root, placeholder:str, from_: int = None, to: int = None, 
-        textvariable = None, **kwargs
+    def __init__(self, root, placeholder: str, from_: int | None = None, 
+        to: int | None = None, textvariable: tk.StringVar | None = None, **kwargs
     ):
         super().__init__(
             root, 
@@ -204,13 +219,12 @@ class DecimalEntry(ctk.CTkEntry):
 
     def _validate_value(self, text: str) -> bool:
         """
-        After typing, it check if the text is a decimal number between min and max.
+        Validates that the input is a decimal number within the allowed range.
 
-        Input:
-            text: Text typed by the user
+        Parameters:
+            - text: The text entered by the user.
         Returns:
-            True: The text is valid and in range
-            False: The text is invalid or out of range
+            - bool: True if valid, False otherwise.
         """
         
         if text == "" :
@@ -242,7 +256,7 @@ class DecimalEntry(ctk.CTkEntry):
 
 class DateEntry(ctk.CTkEntry):
     """
-    Entry component that only accepts dates from a topup calendar.
+    An entry widget that allows users to select a date from a pop-up calendar.
     """
     def __init__(self, root, textvariable: str | None = None, **kwargs):
         self.text_var = textvariable or tk.StringVar()
@@ -251,59 +265,54 @@ class DateEntry(ctk.CTkEntry):
 
         self.year = None
         self.month = None
-        self.top_level = None
+        self.frame_calendar = None
 
         # Show calendar on click
         self.bind("<Button-1>", self.open_calendar)
 
-    def open_calendar(self, event=None):
+    def open_calendar(self, event: tk.Event | None = None) -> None:
         """
-        Creates a top level with the calendar.
+        Opens a calendar pop-up for selecting a date.
+        Parameters:
+            - event: The triggering event.
         """
         # Get current date details
         today = datetime.date.today()
         self.year = today.year
         self.month = today.month
         
-        # Destroy any previous toplevel (important)
-        # Note: Only way to keep calendar at the front with multiple clicks
-        # deiconify, topmost, focus force, lift and sending main window at the 
-        # back didn't work.
-        if self.top_level:
-            self.top_level.destroy()
-            self.top_level = None
+        # Destroy any previous calendar (important)
+        self.close_calendar()
 
-        # Create TopLevel
-        self.top_level = ctk.CTkToplevel(
-            self,
+        # Create a calendar frame
+        self.frame_calendar = ctk.CTkFrame(
+            self.winfo_toplevel(),
             fg_color=Colours.BG_MAIN,
+            border_width=2,
+            border_color=Colours.BORDERS,
         )
-        self.top_level.title("Pick Date")
         
-        # Locate TopLevel
-        tl_width = 300
-        tl_height = 210
-        x = self.winfo_rootx() - (tl_width - self.winfo_width()) // 2
-        y = self.winfo_rooty() + self.winfo_height()
-        self.top_level.geometry(f"{tl_width}x{tl_height}+{x}+{y}")
-        self.top_level.resizable(False, False)
+        # Locate calendar
+        x = self.winfo_rootx() - self.winfo_toplevel().winfo_rootx()
+        y = self.winfo_rooty() - self.winfo_toplevel().winfo_rooty() + self.winfo_height() + 5
+        self.frame_calendar.place(x=x, y=y)
+        self.frame_calendar.lift()
        
         # Build calendar
         self.build_calendar()
     
-    def build_calendar(self):
+    def build_calendar(self) -> None:
         """
-        Build each component of the calendar: Headers, navigation buttons, buttons
-        representing days. Before building it, it removes any previous toplevel.
+        Builds the structure of the calendar, including navigation and day buttons.
         """
-        for widget in self.top_level.winfo_children():
+        for widget in self.frame_calendar.winfo_children():
             widget.destroy()
 
         calendar_ = calendar.monthcalendar(self.year, self.month)
 
         # Header (middle position)
         header = ctk.CTkLabel(
-            self.top_level, 
+            self.frame_calendar, 
             text=f"{calendar.month_name[self.month]} {self.year}",
             font=Fonts.TEXT_HEADER_CALENDAR
         )
@@ -311,7 +320,7 @@ class DateEntry(ctk.CTkEntry):
 
         # Navigation buttons (besides header)
         year_prev_btn = ctk.CTkButton(
-            self.top_level, 
+            self.frame_calendar, 
             text="<<", 
             width=30, 
             fg_color=Colours.BG_HOVER_NAV,
@@ -320,7 +329,7 @@ class DateEntry(ctk.CTkEntry):
             command=self.prev_year
         )
         month_prev_btn = ctk.CTkButton(
-            self.top_level, 
+            self.frame_calendar, 
             text="<", 
             width=30, 
             fg_color=Colours.BG_HOVER_NAV,
@@ -329,7 +338,7 @@ class DateEntry(ctk.CTkEntry):
             command=self.prev_month
         )         
         month_next_btn = ctk.CTkButton(
-            self.top_level, 
+            self.frame_calendar, 
             text=">", 
             width=30, 
             fg_color=Colours.BG_HOVER_NAV,
@@ -338,7 +347,7 @@ class DateEntry(ctk.CTkEntry):
             command=self.next_month
         )
         year_next_btn = ctk.CTkButton(
-            self.top_level, 
+            self.frame_calendar, 
             text=">>", 
             width=30, 
             fg_color=Colours.BG_HOVER_NAV,
@@ -346,22 +355,22 @@ class DateEntry(ctk.CTkEntry):
             hover_color=Colours.DROPDOWN_HOVER,
             command=self.next_year
         )
-        year_prev_btn.grid(row=0, column=0)
+        year_prev_btn.grid(row=0, column=0, padx=(5, 0))
         month_prev_btn.grid(row=0, column=1)
         month_next_btn.grid(row=0, column=5)
-        year_next_btn.grid(row=0, column=6)
+        year_next_btn.grid(row=0, column=6, padx=(0, 5))
 
         # Days
         for i, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
-            label = ctk.CTkLabel(self.top_level, text=day)
+            label = ctk.CTkLabel(self.frame_calendar, text=day)
             label.grid(row=1, column=i, padx=2, pady=2)
 
-        # Days of the month
+        # Days of the month (start from 2 because 1 is days)
         for r, week in enumerate(calendar_, start=2):
             for c, day in enumerate(week):
                 if day != 0:
                     button = ctk.CTkButton(
-                        self.top_level, 
+                        self.frame_calendar, 
                         text=str(day), 
                         width=40, 
                         height=25,
@@ -370,11 +379,19 @@ class DateEntry(ctk.CTkEntry):
                         hover_color=Colours.BG_HOVER_NAV,
                         command=lambda d=day: self.select_date(d)
                     )
-                    button.grid(row=r, column=c, padx=1, pady=1)
+                    # Set pads for borders
+                    if c == 0:
+                        padx = (3, 1)
+                    elif c == len(week) - 1:
+                        padx = (1, 3)
+                    else:
+                        padx = 1
+                    pady = 1 if r != len(calendar_) + 1 else (1, 3)
+                    button.grid(row=r, column=c, padx=padx, pady=pady)
 
-    def prev_month(self):
+    def prev_month(self) -> None:
         """
-        Builds the calendar after the user clicks on month_prev_btn
+        Displays the previous month in the calendar.
         """
         if self.month == 1:
             self.month = 12
@@ -383,9 +400,9 @@ class DateEntry(ctk.CTkEntry):
             self.month -= 1
         self.build_calendar()
 
-    def next_month(self):
+    def next_month(self) -> None:
         """
-        Builds the calendar after the user clicks on month_next_btn
+        Displays the next month in the calendar.
         """
         if self.month == 12:
             self.month = 1
@@ -394,38 +411,50 @@ class DateEntry(ctk.CTkEntry):
             self.month += 1
         self.build_calendar()
 
-    def prev_year(self):
+    def prev_year(self) -> None:
         """
-        Builds the calendar after the user clicks on year_prev_btn
+        Displays the previous year in the calendar.
         """
         self.year -= 1
         self.build_calendar()
 
     def next_year(self):
         """
-        Builds the calendar after the user clicks on year_next_btn
+        Displays the next year in the calendar.
         """
         self.year += 1
         self.build_calendar()
 
-    def select_date(self, day):
+    def select_date(self, day: int) -> None:
         """
-        Obtains the date clicked by the user, stores it in the tkvariable and
-        destroys the toplevel.
+        Handles date selection from the calendar.
+        Parameters:
+            - day: The day selected by the user.
         """
         # Get date and show it on the input
         selected = datetime.date(self.year, self.month, day)
         self.text_var.set(selected.strftime("%d/%m/%Y"))
-        # Destroy top level
-        self.top_level.destroy()
-        self.top_level = None # Important to prevent errors
+        # Destroy calendar
+        self.close_calendar()
+
+    def close_calendar(self) -> None:
+        """Closes the calendar pop-up if it exists."""
+        if self.frame_calendar:
+            self.frame_calendar.destroy()
+            self.frame_calendar = None
+    
+    def destroy(self) -> None:
+        """
+        Destroys the entry and any associated calendar pop-up.
+        """
+        self.close_calendar()
+        super().destroy()
 
 class AutocompleteEntry(ctk.CTkEntry):
     """
-    An entry that contains an autocomplete feature according to the wine list.
-    Autcomplete is formed by a frame that contains a listbox.
+    An entry widget that provides autocomplete suggestions from a wine list.
     """
-    def __init__(self, root, placeholder:str, wine_list, **kwargs):
+    def __init__(self, root, placeholder: str, item_list: list[str], **kwargs):
         super().__init__(
             root, 
             placeholder_text=placeholder, 
@@ -433,7 +462,7 @@ class AutocompleteEntry(ctk.CTkEntry):
             **kwargs
         )
         self.root = root
-        self.wine_list = wine_list
+        self.wine_list = item_list
         self.listbox = None
         self.listbox_frame = None
         self.main_window = self.winfo_toplevel()
@@ -441,8 +470,12 @@ class AutocompleteEntry(ctk.CTkEntry):
         self.bind("<KeyRelease>", self.show_suggestions)
         self.bind("<Button-1>", self.show_suggestions)
 
-    def on_click_outside(self, event):
-        """Clicks out of the inbox and entry"""
+    def on_click_outside(self, event: tk.Event) -> None:
+        """
+        Closes the suggestion list when clicking outside the entry or listbox.
+        Parameters:
+            - event: The triggering event.
+        """
         if self.listbox_frame:
             # Get click's coordinates
             x = event.x_root
@@ -457,7 +490,7 @@ class AutocompleteEntry(ctk.CTkEntry):
             in_entry = (entry_x <= x <= entry_x + entry_width and 
                        entry_y <= y <= entry_y + entry_height)
             
-            # check if the click was in the listbox
+            # Check if the click was in the listbox
             if self.listbox_frame and self.listbox_frame.winfo_exists():
                 listbox_x = self.listbox_frame.winfo_rootx()
                 listbox_y = self.listbox_frame.winfo_rooty()
@@ -469,11 +502,17 @@ class AutocompleteEntry(ctk.CTkEntry):
             else:
                 in_listbox = False
             
-            # destroy listbox if not in entry or listbox
+            # Destroy listbox if not in entry or listbox
             if not in_entry and not in_listbox:
                 self.destroy_listbox()
 
-    def show_suggestions(self, event=None):
+    def show_suggestions(self, event: tk.Event | None = None) -> None:
+        """
+        Displays autocomplete suggestions based on user input.
+
+        Parameters:
+            - event: The triggering event.
+        """
         typed = self.get().lower()
 
         # Clean previous listbox
@@ -532,9 +571,11 @@ class AutocompleteEntry(ctk.CTkEntry):
             # Global bind, click outside
             self.main_window.bind("<Button-1>", self.on_click_outside, add="+")
         
-    def select_suggestion(self, event):
+    def select_suggestion(self, event: tk.Event) -> None:
         """
-        Get the selected element from listbox and update entry.
+        Inserts the selected suggestion into the entry.
+        Parameters:
+            - event: The triggering event.
         """
         if self.listbox and self.listbox.curselection():
             selected = self.listbox.get(self.listbox.curselection())
@@ -545,8 +586,12 @@ class AutocompleteEntry(ctk.CTkEntry):
             # Clean listbox
             self.destroy_listbox()
     
-    def select_on_click(self, event):
-        """Select with one click"""
+    def select_on_click(self, event: tk.Event) -> None:
+        """
+        Selects a suggestion with a single mouse click.
+        Parameters:
+            - event: The triggering event.
+        """
         # Get index of the clicked event
         index = self.listbox.nearest(event.y)
         if index >= 0:
@@ -556,18 +601,19 @@ class AutocompleteEntry(ctk.CTkEntry):
             self.listbox.selection_set(index)
             self.select_suggestion(event)
     
-    def destroy_listbox(self):
-        """Destroy listbox and its frame"""
+    def destroy_listbox(self) -> None:
+        """
+        Destroys the suggestion listbox and its frame.
+        """
         if self.listbox_frame:
-            self.main_window.unbind("<Button-1>")
-            
+            self.main_window.unbind("<Button-1>")   
             self.listbox_frame.destroy()
             self.listbox_frame = None
             self.listbox = None
 
-    def destroy(self):
+    def destroy(self) -> None:
         """
-        Destroys the entry with the listbox if exists.
+        Destroys the entry and any existing listbox..
         """
         self.destroy_listbox()
         super().destroy()
@@ -575,8 +621,13 @@ class AutocompleteEntry(ctk.CTkEntry):
 
 class BaseInput(ctk.CTkFrame):
     """
-    A frame that contains 2 labels (name and *), used as base for inputs with
-    entries
+    Base frame for labeled input components.
+
+    Parameters:
+        - root: Parent frame.
+        - label_text: Label text for the input.
+        - optional: If True, the field is optional (no asterisk shown).
+        - **kwargs: Additional keyword arguments passed to CTkFrame.
     """
     def __init__(
         self, root, label_text: str, optional: bool = False, **kwargs
@@ -611,9 +662,9 @@ class BaseInput(ctk.CTkFrame):
         self.label.grid(row=0, column=0, sticky="w") 
         self.label_optional.grid(row=0, column=1, padx=(0, 10))
 
-    def set_label_layout(self, label_width: int):
+    def set_label_layout(self, label_width: int) -> None:
         """
-        Set the width of the label.
+        Set the width and wraplength of the label.
         Parameters:
             - label_width: Width of the column label.
         """
@@ -624,7 +675,7 @@ class BaseInput(ctk.CTkFrame):
 
 class TextInput(BaseInput, EntryInputMixin):
     """
-    A frame that contains a label and an entry components
+    A frame that contains a label and text entry component.
     """
     def __init__(self, root, placeholder: str | None = None, max_len: int = 60, 
         **kwargs):
@@ -647,11 +698,11 @@ class TextInput(BaseInput, EntryInputMixin):
 
 class IntInput(BaseInput, EntryInputMixin):
     """
-    A frame that contains a label and an integer entry components
+    A frame that contains a label and an integer entry component.
     """
     def __init__(
         self, root, placeholder: str | None = None, from_: int | None = None,
-        to: int | None = None, textvariable=None, **kwargs
+        to: int | None = None, textvariable: tk.Variable | None = None, **kwargs
     ):
         super().__init__(root, **kwargs)
 
@@ -673,11 +724,11 @@ class IntInput(BaseInput, EntryInputMixin):
 
 class DecimalInput(BaseInput, EntryInputMixin):
     """
-    A frame that contains a label and an decimal entry components
+    A frame that contains a label and an decimal entry component.
     """
     def __init__(
-        self, root, placeholder: str | None = None, from_: int | None = None,
-        to: int | None =None, textvariable=None, **kwargs
+        self, root, placeholder: str | None = None, from_: Decimal | None = None,
+        to: Decimal | None = None, textvariable: tk.Variable | None = None, **kwargs
     ):
         super().__init__(root, **kwargs)
 
@@ -699,17 +750,24 @@ class DecimalInput(BaseInput, EntryInputMixin):
 
 class AutoCompleteInput(BaseInput, EntryInputMixin):
     """
-    A frame that contains a label and an AutoComplete entry components
+    A frame that contains a label and an AutoComplete entry component.
+    Parameters:
+        root: Parent widget.
+        placeholder: Placeholder text for the entry.
+        textvariable: Optional Tk variable to bind the entry to.
+        item_list: List of items used for autocomplete.
+        **kwargs: Additional keyword arguments passed to BaseInput.
     """
     def __init__(
-        self, root, placeholder: str | None = None, textvariable=None, 
-        wine_list=list[Wine], **kwargs
+        self, root, placeholder: str | None = None, 
+        textvariable: tk.Variable | None = None, item_list: list = [],
+        **kwargs
     ):
         super().__init__(root, **kwargs)
 
         self.entry = AutocompleteEntry(
             self,
-            wine_list=wine_list,
+            item_list=item_list,
             fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN, 
             font=Fonts.TEXT_MAIN,
@@ -724,10 +782,10 @@ class AutoCompleteInput(BaseInput, EntryInputMixin):
 
 class DateInput(BaseInput, EntryInputMixin):
     """
-    A frame that contains a label and an decimal entry components
+    A frame that contains a label and an date entry components
     """
     def __init__(
-        self, root, textvariable=None, **kwargs
+        self, root, textvariable: tk.Variable | None = None, **kwargs
     ):
         super().__init__(root, **kwargs)
 
@@ -743,8 +801,10 @@ class DateInput(BaseInput, EntryInputMixin):
 
         self.entry.grid(row=0, column=2)
 
-    def clear(self):
-        """Removes the text typed by the user"""
+    def clear(self) -> None:
+        """
+        Removes the text typed by the user.
+        """
         self.entry.configure(state="normal")
         self.entry.delete(0, "end") 
         self.entry.configure(state="readonly")
@@ -755,8 +815,8 @@ class DropdownInput(BaseInput):
     A frame that contains a label and a dropdown components
     """
     def __init__(
-        self, root, values: list[str], variable = None, command = None, 
-        **kwargs
+        self, root, values: list[str], variable: tk.Variable | None = None, 
+        command: Callable | None = None, **kwargs
     ):
         super().__init__(root, **kwargs)
       
@@ -778,29 +838,31 @@ class DropdownInput(BaseInput):
         # Place components
         self.dropdown.grid(row=0, column=2)
     
-    def get(self):
-        """Returns the selected value of Dropdown"""
+    def get(self) -> str:
+        """
+        Returns the selected value of Dropdown.
+        """
         return self.dropdown.get()
     
-    def set_to_first_value(self):
+    def set_to_first_value(self) -> None:
         """
-        Returns the first value of the Dropdown
+        Sets the dropdown to its first available value.
         """
         return self.dropdown.set(self.dropdown.cget("values")[0])
 
-    def update_values(self, values: list) -> None:
+    def update_values(self, values: list[str]) -> None:
         """
         Updates the available values of the dropdown.
 
         Inputs:
-            Values: New list of values that will be available in the dropdown
+            - Values: New list of values that will be available in the dropdown.
         """
         self.dropdown.configure(values=values)
 
     def set_input_width(self, input_width: int):
         """
-        Sets the total with of the dropdown, used for aligment. It will create an 
-        empty label to cover the remaning width.
+        Sets the total with of the dropdown used for aligment. 
+        It creates an empty label to cover the remaning width.
         Parameters:
             - input_width: Total width of the input.
    
@@ -828,11 +890,11 @@ class DropdownInput(BaseInput):
    
 class DoubleLabel(ctk.CTkFrame):
     """
-    A frame that contains a label for title and a label for showing a value
+    A frame that contains a title label and a value label.
     """
     def __init__(
         self, root, label_title_text: str, label_value_text: str = "",  
-        text_variable: str | None = None, **kwargs
+        text_variable: tk.Variable | None = None, **kwargs
     ):
         super().__init__(root, **kwargs)
         self.configure(
@@ -863,27 +925,27 @@ class DoubleLabel(ctk.CTkFrame):
 
     def update_value_text(self, new_text: str) -> None:
         """
-        Update the text of the label_value.
+        Update the text of the value label.
 
         Inputs:
-            New Text = New text to include in label_value.
+            new_text = New text to include in the label_value.
         """
         self.label_value.configure(
             text=new_text
         )
 
-    def bold_value_text(self):
+    def bold_value_text(self) -> None:
         """
-        Makes the label that contains the value bold.
+        Make the value label use the bold header font.
         """
         self.label_value.configure(font=Fonts.TEXT_HEADER)
 
     def set_columns_layout(self, title_width: int, value_width: int, anchor: str):
         """
-        Set the width and anchor of both the label title and label value.
-        Parameters;
-            - title_width: Width of the column label_title.
-            - value_width: Width of the column label_value.
+        Set the width and anchor of both the title label and the value label.
+        Parameters:
+            - title_width: Width of the label_title column.
+            - value_width: Width of the label_value column.
             - anchor: Position of the text.
         """
         self.label_title.configure(
@@ -896,7 +958,8 @@ class DoubleLabel(ctk.CTkFrame):
 
 class ImageInput(BaseInput):
     """
-    A frame that contains a text label, filedialog button, and image label components
+    A frame that contains a text label, a file dialog button, and an image preview
+    label.
     """
     def __init__(
         self, root, image_path: str | None = None, **kwargs
@@ -938,7 +1001,7 @@ class ImageInput(BaseInput):
 
     def load_logo(self) -> None:
         """
-        Show filedialog to user, and show a preview
+        Shows file dialog to the user and update the preview image.
         """
         self.temp_file_path = ctk.filedialog.askopenfilename(
             title="Select Image",
@@ -953,20 +1016,22 @@ class ImageInput(BaseInput):
 
     def get_new_path(self) -> str | None:
         """
-        Returns temp_file_path if the user picked one, else None.
+        Returns the temporary file path selected by the user, or None.
         """
         return self.temp_file_path
 
-    def clear(self):
-        """Sets the preview image to None"""
+    def clear(self) -> None:
+        """
+        Sets the preview image to None
+        """
         self.label_preview.configure(
             image=None
         )
 
-    def set_input_width(self, input_width: int):
+    def set_input_width(self, input_width: int) -> None:
         """
-        Sets the total with of the image input, used for aligment. It will create an 
-        empty label to cover the remaning width.
+        Sets the total width of the image input used for alignment.
+        It creates an empty label to cover the remaining width.
         Parameters:
             - input_width: Total width of the input.
         """
@@ -982,7 +1047,7 @@ class ImageInput(BaseInput):
             label_asterisk_width + button_width + 25)
 
         if empty_label_width < 0:
-            raise ValueError("input_width should be higher than labels width")
+            raise ValueError("input_width should be higher than labels width.")
 
         # Create empty label for aligment
         empty_label = ctk.CTkLabel(
@@ -994,9 +1059,16 @@ class ImageInput(BaseInput):
 
 class ClearSaveButtons(ctk.CTkFrame):
     """
-    A frame with clear and save buttons
+    A frame with Clear and Save buttons.
+
+    Parameters:
+        root: Parent widget.
+        btn_clear_function: Callback executed when Clear is clicked.
+        btn_save_function: Callback executed when Save is clicked.
+        **kwargs: Additional keyword arguments passed to CTkFrame.
     """
-    def __init__(self, root, btn_clear_function, btn_save_function, **kwargs):
+    def __init__(self, root, btn_clear_function: Callable, 
+    btn_save_function: Callable, **kwargs):
         super().__init__(root, **kwargs)
         self.configure(
             root,
@@ -1032,40 +1104,39 @@ class ClearSaveButtons(ctk.CTkFrame):
         self.button_clear.grid(row=0, column=0)
         self.button_save.grid(row=0, column=1, padx=20)
 
-    def clear_on_click(self):
+    def clear_on_click(self) -> None:
         """
-        Execute callback function for clear button
+        Executes callback function for the Clear button.
         """
         self.btn_clear_function()
 
-    def save_on_click(self):
+    def save_on_click(self) -> None:
         """
-        Execute callback function for save button
+        Executes callback function for the Save button.
         """
         self.btn_save_function()
 
-    def enable_save_button(self):
+    def enable_save_button(self) -> None:
         """
-        Enables save button
+        Enables the Save button.
         """
         if self.button_save.cget("state") == "disabled":
             self.button_save.configure(state="normal", cursor="hand2")
 
-    def disable_save_button(self):
+    def disable_save_button(self) -> None:
         """
-        Disables save button
+        Disables the save button.
         """
         self.button_save.configure(state="disabled", cursor="arrow")
 
 
 class Card(ctk.CTkFrame):
     """
-    A card that contains a picture, a title, and a description
+    A card that contains an image and a title button.
     """
-
     def __init__(
-        self, root, title: str, image_path: str ="assets/cards/add_wine.png",
-        on_click=None, **kwargs
+        self, root, title: str, image_path: str = "assets/cards/add_wine.png",
+        on_click: Callable | None = None, **kwargs
     ):
         super().__init__(root, **kwargs)
         # Frame
@@ -1078,8 +1149,7 @@ class Card(ctk.CTkFrame):
             
         )
         self.on_click = on_click 
-          
-        
+           
         # Create components (They work better as buttons rather than labels)
         self.image = ctk.CTkButton(
             self,
@@ -1098,8 +1168,7 @@ class Card(ctk.CTkFrame):
             hover_color=Colours.BG_HOVER_NAV,
             width=120,
             height=50,
-            command=on_click,
-            
+            command=on_click,  
         )
         self.image.pack(pady=(5,0))
         self.title.pack(pady=5)
@@ -1107,9 +1176,9 @@ class Card(ctk.CTkFrame):
         # Add binds
         self.add_binds()
        
-    def add_binds(self):
+    def add_binds(self) -> None:
         """
-        Add bind to the components to work as a one thing
+        Add bindings so the whole frame behaves as a single clickable control.
         """
         if self.on_click:
             self.bind("<Button-1>", self.frame_clicked)
@@ -1117,23 +1186,23 @@ class Card(ctk.CTkFrame):
             control.bind("<Enter>", self.frame_on_enter)
             control.bind("<Leave>", self.frame_on_leave)
 
-    def frame_clicked(self, event):
+    def frame_clicked(self, event: tk.Event) -> None:
         """
-        Click event triggered: Callback
+        Click event handler: call the callback if provided.
         """
         self.on_click()
 
-    def frame_on_enter(self, event):
+    def frame_on_enter(self, event: tk.Event) -> None:
         """
-        Hover on enter event trigered: Change hover color
+        Hover enter: change hover color for frame and children.
         """
         self.configure(fg_color=Colours.BG_HOVER_NAV)
         for control in self.winfo_children():
             control.configure(fg_color=Colours.BG_HOVER_NAV)
 
-    def frame_on_leave(self, event):
+    def frame_on_leave(self, event: tk.Event) -> None:
         """
-        Hover on leave event trigered: Change hover colour
+        Hover leave: restore original colors.
         """
         self.configure(fg_color=Colours.BG_MAIN)
         for control in self.winfo_children():
@@ -1142,11 +1211,18 @@ class Card(ctk.CTkFrame):
 
 class NavLink(ctk.CTkButton):
     """
-    A button that works as a navigator link.
+    A button that behaves as a navigation link.
+
+    Parameters:
+        root: Parent widget.
+        text: Button text.
+        image: Optional icon image.
+        command: Callback executed when clicked.
+        **kwargs: Additional CTkButton keyword arguments.
     """
     def __init__(
-        self, root, text: str = "", image: ctk.CTkImage = None, 
-        command: Callable = None, **kwargs
+        self, root, text: str = "", image: ctk.CTkImage | None = None, 
+        command: Callable | None = None, **kwargs
     ):
         super().__init__(root, **kwargs)
         # Frame
@@ -1166,11 +1242,12 @@ class NavLink(ctk.CTkButton):
             command=self.on_click
         )
         self.root = root
-        self.callback = command   
+        self.callback = command
 
-    def on_click(self):
-        """Disable active button and execute callback"""
-        
+    def on_click(self) -> None:
+        """
+        Disable previously active navlink and execute callback.
+        """
         # Do nothing if there is no function
         if self.callback is None:
             return
@@ -1196,8 +1273,10 @@ class NavLink(ctk.CTkButton):
 
 
 class ButtonGoBack(ctk.CTkButton):
-    """ Button to go back to the precious section"""
-    def __init__(self, root, command, **kwargs):
+    """
+    Button to go back to the previous section.
+    """
+    def __init__(self, root, command: Callable, **kwargs):
         super().__init__(root, **kwargs)
        
         self.configure(
@@ -1216,3 +1295,184 @@ class ButtonGoBack(ctk.CTkButton):
         self.bind("<Leave>", lambda e: self.configure(image=Icons.GO_BACK))
         
 
+class ActionMenuButton(ctk.CTkFrame):
+    """
+    Button that shows a contextual menu with actions (Show, Edit, Delete).
+
+    Parameters:
+        root: Parent widget.
+        on_show: Callback executed when 'Show Details' is selected.
+        on_edit: Callback executed when 'Edit' is selected.
+        on_delete: Callback executed when 'Delete' is selected.
+        **kwargs: Additional CTkFrame keyword arguments.
+    """
+    def __init__(self, root, on_show, on_edit, on_delete, **kwargs):
+        super().__init__(
+            root, 
+            fg_color="transparent", 
+            cursor="hand2",
+            **kwargs
+        )
+
+        # Callbacks
+        self.on_show = on_show
+        self.on_edit = on_edit
+        self.on_delete = on_delete
+        self.menu_visible = False
+        self.menu_frame = None
+
+        # Button
+        self.menu_button = ctk.CTkButton(
+            self,
+            text="",
+            text_color=Colours.TEXT_BUTTON,
+            image=Icons.DOTS,
+            width=25,
+            height=25,
+            fg_color="transparent",
+            hover_color="#EEE5E5",
+            command=self.toggle_menu
+        )
+        self.menu_button.pack(expand=True)
+
+    def toggle_menu(self) -> None:
+        """
+        Shows or hides the menu.
+        """
+        if self.menu_visible:
+            self.hide_menu()
+        else:
+            self.show_menu()
+
+    def show_menu(self) -> None:
+        """
+        Shows and creates the contextual menu with actions.
+        """
+        self.menu_visible = True
+
+        # Frame container of the menu
+        self.menu_frame = ctk.CTkFrame(
+            self.winfo_toplevel(), # First Parent
+            corner_radius=8,
+            fg_color="white",
+            border_color="#DDD",
+            border_width=1
+        )
+
+        # Action buttons
+        btn_show_detail = ctk.CTkButton(
+            self.menu_frame,
+            text="Show Details",
+            image=Icons.SHOW,
+            anchor="w",
+            fg_color="transparent",
+            text_color="black",
+            hover_color="#F0E0E0",
+            height=28,
+            command=lambda: self._handle_action(self.on_show)
+        )
+        btn_show_detail.pack(fill="x", padx=5, pady=(3, 0))
+
+        btn_edit = ctk.CTkButton(
+            self.menu_frame,
+            text="Edit Wine",
+            image=Icons.EDIT,
+            anchor="w",
+            fg_color="transparent",
+            text_color="black",
+            hover_color="#F0E0E0",
+            height=28,
+            command=lambda: self._handle_action(self.on_edit)
+        )
+        btn_edit.pack(fill="x", padx=5, pady=(3, 0))
+
+        btn_delete = ctk.CTkButton(
+            self.menu_frame,
+            text="Delete Wine",
+            image=Icons.DELETE,
+            anchor="w",
+            fg_color="transparent",
+            text_color="#C0392B",
+            hover_color="#F8E5E5",
+            height=28,
+            command=lambda: self._handle_action(self.on_delete)
+        )
+        btn_delete.pack(fill="x", padx=5, pady=(3, 3))
+
+        # Place the menu under the clicked button
+        x = self.menu_button.winfo_rootx() - self.winfo_toplevel().winfo_rootx() - self.menu_button.winfo_width()
+        y = self.menu_button.winfo_rooty() - self.winfo_toplevel().winfo_rooty() + 30
+        
+        self.menu_frame.place(x=x, y=y)
+        self.menu_frame.lift()
+
+        # Bind click outside to close menu
+        self.winfo_toplevel().bind("<Button-1>", self._check_click_outside, add="+")
+
+    def hide_menu(self) -> None:
+        """
+        Destroys the menu if exists.
+        """
+        if self.menu_frame:
+            self.menu_frame.destroy()
+            self.menu_frame = None
+            self.menu_visible = False
+
+            # Unbind the click event
+            try:
+                self.winfo_toplevel().unbind("<Button-1>", self._check_click_outside)
+            except:
+                pass
+
+    def _handle_action(self, callback: Callable | None) -> None:
+        """
+        Destroys the menu and executes the triggered function through a callback.
+        """
+        
+        self.hide_menu()
+        if callback:
+            callback()
+
+    def destroy(self) -> None:
+        """
+        Destroys any existing menu before destroying itself.
+        """    
+        # Destroy existing menu frame
+        self.hide_menu()
+
+        super().destroy()
+
+    def _check_click_outside(self, event: tk.Event) -> None:
+        """
+        Checks if click was outside the menu and closes it.
+        """
+        if not self.menu_visible:
+            return
+            
+        # Get the widget that was clicked
+        widget = event.widget
+        
+        # Check if click was inside menu_frame or menu_button
+        is_inside_menu = False
+        is_inside_button = False
+        
+        # Check if clicked widget is the menu or a child of it
+        if self.menu_frame and widget.winfo_exists():
+            try:
+                parent = widget
+                while parent:
+                    if parent == self.menu_frame:
+                        is_inside_menu = True
+                        break
+                    if parent == self.menu_button:
+                        is_inside_button = True
+                        break
+                    parent = parent.master if hasattr(parent, 'master') else None
+            except:
+                pass
+        
+        # Close menu if clicked outside (but not on the button itself)
+        if not is_inside_menu and not is_inside_button:
+            self.hide_menu()
+
+        

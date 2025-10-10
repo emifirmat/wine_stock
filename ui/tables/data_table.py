@@ -39,7 +39,7 @@ class DataTable(ctk.CTkFrame, ABC):
         
         # Table UI
         self.header_labels = []
-        self.column_width = None
+        self.column_widths = None
         self.rows_container = None
         self.load_more_btn = None
         self.lbl_no_results = None       
@@ -59,14 +59,17 @@ class DataTable(ctk.CTkFrame, ABC):
                 text=header.upper(),
                 text_color=Colours.TEXT_MAIN,
                 font=Fonts.TEXT_HEADER,
-                width=self.column_width,
-                wraplength=self.column_width,
-                cursor="hand2" if header != "picture" else "arrow"
+                width=self.column_widths[i],
+                wraplength=self.column_widths[i],
+                anchor="center",
             )
-            label.grid(row=0, column=i, padx=5)
+            label.grid(row=0, column=i, padx=5, sticky="ew")
 
-            if header != "picture":
+            if header != "picture" and header != "actions":
                 # Bind label with a click
+                label.configure(
+                    cursor="hand2"
+                )
                 label.bind(
                     "<Button-1>", 
                     lambda e, col_index=i: self.on_header_click(e, col_index)
@@ -74,6 +77,9 @@ class DataTable(ctk.CTkFrame, ABC):
 
                 # Add label in header_labels 
                 self.header_labels.append(label)
+
+            # Add responsiveness to the column
+            row_header_frame.grid_columnconfigure(i, weight=1)
 
         # Rows container
         self.rows_container = ctk.CTkFrame(self, fg_color="transparent")
@@ -87,10 +93,6 @@ class DataTable(ctk.CTkFrame, ABC):
             text_color=Colours.TEXT_MAIN,
             anchor="center",
         )
-        
-        # Let columns expand to fill the width
-        for i in range(len(self.headers)):
-            self.rows_container.grid_columnconfigure(i, weight=1)
         
     def refresh_visible_rows(self):
         """
@@ -121,7 +123,12 @@ class DataTable(ctk.CTkFrame, ABC):
                 self.customize_row(line, widget)
                 self.line_widget_map[line] = widget
             # Show widget    
-            widget.grid(row=i, pady=2)
+            widget.grid(
+                row=i, column=0, columnspan=len(self.headers), pady=2, sticky="ew"
+            )
+
+        # Add responsiveness to the columns     
+        self.rows_container.grid_columnconfigure(0, weight=1)
         
         # Add "load more" button
         self.create_load_more_button()
@@ -140,7 +147,7 @@ class DataTable(ctk.CTkFrame, ABC):
 
         # Create labels of the row
         line_values = self.get_line_columns(line)
-        for j, line_value in enumerate(line_values):
+        for i, line_value in enumerate(line_values):
             # Text labels
             if not (isinstance(line_value, str) 
                 and line_value.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
@@ -159,12 +166,15 @@ class DataTable(ctk.CTkFrame, ABC):
             
             label = ctk.CTkLabel(
                 row_frame, 
-                width=self.column_width,
-                wraplength=self.column_width,
+                width=self.column_widths[i],
+                wraplength=self.column_widths[i],
                 **label_config
             )
             
-            label.grid(row=0, column=j, padx=5)
+            label.grid(row=0, column=i, padx=5, sticky="ew")
+
+            # Add responsiveness to the columns
+            row_frame.grid_columnconfigure(i, weight=1)
 
         return row_frame
 

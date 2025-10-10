@@ -76,7 +76,7 @@ class AddTransactionForm(ctk.CTkFrame):
         autocomplete_wine = AutoCompleteInput(
             self,
             label_text="Wine",
-            wine_list=self.wine_names_list,
+            item_list=self.wine_names_list,
             textvariable=self.wine_name_var,
         )
 
