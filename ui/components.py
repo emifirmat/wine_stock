@@ -660,7 +660,7 @@ class BaseInput(ctk.CTkFrame):
         
         # Place components
         self.label.grid(row=0, column=0, sticky="w") 
-        self.label_optional.grid(row=0, column=1, padx=(0, 10))
+        self.label_optional.grid(row=0, column=1, padx=(0, 5))
 
     def set_label_layout(self, label_width: int) -> None:
         """
@@ -752,11 +752,11 @@ class AutoCompleteInput(BaseInput, EntryInputMixin):
     """
     A frame that contains a label and an AutoComplete entry component.
     Parameters:
-        root: Parent widget.
-        placeholder: Placeholder text for the entry.
-        textvariable: Optional Tk variable to bind the entry to.
-        item_list: List of items used for autocomplete.
-        **kwargs: Additional keyword arguments passed to BaseInput.
+        - root: Parent widget.
+        - placeholder: Placeholder text for the entry.
+        - textvariable: Optional Tk variable to bind the entry to.
+        - item_list: List of items used for autocomplete.
+        - **kwargs: Additional keyword arguments passed to BaseInput.
     """
     def __init__(
         self, root, placeholder: str | None = None, 
@@ -887,7 +887,108 @@ class DropdownInput(BaseInput):
         )
         empty_label.grid(row=0, column=3)
 
-   
+
+class RadioInput(BaseInput):
+    """
+    A frame that contains a label and Radio Buttons components.
+    Parameters:
+        - root: Parent widget.
+        - variable: Optional Tk variable to bind the entry to.
+        - item_list: List of items representing each radio button. The item is a 
+        tuple (text, value).
+        - **kwargs: Additional keyword arguments passed to BaseInput.
+    """
+    def __init__(
+        self, root, item_list: list[tuple], variable: tk.Variable | None = None, 
+        **kwargs
+    ):
+        super().__init__(root, **kwargs)
+
+        for index, item_ in enumerate(item_list, start=2):
+            self.radio = ctk.CTkRadioButton(
+                self,
+                text=item_[0],
+                value=item_[1],
+                variable=variable,
+                fg_color=Colours.BTN_ACTIVE,
+                hover_color=Colours.BG_HOVER_BTN_SAVE,
+                text_color=Colours.TEXT_MAIN, 
+                font=Fonts.TEXT_MAIN,
+                border_width_checked=8,
+                border_color=Colours.BORDERS,
+                width=50,
+            )
+            
+            # Place component
+            self.radio.grid(row=0, column=index, padx=(0, 15))
+
+
+class ToggleInput(BaseInput):
+    """
+    A frame that contains a label and toggle-style buttons 
+    for selecting one of multiple options.
+    Parameters:
+        - root: Parent widget.
+        - variable: Tk variable to store the selected value.
+        - item_list: List of tuples (text, value) for each toggle option.
+        - **kwargs: Additional keyword arguments passed to BaseInput.
+    """
+    def __init__(
+        self, root, item_list: list[tuple], variable: tk.Variable | None = None, 
+        **kwargs
+    ):
+        super().__init__(root, **kwargs)
+        self.variable = variable
+        self.buttons = {}
+
+        frame_toggles = ctk.CTkFrame(self, fg_color="transparent")
+        frame_toggles.grid(row=0, column=2)
+
+        for text, value in item_list:
+            btn = ctk.CTkButton(
+                frame_toggles,
+                text=text,
+                width=90,
+                height=30,
+                corner_radius=8,
+                fg_color=Colours.BG_SECONDARY,
+                text_color=Colours.TEXT_SECONDARY,
+                hover_color=Colours.BG_HOVER_NAV,
+                border_color=Colours.BORDERS,
+                border_width=1,
+                command=lambda v=value: self._select(v),
+            )
+            btn.pack(side="left", padx=5)
+            self.buttons[btn] = value
+
+        self._update_buttons()
+
+    def _select(self, value: str):
+        """
+        Updates variable and button states.
+        """
+        self.variable.set(value)
+        self._update_buttons()
+
+    def _update_buttons(self):
+        """
+        Updates the visual appearance based on selected value.
+        """
+        for btn, val in self.buttons.items():
+            if self.variable.get() == val:
+                btn.configure(
+                    fg_color=Colours.PRIMARY_WINE,
+                    text_color="white",
+                    border_color=Colours.PRIMARY_WINE,
+                )
+            else:
+                btn.configure(
+                    fg_color=Colours.BG_SECONDARY,
+                    text_color=Colours.TEXT_SECONDARY,
+                    border_color=Colours.BORDERS,
+                )
+
+        
 class DoubleLabel(ctk.CTkFrame):
     """
     A frame that contains a title label and a value label.

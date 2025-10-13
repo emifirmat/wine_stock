@@ -164,3 +164,13 @@ def load_image_from_file(filepath) -> str:
         shutil.copy(original_path, destination_path)
 
     return destination_path
+
+def deep_getattr(obj, attr_path):
+    """
+    Allows getattr with dot notation, e.g., deep_getattr(wine, "colour.name")
+    """
+    for attr in attr_path.split('.'):
+        obj = getattr(obj, attr, None)
+        if obj is None:
+            return None
+    return obj

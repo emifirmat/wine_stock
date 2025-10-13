@@ -170,7 +170,7 @@ class RemoveTransactionForm(ctk.CTkFrame):
                 "datetime", "wine name", "wine code", "transaction", "quantity",
                 "price", "subtotal", "actions"
             ],
-            lines=StockMovement.all_ordered(self.session)
+            lines=StockMovement.all_ordered_by_datetime(self.session)
         )
         self.transactions_table.grid(row=1, column=0, pady=(10, 0), sticky="nsew")
 

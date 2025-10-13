@@ -65,7 +65,7 @@ class WineFrame(ctk.CTkScrollableFrame):
         
         card_list = Card(
             frame_cards,
-            image_path="assets/cards/wine_list.png",
+            image_path="assets/cards/wine_list2.png",
             title="Manage Wine",
             on_click=self.manage_wine_section,
         )
@@ -85,7 +85,7 @@ class WineFrame(ctk.CTkScrollableFrame):
 
         # Place cards
         card_list.grid(row=0, column=0, pady=(0, 15))
-        card_add.grid(row=0, column=1)
+        card_add.grid(row=0, column=1, pady=(0, 15))
         card_edit.grid(row=1, column=0, padx=20)
         
     

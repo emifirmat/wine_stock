@@ -22,8 +22,7 @@ class Colours:
     COMPANY_NAME = BTN_SAVE = BTN_ACTIVE = "#556B2F"
     ERROR = "#C52323"
     ICONS = "#D4AF37"
-    
-    
+
 
 class Fonts:
     SHOP_NAME = ("Segoe UI", 40, "bold")

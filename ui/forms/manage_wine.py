@@ -26,8 +26,9 @@ class ShowWineForm(ctk.CTkFrame):
         
         # Include db instances
         self.session = session
-        self.wine_names_dict = self.get_wine_names_dict()
-        self.wine_names_list = list(self.wine_names_dict.keys()) # ordered
+        self.wine_names_list = [
+            wine.name for wine in Wine.column_ordered(self.session, "name", "name")
+        ]
         self.wine_codes_list = [
             wine.code for wine in Wine.column_ordered(self.session, "code", "code")
         ]
@@ -61,17 +62,6 @@ class ShowWineForm(ctk.CTkFrame):
         self.frame_lines = None
         self.frame_buttons = None
         self.inputs_dict = self.create_components()
-
-    def get_wine_names_dict(self) -> dict[str:int]:
-        """
-        Get a list of wine names with their instances.
-        Returns:
-            A dict of wine names with their instance as value.
-        """
-        wines = Wine.all_ordered(self.session)
-        return {
-            f"{wine.name.title()}": wine for wine in wines
-        }
 
     def create_components(self) -> list:
         """
@@ -219,7 +209,7 @@ class ShowWineForm(ctk.CTkFrame):
                 "code", "picture", "name", "vintage year", "origin", "quantity",
                 "purchase price", "selling price", "actions"
             ],
-            lines=Wine.all_ordered(self.session)
+            lines=Wine.all_ordered(self.session, order_by="code")
         )
         self.wines_table.grid(row=1, column=0, pady=(10, 20), sticky="nsew")
 

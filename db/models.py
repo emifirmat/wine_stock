@@ -225,12 +225,12 @@ class StockMovement(Base):
 
     # Ordered list
     @classmethod
-    def all_ordered(cls, session, filter: str = None):
+    def all_ordered_by_datetime(cls, session, filter: str | None = None):
         """
         Returns a list ordered by datetime in desc order.
 
         Inputs:
-            filter: Returns a filtered version of the list.
+            - filter: Returns a filtered version of the list.
         """
         ordered_list = session.query(cls).order_by(cls.datetime.desc())
         
