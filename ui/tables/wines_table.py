@@ -6,8 +6,9 @@ import tkinter.messagebox as messagebox
 from typing import Callable, Dict, List
 
 from db.models import Wine
-from helpers import load_ctk_image
+from helpers import load_ctk_image, get_center_coords
 from ui.components import DoubleLabel, FixedSizeToplevel, ActionMenuButton
+from ui.forms.add_wine import AddWineForm
 from ui.style import Colours, Fonts
 from ui.tables.mixins import SortMixin
 from ui.tables.data_table import DataTable
@@ -207,8 +208,55 @@ class WinesTable(DataTable, SortMixin):
         toplevel.destroy()
 
     def edit_wine(self, wine):
-        #TODO
-        pass
+        """
+        Open a new modal window to edit an existing wine.
+        Parameters:
+            - wine: Wine instance of the clicked row.
+        """
+        # Create a modal top level
+        edit_window = ctk.CTkToplevel(
+            self.winfo_toplevel(),
+            fg_color=Colours.BG_MAIN,
+        )
+        edit_window.title("Edit Wine")
+        
+        center_x, center_y = get_center_coords(edit_window)
+        w_width, w_height = 700, min(int(self.winfo_screenheight() * 0.8), 1000)
+        edit_window.geometry(f"{w_width}x{w_height}+{center_x - w_width}+{center_y}")
+        edit_window.update_idletasks() # Necessary to then use grab_set
+        edit_window.grab_set()
+        edit_window.focus_set()
+        
+        # Add scroll
+        frame_scroll = ctk.CTkScrollableFrame(
+            edit_window,
+            fg_color="transparent"
+        )
+        frame_scroll.pack(expand=True, fill="both")
+
+        # Add title
+        title = ctk.CTkLabel(
+            frame_scroll,
+            text="Edit Wine",
+            text_color=Colours.PRIMARY_WINE,
+            font=Fonts.SUBTITLE,
+        )
+
+        # Place title       
+        title.grid(row=0, column=0, pady=(20, 0), sticky="n")
+
+        # Add form
+        form = AddWineForm(
+            frame_scroll,
+            self.session,
+            fg_color="transparent",
+            wine=wine,
+            on_save=self.refresh_edited_rows,
+        )
+        form.grid(row=1, column=0, pady=(10, 0), sticky="nsew")
+
+        # Make everything responsive
+        frame_scroll.grid_columnconfigure(0, weight=1)
 
     def delete_wine(self, wine):
         """
@@ -252,3 +300,12 @@ class WinesTable(DataTable, SortMixin):
             "Wine Removed",
             show_info_message
         )
+
+    def refresh_edited_rows(self, wine):
+        """
+        After a wine is edited, it refreshes the table.
+        """
+        # Delete old wine address from wine_widget_map
+        del self.line_widget_map[wine]
+        # Refresh list
+        self.refresh_visible_rows()

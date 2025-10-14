@@ -174,3 +174,15 @@ def deep_getattr(obj, attr_path):
         if obj is None:
             return None
     return obj
+
+def get_center_coords(widget) -> tuple[int, int]:
+    """
+    Get the coordinates of the center of the screen.
+    Parameters:
+        - Widget necessary to get the coordinates through ctk methods.
+    Returns:
+        - A tuple with the coordinates x and y of the center of the screen.
+    """
+    x = widget.winfo_screenwidth() // 2
+    y = widget.winfo_screenheight() // 2
+    return (x, y)

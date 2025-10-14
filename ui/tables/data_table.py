@@ -120,13 +120,12 @@ class DataTable(ctk.CTkFrame, ABC):
             # Create new widget
             else:
                 widget = self.create_row_widget(line)
-                self.customize_row(line, widget)
                 self.line_widget_map[line] = widget
             # Show widget    
             widget.grid(
                 row=i, column=0, columnspan=len(self.headers), pady=2, sticky="ew"
             )
-
+        
         # Add responsiveness to the columns     
         self.rows_container.grid_columnconfigure(0, weight=1)
         
@@ -175,6 +174,9 @@ class DataTable(ctk.CTkFrame, ABC):
 
             # Add responsiveness to the columns
             row_frame.grid_columnconfigure(i, weight=1)
+
+        # Additional widgets
+        self.customize_row(line, row_frame)
 
         return row_frame
 

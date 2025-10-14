@@ -76,6 +76,13 @@ class EntryInputMixin:
         )
         empty_label.grid(row=0, column=3)
 
+    def update_text_value(self, text: str) -> None:
+        """
+        Updates the text of the entry widget.
+        """
+        self.entry.delete(0, ctk.END) 
+        self.entry.insert(0, text)
+
 
 class FixedSizeToplevel(ctk.CTkToplevel):
     """
@@ -850,6 +857,24 @@ class DropdownInput(BaseInput):
         """
         return self.dropdown.set(self.dropdown.cget("values")[0])
 
+    def set_to_value(self, text: str) -> None:
+        """
+        Sets the value according to the searched text. Sets the dropdown to first
+        value if text is not found. 
+        """
+        values = self.dropdown.cget("values")
+        # Text is empty ("", None)
+        if not text:
+            self.set_to_first_value()
+        # Text has a values
+        else:
+            formatted_text = text.title()
+            if formatted_text in values: # Dropdowns usually are in title format.
+                self.dropdown.set(formatted_text)
+            else:
+                self.set_to_first_value()
+        
+
     def update_values(self, values: list[str]) -> None:
         """
         Updates the available values of the dropdown.
@@ -1109,7 +1134,12 @@ class ImageInput(BaseInput):
             filetypes=[("Images", "*.png *.jpg *.jpeg")]
         )
 
-        # Show preview
+        self.show_preview()
+    
+    def show_preview(self) -> None:
+        """
+        Loads the selected image on the preview label.
+        """
         new_image = load_ctk_image(self.temp_file_path) if self.temp_file_path else None    
         self.label_preview.configure(
             image=new_image
@@ -1157,6 +1187,16 @@ class ImageInput(BaseInput):
             width=empty_label_width
         )
         empty_label.grid(row=0, column=4)
+
+    def set_file_path(self, file_path: str) -> None:
+        """
+        Sets a value for temp_file_path and loads the preview label.
+        Parameters:
+            - file_path: Location of the image.
+        """
+        self.temp_file_path = file_path
+        self.show_preview()
+        
 
 class ClearSaveButtons(ctk.CTkFrame):
     """

@@ -258,6 +258,7 @@ class ShowWineForm(ctk.CTkFrame):
             wn.lower() for wn in self.wine_names_list 
             if wine_name in wn.lower()
         ]
+        print(self.wine_names_list)
         filtered_codes = [
             wc.lower() for wc in self.wine_codes_list 
             if wine_code in wc.lower()

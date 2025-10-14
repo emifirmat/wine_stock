@@ -4,11 +4,12 @@ Classes related with the wine section
 
 import customtkinter as ctk
 
+from db.models import Wine
 from ui.components import Card, ButtonGoBack
 from ui.forms.add_wine import AddWineForm
 from ui.forms.manage_wine import ShowWineForm
 from ui.style import Colours, Fonts
-from db.models import Wine
+
 
 class WineFrame(ctk.CTkScrollableFrame):
     """
@@ -75,18 +76,10 @@ class WineFrame(ctk.CTkScrollableFrame):
             image_path="assets/cards/add_wine2.png",
             on_click=self.show_add_wine_section,
         )
-        card_edit = Card(
-            frame_cards,
-            image_path="assets/cards/coming_soon.png",
-            title="Edit Wine",
-            on_click=None,
-        )
-
 
         # Place cards
         card_list.grid(row=0, column=0, pady=(0, 15))
         card_add.grid(row=0, column=1, pady=(0, 15))
-        card_edit.grid(row=1, column=0, padx=20)
         
     
     def show_subsection(self, text_title: str, form_class, **kwargs):

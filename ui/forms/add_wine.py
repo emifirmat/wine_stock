@@ -7,6 +7,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from db.models import Wine, Colour, Style, Varietal
+from helpers import deep_getattr
 from ui.components import (TextInput, IntInput, DropdownInput, ImageInput,
     DecimalInput, ClearSaveButtons)
 from ui.style import Colours, Fonts
@@ -18,10 +19,15 @@ class AddWineForm(ctk.CTkFrame):
     """
     Contains all the components and logic related to ADD Wine.
     """
-    def __init__(self, root: ctk.CTkFrame, session, **kwargs):
+    def __init__(
+        self, root: ctk.CTkFrame, session, wine: Wine | None = None, 
+        on_save=None, **kwargs
+    ):
         super().__init__(root, **kwargs)
         
         self.session = session
+        self.wine = wine
+        self.on_save = on_save
         self.wine_colours_dict = self.get_wine_colours_dict()
         self.wine_styles_dict = self.get_wine_style_dict()
         self.label_error = None
@@ -66,7 +72,7 @@ class AddWineForm(ctk.CTkFrame):
         varietal = DropdownInput(
             frame_background,
             label_text="Varietal",
-            values=[""] + [v.name.capitalize() for v in self.session.query(Varietal).all()],
+            values=[""] + [v.name.title() for v in self.session.query(Varietal).all()],
             optional=True
         )
         vintage_year = IntInput(
@@ -108,13 +114,13 @@ class AddWineForm(ctk.CTkFrame):
         inputs_dict = {
             "name": name, 
             "winery": winery, 
-            "colour": colour, 
-            "style": style, 
-            "varietal": varietal, 
+            "colour.name": colour, 
+            "style.name": style, 
+            "varietal.name": varietal, 
             "vintage_year": vintage_year, 
             "origin": origin, 
             "code": code,
-            "wine_picture": wine_picture,
+            "picture_path": wine_picture,
             "quantity": quantity,
             "purchase_price": purchase_price,
             "selling_price": selling_price
@@ -145,6 +151,10 @@ class AddWineForm(ctk.CTkFrame):
         
         frame_buttons.grid(row=len(inputs_dict) + 1, column=0, pady=20)
 
+        # Edition mode
+        if self.wine:
+            self.set_edition_mode(inputs_dict)
+        
         return inputs_dict
     
     def get_wine_colours_dict(self) -> dict[str:int]:
@@ -231,7 +241,14 @@ class AddWineForm(ctk.CTkFrame):
         ) if wine_attributes["varietal"] else None
         
         try:
-            wine = Wine(**wine_attributes)
+            # Edit wine
+            if self.wine:
+                for attr, val in wine_attributes.items():
+                    setattr(self.wine, attr, val)
+            # Create new wine
+            else:
+                new_wine = Wine(**wine_attributes)
+                self.session.add(new_wine)
         except TypeError:
             messagebox.showinfo(
                 "Error Saving",
@@ -241,7 +258,6 @@ class AddWineForm(ctk.CTkFrame):
 
         # Save it in the DB
         try:
-            self.session.add(wine)
             self.session.commit()
         except IntegrityError as e:
             # Rollback session
@@ -267,8 +283,15 @@ class AddWineForm(ctk.CTkFrame):
             "The wine has been successfully saved."
         )
 
-        # Clear all lines
-        self.clear_inputs()
+        if self.wine:
+            edit_window = self.winfo_toplevel()
+            # Refresh table
+            self.on_save(self.wine)
+            # Close top level
+            edit_window.destroy()
+        else:
+            # Clear all lines
+            self.clear_inputs()
 
     
     def validate_inputs(self) -> dict | None:
@@ -278,20 +301,18 @@ class AddWineForm(ctk.CTkFrame):
             - True: All inputs passed the validations.
             - False: There is an input that couldn't pass the validations.
         """
-        
-
         # Validate inputs
         try:
             return {
                 "name": validate_string("name", self.inputs_dict["name"].get()),
                 "winery": validate_string("winery", self.inputs_dict["winery"].get()),
-                "colour": validate_dropdown("colour", self.inputs_dict["colour"].get()),
-                "style": validate_dropdown("style", self.inputs_dict["style"].get()),
-                "varietal": self.inputs_dict["varietal"].get().lower(), # It's optional           
+                "colour": validate_dropdown("colour", self.inputs_dict["colour.name"].get()),
+                "style": validate_dropdown("style", self.inputs_dict["style.name"].get()),
+                "varietal": self.inputs_dict["varietal.name"].get().lower(), # It's optional           
                 "vintage_year": validate_year("vintage year", self.inputs_dict["vintage_year"].get()),
                 "origin": self.inputs_dict["origin"].get().strip(), # Optional
                 "code": validate_string("code", self.inputs_dict["code"].get()),
-                "picture_path": self.inputs_dict["wine_picture"].get_new_path(), # Optional
+                "picture_path": self.inputs_dict["picture_path"].get_new_path(), # Optional
                 "quantity": validate_int(
                     "initial stock", self.inputs_dict["quantity"].get(), 
                     allowed_signs="positive"
@@ -309,3 +330,19 @@ class AddWineForm(ctk.CTkFrame):
             self.label_error.configure(text=str(ve))
             return None
         
+    def set_edition_mode(self, inputs_dict):
+        """
+        """
+        for input_name, input in inputs_dict.items():
+            # Get value
+            value = deep_getattr(self.wine, input_name)
+            
+            if isinstance(input, DropdownInput):
+                input.set_to_value(value)
+            elif isinstance(input, ImageInput):
+                input.set_file_path(value)
+            else:
+                # Text inputs
+                input.update_text_value(
+                    text=value
+                )
