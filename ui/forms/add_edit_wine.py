@@ -127,7 +127,7 @@ class AddWineForm(ctk.CTkFrame):
         }
 
         for index, input in enumerate(inputs_dict.values()):
-            input.set_input_width(450)
+            input.set_total_width(450)
             input.grid(row=index, column=0, padx=(25, 0), pady=15)
                    
         # Error message
@@ -284,11 +284,10 @@ class AddWineForm(ctk.CTkFrame):
         )
 
         if self.wine:
-            edit_window = self.winfo_toplevel()
             # Refresh table
             self.on_save(self.wine)
             # Close top level
-            edit_window.destroy()
+            self.winfo_toplevel().destroy()
         else:
             # Clear all lines
             self.clear_inputs()
@@ -344,5 +343,5 @@ class AddWineForm(ctk.CTkFrame):
             else:
                 # Text inputs
                 input.update_text_value(
-                    text=value
+                    new_text=value
                 )

@@ -4,8 +4,8 @@ Classes related with the home section
 import customtkinter as ctk
 
 from ui.components import Card, ButtonGoBack
-from ui.forms.add_transaction import AddTransactionForm
-from ui.forms.remove_transaction import RemoveTransactionForm
+from ui.forms.add_edit_transaction import AddTransactionForm
+from ui.forms.manage_transaction import ManageTransactionForm
 from ui.tables.transactions_table import TransactionsTable
 from ui.style import Colours, Fonts, Icons
 
@@ -98,17 +98,17 @@ class HomeFrame(ctk.CTkScrollableFrame):
             on_click=self.show_add_purchase_section,
         )
         # New purhase
-        card_remove_transaction = Card(
+        card_manage_transaction = Card(
             frame_cards,
             image_path="assets/cards/remove_transaction.png",
-            title= "Remove \nTransaction",
-            on_click=self.show_remove_transaction_section,
+            title= "Manage \nTransaction",
+            on_click=self.show_manage_transaction_section,
         )
 
         # Place cards
         card_new_sale.grid(row=0, column=0, pady=(0, 15))
         card_new_purchase.grid(row=0, column=1, pady=(0, 15), padx=20)
-        card_remove_transaction.grid(row=1, column=0, pady=(0, 15))
+        card_manage_transaction.grid(row=1, column=0, pady=(0, 15))
     
     def show_subsection(self, text_title: str, form_class, **kwargs):
         """
@@ -149,7 +149,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         # Add form
         form = form_class(
             self,
-            self.session,
+            session=self.session,
             **kwargs
         )
         form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") 
@@ -174,13 +174,13 @@ class HomeFrame(ctk.CTkScrollableFrame):
             transaction_type="purchase",
         )
 
-    def show_remove_transaction_section(self) -> None:
+    def show_manage_transaction_section(self) -> None:
         """
         Shows the form for removing a transaction.
         """
         self.show_subsection(
-            "REMOVE TRANSACTION",
-            RemoveTransactionForm, 
+            "MANAGE TRANSACTION",
+            ManageTransactionForm, 
         )
 
     def clear_content(self) -> None:

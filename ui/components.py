@@ -9,7 +9,7 @@ import re
 from decimal import Decimal
 from typing import Callable
 
-from helpers import load_ctk_image, resource_path, generate_colored_icon
+from helpers import load_ctk_image, resource_path
 from db.models import Wine
 from ui.style import Colours, Fonts, Icons
 
@@ -42,7 +42,7 @@ class EntryInputMixin:
         """
         return self.entry.get()
 
-    def set_input_width(self, input_width: int) -> None:
+    def set_total_width(self, total_width: int) -> None:
         """
         Sets the total width of the input for alignment purposes.
         Creates an empty label to fill the remaining width.
@@ -63,7 +63,7 @@ class EntryInputMixin:
         label_width = self.label.winfo_width()
         label_asterisk_width = self.label_optional.winfo_width()
         entry_width = self.entry.winfo_width()
-        empty_label_width = input_width - (label_width + entry_width + label_asterisk_width)
+        empty_label_width = total_width - (label_width + entry_width + label_asterisk_width)
 
         if empty_label_width < 0:
             raise ValueError("input_width must be greater than label_width + entry_width")
@@ -76,12 +76,14 @@ class EntryInputMixin:
         )
         empty_label.grid(row=0, column=3)
 
-    def update_text_value(self, text: str) -> None:
+    def update_text_value(self, new_text: str) -> None:
         """
         Updates the text of the entry widget.
+        Parameters:
+            new_text: New text to be inserted.
         """
         self.entry.delete(0, ctk.END) 
-        self.entry.insert(0, text)
+        self.entry.insert(0, new_text)
 
 
 class FixedSizeToplevel(ctk.CTkToplevel):
@@ -884,7 +886,7 @@ class DropdownInput(BaseInput):
         """
         self.dropdown.configure(values=values)
 
-    def set_input_width(self, input_width: int):
+    def set_total_width(self, total_width: int):
         """
         Sets the total with of the dropdown used for aligment. 
         It creates an empty label to cover the remaning width.
@@ -899,7 +901,7 @@ class DropdownInput(BaseInput):
         label_width = self.label.winfo_width()
         label_asterisk_width = self.label_optional.winfo_width()
         dropdown_width = self.dropdown.winfo_width()
-        empty_label_width = input_width - (label_width + dropdown_width + label_asterisk_width)
+        empty_label_width = total_width - (label_width + dropdown_width + label_asterisk_width)
 
         if empty_label_width < 0:
             raise ValueError("input_width should be higher than labels width + dropdown width")
@@ -1049,7 +1051,7 @@ class DoubleLabel(ctk.CTkFrame):
         self.label_title.grid(row=0, column=0, sticky="w", padx=(0, 10)) 
         self.label_value.grid(row=0, column=1)
 
-    def update_value_text(self, new_text: str) -> None:
+    def update_text_value(self, new_text: str) -> None:
         """
         Update the text of the value label.
 
@@ -1066,20 +1068,50 @@ class DoubleLabel(ctk.CTkFrame):
         """
         self.label_value.configure(font=Fonts.TEXT_HEADER)
 
-    def set_columns_layout(self, title_width: int, value_width: int, anchor: str):
+    def set_columns_layout(self, title_width: int, 
+        value_width: int | None = None, anchor: str = "w") -> None: 
         """
         Set the width and anchor of both the title label and the value label.
         Parameters:
             - title_width: Width of the label_title column.
             - value_width: Width of the label_value column.
-            - anchor: Position of the text.
-        """
+            - anchor: Position of the text. By default is set to left.
+        """ 
         self.label_title.configure(
             width=title_width, wraplength=title_width, anchor=anchor
         )
-        self.label_value.configure(
-            width=value_width, wraplength=value_width, anchor=anchor
-        )
+    
+        if value_width:
+            self.label_value.configure(
+                width=value_width, wraplength=value_width, anchor=anchor
+            )
+
+    def set_total_width(self, total_width: int) -> None:
+        """
+        Sets the total width of the double label for alignment purposes.
+        Creates an empty label to fill the remaining width.
+        Parameters:
+            - total_width: Total width of the double label.
+        Raises:
+            - ValueError: If the total width is smaller than the sum of its components.
+        """
+        # Ensure widgets are rendered before measuring
+        self.update_idletasks()
+        
+        # Calculate widths
+        title_width = self.label_title.winfo_width()
+        value_width = self.label_value.winfo_width()
+        empty_label_width = total_width - (title_width + value_width)
+
+        if empty_label_width < 0:
+            raise ValueError("input_width must be greater than label_width + entry_width")
+
+        # Create empty label for aligment
+        ctk.CTkLabel(
+            self, # frame that contains all ctk components
+            text="",
+            width=empty_label_width,
+        ).grid(row=0, column=2)
 
 
 class ImageInput(BaseInput):
@@ -1159,7 +1191,7 @@ class ImageInput(BaseInput):
             image=None
         )
 
-    def set_input_width(self, input_width: int) -> None:
+    def set_total_width(self, total_width: int) -> None:
         """
         Sets the total width of the image input used for alignment.
         It creates an empty label to cover the remaining width.
@@ -1174,7 +1206,7 @@ class ImageInput(BaseInput):
         label_asterisk_width = self.label_optional.winfo_width()
         label_preview_width = self.label_preview.winfo_width()
         button_width = self.button.winfo_width()
-        empty_label_width = input_width - (label_width + label_preview_width + 
+        empty_label_width = total_width - (label_width + label_preview_width + 
             label_asterisk_width + button_width + 25)
 
         if empty_label_width < 0:
@@ -1447,7 +1479,10 @@ class ActionMenuButton(ctk.CTkFrame):
         on_delete: Callback executed when 'Delete' is selected.
         **kwargs: Additional CTkFrame keyword arguments.
     """
-    def __init__(self, root, on_show, on_edit, on_delete, **kwargs):
+    def __init__(
+        self, root, btn_name: str, on_show = None, on_edit = None, 
+        on_delete = None, **kwargs
+    ):
         super().__init__(
             root, 
             fg_color="transparent", 
@@ -1456,6 +1491,7 @@ class ActionMenuButton(ctk.CTkFrame):
         )
 
         # Callbacks
+        self.btn_name = btn_name
         self.on_show = on_show
         self.on_edit = on_edit
         self.on_delete = on_delete
@@ -1501,44 +1537,47 @@ class ActionMenuButton(ctk.CTkFrame):
         )
 
         # Action buttons
-        btn_show_detail = ctk.CTkButton(
-            self.menu_frame,
-            text="Show Details",
-            image=Icons.SHOW,
-            anchor="w",
-            fg_color="transparent",
-            text_color="black",
-            hover_color="#F0E0E0",
-            height=28,
-            command=lambda: self._handle_action(self.on_show)
-        )
-        btn_show_detail.pack(fill="x", padx=5, pady=(3, 0))
+        if self.on_show:
+            btn_show_detail = ctk.CTkButton(
+                self.menu_frame,
+                text="Show Details",
+                image=Icons.SHOW,
+                anchor="w",
+                fg_color="transparent",
+                text_color="black",
+                hover_color="#F0E0E0",
+                height=28,
+                command=lambda: self._handle_action(self.on_show)
+            )
+            btn_show_detail.pack(fill="x", padx=5, pady=(3, 0))
 
-        btn_edit = ctk.CTkButton(
-            self.menu_frame,
-            text="Edit Wine",
-            image=Icons.EDIT,
-            anchor="w",
-            fg_color="transparent",
-            text_color="black",
-            hover_color="#F0E0E0",
-            height=28,
-            command=lambda: self._handle_action(self.on_edit)
-        )
-        btn_edit.pack(fill="x", padx=5, pady=(3, 0))
+        if self.on_edit:
+            btn_edit = ctk.CTkButton(
+                self.menu_frame,
+                text=f"Edit {self.btn_name}",
+                image=Icons.EDIT,
+                anchor="w",
+                fg_color="transparent",
+                text_color="black",
+                hover_color="#F0E0E0",
+                height=28,
+                command=lambda: self._handle_action(self.on_edit)
+            )
+            btn_edit.pack(fill="x", padx=5, pady=(3, 0))
 
-        btn_delete = ctk.CTkButton(
-            self.menu_frame,
-            text="Delete Wine",
-            image=Icons.DELETE,
-            anchor="w",
-            fg_color="transparent",
-            text_color="#C0392B",
-            hover_color="#F8E5E5",
-            height=28,
-            command=lambda: self._handle_action(self.on_delete)
-        )
-        btn_delete.pack(fill="x", padx=5, pady=(3, 3))
+        if self.on_delete:
+            btn_delete = ctk.CTkButton(
+                self.menu_frame,
+                text=f"Delete {self.btn_name}",
+                image=Icons.DELETE,
+                anchor="w",
+                fg_color="transparent",
+                text_color="#C0392B",
+                hover_color="#F8E5E5",
+                height=28,
+                command=lambda: self._handle_action(self.on_delete)
+            )
+            btn_delete.pack(fill="x", padx=5, pady=(3, 3))
 
         # Place the menu under the clicked button
         x = self.menu_button.winfo_rootx() - self.winfo_toplevel().winfo_rootx() - self.menu_button.winfo_width()

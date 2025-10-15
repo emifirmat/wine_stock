@@ -13,7 +13,7 @@ from ui.style import Colours, Fonts
 from ui.tables.transactions_table import TransactionsTable
 from db.models import Wine, StockMovement
 
-class RemoveTransactionForm(ctk.CTkFrame):
+class ManageTransactionForm(ctk.CTkFrame):
     """
     Contains all the components and logic related to remove a transaction.
     """

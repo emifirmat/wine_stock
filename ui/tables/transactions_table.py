@@ -6,9 +6,13 @@ import tkinter.messagebox as messagebox
 from datetime import datetime, date
 from typing import Callable, Dict, List
 
+from helpers import get_coords_center
+from ui.components import ActionMenuButton
+from ui.forms.add_edit_transaction import EditTransactionForm
 from ui.style import Colours, Fonts
 from ui.tables.data_table import DataTable
 from ui.tables.mixins import SortMixin
+
 
 class TransactionsTable(DataTable, SortMixin):
     """
@@ -42,46 +46,48 @@ class TransactionsTable(DataTable, SortMixin):
         )
         label.grid(row=0, column=column_index, padx=5, sticky="ew")
         
-        button_remove = ctk.CTkButton(
+        ActionMenuButton(
             label,
-            text="X",
-            anchor="center",
-            fg_color=Colours.BTN_CLEAR,
-            text_color=Colours.TEXT_BUTTON,
-            hover_color=Colours.BG_HOVER_BTN_CLEAR,
-            width=30,
-            cursor="hand2",
-            command=lambda f=frame_row, l=line: self.remove_line(f, l) # Pass f, l to get the current value and not last one.
-        )
-        button_remove.grid(row=0, column=0, padx=5)
+            btn_name="Transaction",
+            on_edit=lambda t=line: self.edit_transaction(t),
+            on_delete=lambda t=line: self.delete_transaction(t),
+        ).grid(row=0, column=0, padx=5)
+        
         frame_row.grid_columnconfigure(column_index, weight=1)
-    
-    def remove_line(self, parent_frame: ctk.CTkFrame, instance) -> None:
+
+    def delete_transaction(self, transaction) -> None:
         """
         Removes the line where the button that triggered the event was clicked
         """
         # Ask user for confirmation
         confirm_dialog = messagebox.askyesno(
             "Confirm Removal",
-            (f"Do you want to remove the {instance.transaction_type} for € " 
-            + f"{instance.quantity * instance.price}?")
+            (f"Do you want to remove the {transaction.transaction_type} for € " 
+            + f"{transaction.quantity * transaction.price}?")
         )
         if not confirm_dialog:
             return
 
         # Remove line from db
-        self.session.delete(instance)
+        self.session.delete(transaction)
         self.session.commit()
-       
-        # Remove line from UI
-        parent_frame.destroy()
 
         # Remove line from lines list
-        self.lines.remove(instance)
-        self.filtered_lines.remove(instance)
+        self.lines.remove(transaction)
+        self.filtered_lines.remove(transaction)
+
+        # Remove line from UI
+        self.line_widget_map[transaction].destroy()
+        del self.line_widget_map[transaction]
 
         # Update load more button
         self.create_load_more_button()
+
+        # Show a message
+        messagebox.showinfo(
+            "Transaction Removed",
+            "The transaction has been successfully removed."
+        )
     
     def get_line_columns(self, line) -> List:
         """
@@ -93,7 +99,7 @@ class TransactionsTable(DataTable, SortMixin):
             the text of a label.
         """
         return [
-            str(line.datetime.replace(microsecond=0)), line.wine.name, line.wine.code,
+            str(line.datetime), line.wine.name, line.wine.code,
             line.transaction_type.capitalize(), str(line.quantity), f"€ {line.price}",
             f"€ {line.quantity * line.price}"
         ]
@@ -153,4 +159,62 @@ class TransactionsTable(DataTable, SortMixin):
         self.visible_rows_count = self.INITIAL_ROWS
         self.refresh_visible_rows()
 
+    def edit_transaction(self, transaction):
+        """
+        Open a new modal window to edit an existing transaction.
+        Parameters:
+            - wine: Wine instance of the clicked row.
+        """
+        # Create a modal top level
+        edit_window = ctk.CTkToplevel(
+            self.winfo_toplevel(),
+            fg_color=Colours.BG_MAIN,
+        )
+        edit_window.title("Edit Transaction")
         
+        center_x, center_y = get_coords_center(edit_window)
+        w_width, w_height = 700, min(int(self.winfo_screenheight() * 0.8), 1000)
+        edit_window.geometry(f"{w_width}x{w_height}+{center_x - w_width}+{center_y}")
+        edit_window.update_idletasks() # Necessary to then use grab_set
+        edit_window.grab_set()
+        edit_window.focus_set()
+        
+        # Add scroll
+        frame_scroll = ctk.CTkScrollableFrame(
+            edit_window,
+            fg_color="transparent"
+        )
+        frame_scroll.pack(expand=True, fill="both")
+
+        # Add title
+        title = ctk.CTkLabel(
+            frame_scroll,
+            text="Edit Transaction",
+            text_color=Colours.PRIMARY_WINE,
+            font=Fonts.SUBTITLE,
+        )
+
+        # Place title       
+        title.grid(row=0, column=0, pady=(20, 0), sticky="n")
+
+        # Add form
+        form = EditTransactionForm(
+            frame_scroll,
+            session=self.session,
+            fg_color="transparent",
+            movement=transaction,
+            on_save=self.refresh_edited_rows,
+        )
+        form.grid(row=1, column=0, pady=(10, 0), sticky="nsew")
+
+        # Make everything responsive
+        frame_scroll.grid_columnconfigure(0, weight=1)
+
+    def refresh_edited_rows(self, movement):
+        """
+        After a movement is edited, it refreshes the table
+        """
+        # Delete old movement address from move_widget_map
+        del self.line_widget_map[movement]
+        # Refresh list
+        self.refresh_visible_rows()

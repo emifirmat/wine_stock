@@ -6,7 +6,7 @@ import customtkinter as ctk
 
 from db.models import Wine
 from ui.components import Card, ButtonGoBack
-from ui.forms.add_wine import AddWineForm
+from ui.forms.add_edit_wine import AddWineForm
 from ui.forms.manage_wine import ShowWineForm
 from ui.style import Colours, Fonts
 

@@ -6,9 +6,9 @@ import tkinter.messagebox as messagebox
 from typing import Callable, Dict, List
 
 from db.models import Wine
-from helpers import load_ctk_image, get_center_coords
+from helpers import load_ctk_image, get_coords_center
 from ui.components import DoubleLabel, FixedSizeToplevel, ActionMenuButton
-from ui.forms.add_wine import AddWineForm
+from ui.forms.add_edit_wine import AddWineForm
 from ui.style import Colours, Fonts
 from ui.tables.mixins import SortMixin
 from ui.tables.data_table import DataTable
@@ -124,6 +124,7 @@ class WinesTable(DataTable, SortMixin):
 
         ActionMenuButton(
             label,
+            btn_name="Wine",
             on_show=lambda w=line: self.show_details(w),
             on_edit=lambda w=line: self.edit_wine(w),
             on_delete=lambda w=line: self.delete_wine(w),
@@ -220,7 +221,7 @@ class WinesTable(DataTable, SortMixin):
         )
         edit_window.title("Edit Wine")
         
-        center_x, center_y = get_center_coords(edit_window)
+        center_x, center_y = get_coords_center(edit_window)
         w_width, w_height = 700, min(int(self.winfo_screenheight() * 0.8), 1000)
         edit_window.geometry(f"{w_width}x{w_height}+{center_x - w_width}+{center_y}")
         edit_window.update_idletasks() # Necessary to then use grab_set
@@ -294,6 +295,9 @@ class WinesTable(DataTable, SortMixin):
         # Remove it from the UI table
         self.line_widget_map[wine].destroy()
         del self.line_widget_map[wine]
+
+        # Update load more button
+        self.create_load_more_button()
 
         # Show a message
         messagebox.showinfo(

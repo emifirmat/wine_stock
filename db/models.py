@@ -1,6 +1,6 @@
 from sqlalchemy import (event, create_engine, Column, ForeignKey, Integer, 
     String, DateTime, Numeric, Enum, text, func)
-from sqlalchemy.orm import sessionmaker, relationship, declarative_base
+from sqlalchemy.orm import sessionmaker, relationship, declarative_base, validates
 from datetime import datetime
 
 
@@ -212,7 +212,9 @@ class StockMovement(Base):
     __tablename__ = "stock_movement"
     id = Column(Integer, primary_key=True)
     wine_id = Column(Integer, ForeignKey("wine.id", ondelete="CASCADE"), nullable=False)
-    datetime = Column(DateTime, default=datetime.now, nullable=False)
+    datetime = Column(
+        DateTime, default=lambda: StockMovement.now_without_microseconds(), nullable=False
+    )
     transaction_type = Column(
         Enum("sale", "purchase", name="transaction_type_enum"), nullable=False
     )
@@ -222,6 +224,13 @@ class StockMovement(Base):
     
     # Relationships
     wine = relationship("Wine", back_populates="movements") 
+
+    @staticmethod
+    def now_without_microseconds():
+        """
+        Returns datetime now without microseconds.
+        """
+        return datetime.now().replace(microsecond=0)
 
     # Ordered list
     @classmethod
@@ -238,6 +247,10 @@ class StockMovement(Base):
             return ordered_list.filter(cls.transaction_type == filter).all()
         
         return ordered_list.all()
+    
+    @validates("transaction_type")
+    def convert_lower(self, key, value):
+        return value.lower() if value else value
 
  
 Base.metadata.create_all(engine)

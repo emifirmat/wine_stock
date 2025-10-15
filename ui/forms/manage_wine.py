@@ -71,7 +71,7 @@ class ShowWineForm(ctk.CTkFrame):
             A list containing all the created filters in the form.
         """
         self.grid_columnconfigure(0, weight=1)
-    
+        
         # ==Filters section==
         filter_frame = ctk.CTkFrame(
             self,
@@ -258,7 +258,6 @@ class ShowWineForm(ctk.CTkFrame):
             wn.lower() for wn in self.wine_names_list 
             if wine_name in wn.lower()
         ]
-        print(self.wine_names_list)
         filtered_codes = [
             wc.lower() for wc in self.wine_codes_list 
             if wine_code in wc.lower()

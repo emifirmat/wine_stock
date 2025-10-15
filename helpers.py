@@ -175,7 +175,7 @@ def deep_getattr(obj, attr_path):
             return None
     return obj
 
-def get_center_coords(widget) -> tuple[int, int]:
+def get_coords_center(widget) -> tuple[int, int]:
     """
     Get the coordinates of the center of the screen.
     Parameters:
