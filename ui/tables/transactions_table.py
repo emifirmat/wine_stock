@@ -146,7 +146,7 @@ class TransactionsTable(DataTable, SortMixin):
             if (                
                 line.wine.name.lower() in filtered_names
                 and line.wine.code.lower() in filtered_codes
-                and (line.transaction_type.capitalize() == transaction_type or not transaction_type)
+                and (line.transaction_type.lower() == transaction_type or not transaction_type)
                 and date_from <= line.datetime.date() <= date_to
             ):
                 self.filtered_lines.append(line)

@@ -8,7 +8,7 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 
 from helpers import deep_getattr
-from ui.components import (IntInput, DropdownInput, DoubleLabel, AutoCompleteInput,
+from ui.components import (IntInput, DropdownInput, DoubleLabel, AutocompleteInput,
     ClearSaveButtons)
 from ui.style import Colours, Fonts
 from ui.tables.add_line_table import AddLineTable
@@ -116,7 +116,7 @@ class AddTransactionForm(BaseTransactionForm):
             self.grid_columnconfigure(i, weight=1)
       
         # ==Inputs section==
-        autocomplete_wine = AutoCompleteInput(
+        autocomplete_wine = AutocompleteInput(
             self,
             label_text="Wine",
             item_list=self.wine_names_list,
@@ -425,7 +425,7 @@ class EditTransactionForm(BaseTransactionForm):
             label_title_text="Datetime"
         )
 
-        wine_name = AutoCompleteInput(
+        wine_name = AutocompleteInput(
             frame_background,
             label_text="Wine Name",
             item_list=self.wine_names_list,

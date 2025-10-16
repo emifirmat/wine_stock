@@ -757,7 +757,7 @@ class DecimalInput(BaseInput, EntryInputMixin):
         self.entry.grid(row=0, column=2)
 
 
-class AutoCompleteInput(BaseInput, EntryInputMixin):
+class AutocompleteInput(BaseInput, EntryInputMixin):
     """
     A frame that contains a label and an AutoComplete entry component.
     Parameters:

@@ -100,7 +100,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         # New purhase
         card_manage_transaction = Card(
             frame_cards,
-            image_path="assets/cards/remove_transaction.png",
+            image_path="assets/cards/manage_transaction.png",
             title= "Manage \nTransaction",
             on_click=self.show_manage_transaction_section,
         )

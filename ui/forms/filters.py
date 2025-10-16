@@ -1,0 +1,421 @@
+"""
+Filters form file.
+"""
+import customtkinter as ctk
+import tkinter as tk
+import tkinter.messagebox as messagebox
+
+from db.models import Wine, Colour, Style, Varietal
+from ui.components import (TextInput, IntInput, DropdownInput, ImageInput,
+    DecimalInput, ClearSaveButtons, AutocompleteInput, DateInput)
+from ui.style import Colours, Fonts
+
+
+
+class BaseFiltersForm(ctk.CTkFrame):
+    """
+    Base class for filters forms. Handles common setup, event tracing, and clear logic.
+    """
+    def __init__(self, root: ctk.CTkFrame, session, filtered_table, **kwargs):
+        super().__init__(root, **kwargs)
+        self.configure(
+            fg_color="transparent",
+            border_width=1,
+            border_color=Colours.BORDERS
+        )
+
+        # Db session and table to filter
+        self.session = session
+        self.filtered_table = filtered_table
+        self.inputs_dict = {}
+        self.vars_dict = {}
+
+        # Components (created by subclass)
+        self.create_components()
+        self.add_variable_traces()
+
+    def create_components(self):
+        """
+        Implemented by subclasses. Must define `self.inputs_dict` and 
+        `self.vars_dict`.
+        """
+        raise NotImplementedError
+
+    def trigger_filters(self):
+        """
+        Called when user changes a filter input. Implemented by subclasses.
+        """
+        raise NotImplementedError
+
+    def add_variable_traces(self):
+        """
+        Attach trace listeners for all tk variables in vars_dict.
+        """
+        for var in self.vars_dict.values():
+            if isinstance(var, tk.Variable):
+                var.trace_add("write", self.on_entry_change)
+
+    def on_entry_change(self, *args):
+        """
+        Triggered whenever any tk variable changes.
+        """
+        self.trigger_filters()
+
+    def clear_inputs(self):
+        """
+        Reset all inputs.
+        """
+        confirm_dialog = messagebox.askyesno(
+            "Confirm",
+            "Remove all current filters?"
+        )
+        if not confirm_dialog:
+            return
+        
+        for key, input in self.inputs_dict.items():
+            if not isinstance(input, DropdownInput):
+                input.clear()
+            else:
+                input.set_to_first_value
+
+        self.trigger_filters()
+        
+
+class WineFiltersForm(BaseFiltersForm):
+    """
+    Contains all the components and logic for filtering the Wines table.
+    """        
+    def create_components(self) -> list:
+        """
+        Create the filters and table.
+
+        Returns:
+            A list containing all the created filters in the form.
+        """
+        # DB lists
+        self.wine_names_list = [
+            wine.name for wine in Wine.column_ordered(self.session, "name", "name")
+        ]
+        self.wine_codes_list = [
+            wine.code for wine in Wine.column_ordered(self.session, "code", "code")
+        ]
+        self.wine_winery_list = [
+            wine.winery 
+            for wine in Wine.column_ordered(self.session, "winery", "winery", "winery")
+        ]
+        self.wine_origin_list = [
+            wine.origin 
+            for wine in Wine.column_ordered(self.session, "origin", "origin", "origin")
+        ]
+
+        # TK variables
+        self.vars_dict = {
+            "name": tk.StringVar(),
+            "code": tk.StringVar(),
+            "winery": tk.StringVar(),
+            "origin": tk.StringVar(),
+            "year": tk.StringVar(),
+        }
+
+        # Title
+        ctk.CTkLabel(
+            self,
+            text="Filters",
+            font=Fonts.SUBTITLE,
+            text_color=Colours.TEXT_MAIN,
+            anchor="center"
+        ).grid(
+            row=0, column=0, padx=2, pady=20, columnspan=4, sticky="wen"
+        )
+
+        # Components
+        autocomplete_wine = AutocompleteInput(
+            self,
+            label_text="Wine",
+            item_list=self.wine_names_list,
+            textvariable=self.vars_dict["name"],
+            optional=True
+        )
+    
+        autocomplete_code = AutocompleteInput(
+            self,
+            label_text="Code",
+            item_list=self.wine_codes_list,
+            textvariable=self.vars_dict["code"],
+            optional=True
+        )
+
+        autocomplete_winery = AutocompleteInput(
+            self,
+            label_text="Winery",
+            item_list=self.wine_winery_list,
+            textvariable=self.vars_dict["winery"],
+            optional=True
+        )
+
+        dropdown_colours = DropdownInput(
+            self,
+            label_text="Colour",
+            values=[""] + [
+                w_colour.name.capitalize()
+                for w_colour in self.session.query(Colour).all()
+            ],
+            optional=True,
+            command=self.on_entry_change, # It doesn't need variable trace
+        )
+
+        dropdown_styles = DropdownInput(
+            self,
+            label_text="Style",
+            values=[""] + [
+                style.name.capitalize() 
+                for style in self.session.query(Style).all()
+            ],
+            optional=True,
+            command=self.on_entry_change,
+        )
+        
+        dropdown_varietals = DropdownInput(
+            self,
+            label_text="Varietal",
+            values=[""] + [
+                varietal.name.capitalize() 
+                for varietal in self.session.query(Varietal).all()
+            ],
+            optional=True,
+            command=self.on_entry_change,
+        )
+
+        input_year = IntInput(
+            self,
+            label_text="Year",
+            textvariable=self.vars_dict["year"],
+            optional=True
+        )
+
+        autocomplete_origin = AutocompleteInput(
+            self,
+            label_text="Origin",
+            item_list=self.wine_origin_list,
+            textvariable=self.vars_dict["origin"],
+            optional=True
+        )
+
+        autocomplete_wine.grid(row=1, column=0, padx=5, pady=(0, 20), sticky="w")
+        autocomplete_code.grid(row=1, column=1, padx=5, pady=(0, 20))
+        autocomplete_winery.grid(row=1, column=2, padx=(5, 2), pady=(0, 20))
+        dropdown_colours.grid(row=2, column=0, padx=5, pady=(0, 20))
+        dropdown_styles.grid(row=2, column=1, padx=5, pady=(0, 20))
+        dropdown_varietals.grid(row=2, column=2, padx=(5, 2), pady=(0, 20))
+        input_year.grid(row=3, column=0, padx=5, pady=(0, 20))
+        autocomplete_origin.grid(row=3, column=1, padx=5, pady=(0, 20))
+
+        # Save input references
+        self.inputs_dict = {
+            "wine": autocomplete_wine, 
+            "code": autocomplete_code, 
+            "winery": autocomplete_winery,
+            "colour": dropdown_colours,
+            "style": dropdown_styles,
+            "varietal": dropdown_varietals,
+            "year": input_year,
+            "origin": autocomplete_origin
+        }
+
+        # Clear button
+        button_clear = ctk.CTkButton(
+            self,
+            text="Clear",
+            fg_color=Colours.PRIMARY_WINE,
+            text_color=Colours.BG_MAIN,
+            font=Fonts.TEXT_MAIN,
+            hover_color=Colours.BG_HOVER_BTN_CLEAR,
+            corner_radius=10,
+            cursor="hand2",
+            command=self.clear_inputs,
+        )
+        button_clear.grid(row=3, column=2, padx=5, pady=(0, 20))
+
+    def apply_filters(self, *args) -> None:
+        """
+        When the user types on an input, the variables and the table get updated.
+        """
+        # Get variables
+        name = self.vars_dict["name"].get().strip().lower()
+        code = self.vars_dict["code"].get().strip().lower()
+        winery = self.vars_dict["winery"].get().strip().lower()
+        origin = self.vars_dict["origin"].get().strip().lower()
+        year = self.vars_dict["year"].get().strip()
+
+        colour = self.inputs_dict["colour"].get().strip()
+        style = self.inputs_dict["style"].get().strip()
+        varietal = self.inputs_dict["varietal"].get().strip()
+        
+        # Get wines that matches what the user typed
+        filtered_names = [
+            wn.lower() for wn in self.wine_names_list 
+            if name in wn.lower()
+        ]
+        filtered_codes = [
+            wc.lower() for wc in self.wine_codes_list 
+            if code in wc.lower()
+        ]
+        filtered_wineries = [
+            ww.lower() for ww in self.wine_winery_list 
+            if winery in ww.lower()
+        ]
+        filtered_origin = [
+            wo.lower() for wo in self.wine_origin_list 
+            if origin in wo.lower()
+        ]
+        
+        # If there is no match, stop the function
+        if not any([
+            filtered_names, filtered_codes, winery, colour, style, varietal,
+            year, filtered_origin
+        ]):
+            return
+
+        # Else, update the table
+        self.filtered_table.apply_filters(
+            filtered_names, filtered_codes, filtered_wineries, colour, 
+            style, varietal, year, filtered_origin
+        )
+
+class TransactionFiltersForm(BaseFiltersForm):
+    """
+    Contains the components and logic for filtering the Transactions table.
+    """       
+    def create_components(self) -> list:
+        """
+        Create the filters and table.
+
+        Returns:
+            A list containing all the created filters in the form.
+        """
+        # DB lists
+        self.wine_names_list = [
+            wine.name for wine in Wine.column_ordered(self.session, "name", "name")
+        ]
+        self.wine_codes_list = [
+            wine.code for wine in Wine.column_ordered(self.session, "code", "code")
+        ]
+
+        # TK variables
+        self.vars_dict = {
+            "name": tk.StringVar(),
+            "code": tk.StringVar(),
+            "date_from": tk.StringVar(),
+            "date_to": tk.StringVar(),
+        }
+
+        # Title
+        ctk.CTkLabel(
+            self,
+            text="Filters",
+            font=Fonts.SUBTITLE,
+            text_color=Colours.TEXT_MAIN,
+            anchor="center"
+        ).grid(
+            row=0, column=0, padx=2, pady=20, columnspan=4, sticky="wen"
+        )
+
+        # Components
+        autocomplete_wine = AutocompleteInput(
+            self,
+            label_text="Wine",
+            item_list=self.wine_names_list,
+            textvariable=self.vars_dict["name"],
+            optional=True
+        )
+    
+        autocomplete_code = AutocompleteInput(
+            self,
+            label_text="Code",
+            item_list=self.wine_codes_list,
+            textvariable=self.vars_dict["code"],
+            optional=True
+        )
+
+        dropdown_transaction = DropdownInput(
+            self,
+            label_text="Transaction",
+            values=["", "Purchase", "Sale"],
+            optional=True,
+            command=self.on_entry_change, # It doesn't need variable trace
+        )
+
+        input_from_date = DateInput(
+            self,
+            label_text="From",
+            textvariable=self.vars_dict["date_from"],
+            optional=True,
+        )
+        
+        input_to_date = DateInput(
+            self,
+            label_text="To",
+            textvariable=self.vars_dict["date_to"],
+            optional=True,
+        )
+
+        autocomplete_wine.grid(row=1, column=0, padx=5, pady=(0, 20), sticky="w")
+        autocomplete_code.grid(row=1, column=1, padx=5, pady=(0, 20))
+        dropdown_transaction.grid(row=1, column=2, padx=(5, 2), pady=(0, 20))
+        input_from_date.grid(row=2, column=0, padx=5, pady=(0, 20))
+        input_to_date.grid(row=2, column=1, padx=5, pady=(0, 20))
+
+        # Save input references
+        self.inputs_dict = {
+            "wine": autocomplete_wine, 
+            "code": autocomplete_code, 
+            "transaction": dropdown_transaction,
+            "input_from_date": input_from_date,
+            "input_to_date": input_to_date,
+        }
+
+        # Clear button
+        button_clear = ctk.CTkButton(
+            self,
+            text="Clear",
+            fg_color=Colours.PRIMARY_WINE,
+            text_color=Colours.BG_MAIN,
+            font=Fonts.TEXT_MAIN,
+            hover_color=Colours.BG_HOVER_BTN_CLEAR,
+            corner_radius=10,
+            cursor="hand2",
+            command=self.clear_inputs,
+        )
+        button_clear.grid(row=3, column=2, padx=5, pady=(0, 20))
+
+    def trigger_filters(self, *args) -> None:
+        """
+        When the user types on an input, the variables and the table get updated.
+        """
+        # Get variables
+        name = self.vars_dict["name"].get().strip().lower()
+        code = self.vars_dict["code"].get().strip().lower()
+        transaction_type = self.inputs_dict["transaction"].get().strip().lower()
+        date_from = self.vars_dict["date_from"].get().strip().lower()
+        date_to = self.vars_dict["date_to"].get().strip()
+        
+        # Get wines that matches what the user typed
+        filtered_names = [
+            wn.lower() for wn in self.wine_names_list 
+            if name in wn.lower()
+        ]
+        filtered_codes = [
+            wc.lower() for wc in self.wine_codes_list 
+            if code in wc.lower()
+        ]
+
+        # If there is no match, stop the function
+        if not any([
+            filtered_names, filtered_codes, transaction_type, date_from, date_to
+        ]):
+            return
+
+        # Else, update the table
+        self.filtered_table.apply_filters(
+            filtered_names, filtered_codes, transaction_type, date_from, date_to
+        )

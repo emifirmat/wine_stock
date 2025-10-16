@@ -7,7 +7,7 @@ import customtkinter as ctk
 from db.models import Wine
 from ui.components import Card, ButtonGoBack
 from ui.forms.add_edit_wine import AddWineForm
-from ui.forms.manage_wine import ShowWineForm
+from ui.forms.manage_wine import ManageWineForm
 from ui.style import Colours, Fonts
 
 
@@ -66,14 +66,14 @@ class WineFrame(ctk.CTkScrollableFrame):
         
         card_list = Card(
             frame_cards,
-            image_path="assets/cards/wine_list2.png",
+            image_path="assets/cards/wine_list.png",
             title="Manage Wine",
             on_click=self.manage_wine_section,
         )
         card_add = Card(
             frame_cards,
             title="Add Wine",
-            image_path="assets/cards/add_wine2.png",
+            image_path="assets/cards/add_wine.png",
             on_click=self.show_add_wine_section,
         )
 
@@ -143,7 +143,7 @@ class WineFrame(ctk.CTkScrollableFrame):
         """
         self.show_subsection(
             "WINE LIST",
-            ShowWineForm,
+            ManageWineForm,
         )
     
     def clear_content(self) -> None:
