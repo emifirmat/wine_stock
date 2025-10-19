@@ -161,6 +161,7 @@ class DataTable(ctk.CTkFrame, ABC):
                 label_config = {
                     "image": load_ctk_image(line_value),
                     "text": "",   
+                    "fg_color": "transparent"
                 }
             
             label = ctk.CTkLabel(

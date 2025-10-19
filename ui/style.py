@@ -117,3 +117,16 @@ class Icons:
         size=((small_icon_size)),
     )
 
+    EXPAND = ctk.CTkImage(
+        light_image=generate_colored_icon(
+            f"{root_path}/expand.png", Colours.TEXT_MAIN,
+        ),
+        size=((small_icon_size)),
+    )
+
+    COLLAPSE = ctk.CTkImage(
+        light_image=generate_colored_icon(
+            f"{root_path}/collapse.png", Colours.TEXT_MAIN,
+        ),
+        size=((small_icon_size)),
+    )

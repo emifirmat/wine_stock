@@ -3,6 +3,7 @@ Classes related with the report section
 """
 import csv
 import customtkinter as ctk
+import tkinter.messagebox as messagebox
 import xlsxwriter
 from datetime import datetime
 
@@ -126,6 +127,13 @@ class ReportFrame(ctk.CTkScrollableFrame):
             self._write_excel(file_path, ws_title, field_names, attribute_names, data_list)
         else:
             raise ValueError("Wrong file extension.")
+        
+        # Show success message
+        messagebox.showinfo(
+            "Report Generated",
+            "The report has been successfully created."
+        )
+
         
     def _get_data_config(self, filter_type: str | None):
         """

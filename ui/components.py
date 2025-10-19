@@ -834,7 +834,7 @@ class DropdownInput(BaseInput):
             values=values,
             variable=variable,
             font=Fonts.TEXT_MAIN,
-            fg_color=Colours.BG_MAIN,
+            fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN,
             button_color=Colours.BG_HOVER_NAV,
             dropdown_fg_color=Colours.BG_MAIN,
