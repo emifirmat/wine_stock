@@ -153,12 +153,7 @@ class TransactionFiltersForm(BaseFiltersForm):
             A list containing all the created filters in the form.
         """
         # DB lists
-        self.wine_names_list = [
-            wine.name for wine in Wine.column_ordered(self.session, "name", "name")
-        ]
-        self.wine_codes_list = [
-            wine.code for wine in Wine.column_ordered(self.session, "code", "code")
-        ]
+        self.update_lists()
 
         # TK variables
         self.vars_dict = {
@@ -276,6 +271,17 @@ class TransactionFiltersForm(BaseFiltersForm):
             filtered_names, filtered_codes, transaction_type, date_from, date_to
         )
 
+    def update_lists(self):
+        """
+        Updates the lists of wines.
+        """
+        self.wine_names_list = [
+            wine.name for wine in Wine.column_ordered(self.session, "name", "name")
+        ]
+        self.wine_codes_list = [
+            wine.code for wine in Wine.column_ordered(self.session, "code", "code")
+        ]
+
     
 class WineFiltersForm(BaseFiltersForm):
     """
@@ -289,20 +295,7 @@ class WineFiltersForm(BaseFiltersForm):
             A list containing all the created filters in the form.
         """
         # DB lists
-        self.wine_names_list = [
-            wine.name for wine in Wine.column_ordered(self.session, "name", "name")
-        ]
-        self.wine_codes_list = [
-            wine.code for wine in Wine.column_ordered(self.session, "code", "code")
-        ]
-        self.wine_winery_list = [
-            wine.winery 
-            for wine in Wine.column_ordered(self.session, "winery", "winery", "winery")
-        ]
-        self.wine_origin_list = [
-            wine.origin 
-            for wine in Wine.column_ordered(self.session, "origin", "origin", "origin")
-        ]
+        self.update_lists()
 
         # TK variables
         self.vars_dict = {
@@ -425,7 +418,7 @@ class WineFiltersForm(BaseFiltersForm):
         )
         button_clear.grid(row=2, column=2, padx=5, pady=(0, 20))
 
-    def apply_filters(self, *args) -> None:
+    def trigger_filters(self, *args) -> None:
         """
         When the user types on an input, the variables and the table get updated.
         """
@@ -441,32 +434,49 @@ class WineFiltersForm(BaseFiltersForm):
         varietal = self.inputs_dict["varietal"].get().strip()
         
         # Get wines that matches what the user typed
-        filtered_names = [
+        self.filtered_names = [
             wn.lower() for wn in self.wine_names_list 
             if name in wn.lower()
         ]
-        filtered_codes = [
+        self.filtered_codes = [
             wc.lower() for wc in self.wine_codes_list 
             if code in wc.lower()
         ]
-        filtered_wineries = [
+        self.filtered_wineries = [
             ww.lower() for ww in self.wine_winery_list 
             if winery in ww.lower()
         ]
-        filtered_origin = [
+        self.filtered_origin = [
             wo.lower() for wo in self.wine_origin_list 
             if origin in wo.lower()
         ]
         
         # If there is no match, stop the function
         if not any([
-            filtered_names, filtered_codes, winery, colour, style, varietal,
-            year, filtered_origin
+            self.filtered_names, self.filtered_codes, self.filtered_wineries, 
+            colour, style, varietal, year, self.filtered_origin
         ]):
             return
 
         # Else, update the table
         self.filtered_table.apply_filters(
-            filtered_names, filtered_codes, filtered_wineries, colour, 
-            style, varietal, year, filtered_origin
+            self.filtered_names, self.filtered_codes, self.filtered_wineries, colour, 
+            style, varietal, year, self.filtered_origin
         )
+
+    def update_lists(self):
+        """
+        Updates the lists of wines.
+        """
+        self.wine_names_list = [
+            w.name for w in Wine.column_ordered(self.session, "name", "name")
+        ]
+        self.wine_codes_list = [
+            w.code for w in Wine.column_ordered(self.session, "code", "code")
+        ]
+        self.wine_winery_list = [
+            w.winery for w in Wine.column_ordered(self.session, "winery", "winery", "winery")
+        ]
+        self.wine_origin_list = [
+            w.origin for w in Wine.column_ordered(self.session, "origin", "origin", "origin")
+        ]

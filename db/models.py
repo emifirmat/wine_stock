@@ -101,7 +101,7 @@ class Wine(Base):
     colour = relationship("Colour", back_populates="wines") 
     style = relationship("Style", back_populates="wines") 
     varietal = relationship("Varietal", back_populates="wines", passive_deletes=True) 
-    movements = relationship("StockMovement", back_populates="wine", cascade="all, delete")
+    movements = relationship("StockMovement", back_populates="wine")
 
     # Ordered list
     @classmethod
@@ -211,7 +211,7 @@ class StockMovement(Base):
     """
     __tablename__ = "stock_movement"
     id = Column(Integer, primary_key=True)
-    wine_id = Column(Integer, ForeignKey("wine.id", ondelete="CASCADE"), nullable=False)
+    wine_id = Column(Integer, ForeignKey("wine.id", ondelete="RESTRICT"), nullable=False)
     datetime = Column(
         DateTime, default=lambda: StockMovement.now_without_microseconds(), nullable=False
     )

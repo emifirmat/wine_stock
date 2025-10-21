@@ -3,6 +3,7 @@ Table that contains the list of added wines with their stock
 """
 import customtkinter as ctk
 import tkinter.messagebox as messagebox
+from sqlalchemy.exc import IntegrityError
 from typing import Callable, Dict, List
 
 from db.models import Wine
@@ -264,30 +265,34 @@ class WinesTable(DataTable, SortMixin):
         Removes the wine from the DB and table.
         """   
         # Ask for confirmation
-        movements_count = len(wine.movements)
-        if movements_count > 0:
-            confirm_dialog_message = (
-                f"There are {movements_count} stock movements related with the wine "
-                f"{wine.name}. Do you want to remove them all?"
-            )
-            show_info_message = "The wine and stock movements have been successfully removed."
-        else:
-            confirm_dialog_message = (
-                f"Do you want to remove the wine '{wine.name}'?"
-            )
-            show_info_message = "The wine has been successfully removed."
-
         confirm_dialog = messagebox.askyesno(
             "Confirm Removal",
-            confirm_dialog_message
+            f"Do you want to remove the wine '{wine.name}'?"
         )
+
         if not confirm_dialog:
             return
         
         # Remove it from the DB    
-        self.session.delete(wine)
-        self.session.commit()
-
+        try: 
+            self.session.delete(wine)
+            self.session.commit()
+        except IntegrityError:
+            # Don't delete if there are transactions involved
+            self.session.rollback() 
+            mov_count = len(wine.movements) 
+            words = ["is", "movement"] if mov_count == 1 else ["are", "movements"]
+            error_message = (
+                f"There {words[0]} {mov_count} stock {words[1]} related with this wine. "
+                "Please, remove them before continuing."
+            )
+            messagebox.showinfo(
+                "Couln't Remove The Wine ",
+                error_message
+            )
+            # End function
+            return
+        
         # Remove it from the lists (data)
         self.lines.remove(wine)
         self.filtered_lines.remove(wine)
@@ -302,7 +307,7 @@ class WinesTable(DataTable, SortMixin):
         # Show a message
         messagebox.showinfo(
             "Wine Removed",
-            show_info_message
+            "The wine has been successfully removed."
         )
 
     def refresh_edited_rows(self, wine):
@@ -313,3 +318,5 @@ class WinesTable(DataTable, SortMixin):
         del self.line_widget_map[wine]
         # Refresh list
         self.refresh_visible_rows()
+        # Refresh lists in filters form
+        self.master.filters_form.update_lists()

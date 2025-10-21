@@ -331,11 +331,13 @@ class AddWineForm(ctk.CTkFrame):
         
     def set_edition_mode(self, inputs_dict):
         """
+        Set the inputs initial value to the wine instance.
         """
         for input_name, input in inputs_dict.items():
             # Get value
             value = deep_getattr(self.wine, input_name)
             
+            # Populate inputs
             if isinstance(input, DropdownInput):
                 input.set_to_value(value)
             elif isinstance(input, ImageInput):

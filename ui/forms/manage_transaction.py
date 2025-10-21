@@ -30,6 +30,7 @@ class ManageTransactionForm(ctk.CTkFrame):
 
         # Add components
         self.transactions_table = None
+        self.filters_form = None
         self.create_components()
 
     def get_wine_names_dict(self) -> dict[str:int]:
@@ -65,9 +66,9 @@ class ManageTransactionForm(ctk.CTkFrame):
         self.transactions_table.grid(row=1, column=0, pady=(10, 0), sticky="nsew")
 
         # ==Filters section==
-        filter_form = TransactionFiltersForm(
+        self.filters_form = TransactionFiltersForm(
             self,
             self.session,
             filtered_table=self.transactions_table
         )
-        filter_form.grid(row=0, column=0, pady=20, sticky="we")
+        self.filters_form.grid(row=0, column=0, pady=(10, 20), sticky="we")

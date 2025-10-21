@@ -212,9 +212,11 @@ class TransactionsTable(DataTable, SortMixin):
 
     def refresh_edited_rows(self, movement):
         """
-        After a movement is edited, it refreshes the table
+        After a movement is edited, it refreshes the table/
         """
         # Delete old movement address from move_widget_map
         del self.line_widget_map[movement]
         # Refresh list
         self.refresh_visible_rows()
+        # Refresh lists in filters form
+        self.master.filters_form.update_lists()

@@ -30,6 +30,7 @@ class ManageWineForm(ctk.CTkFrame):
 
         # Add components
         self.wines_table = None
+        self.filters_form = None
         self.create_components()
 
     def create_components(self) -> list:
@@ -55,10 +56,10 @@ class ManageWineForm(ctk.CTkFrame):
 
         # ==Filters section==
         # Should be after wines table as the filter needs its reference.
-        filter_form = WineFiltersForm(
+        self.filters_form = WineFiltersForm(
             self,
             self.session,
             filtered_table=self.wines_table
         )
 
-        filter_form.grid(row=0, column=0, pady=20, sticky="we")
+        self.filters_form.grid(row=0, column=0, pady=(10, 20), sticky="we")
