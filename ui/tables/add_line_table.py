@@ -163,7 +163,7 @@ class AddLineTable(ctk.CTkFrame):
             subtotal.
             - subtotal: Result of doing quantity x price.
         """
-        wine_name = parent_frame.winfo_children()[1].cget("text").lower().strip() 
+        wine_name = parent_frame.winfo_children()[1].cget("text").strip() 
         quantity = parent_frame.winfo_children()[2].cget("text")
         
         line_table_index = parent_frame.winfo_children()[0].cget("text")

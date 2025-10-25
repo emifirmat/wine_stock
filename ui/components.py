@@ -86,6 +86,38 @@ class EntryInputMixin:
         self.entry.insert(0, new_text)
 
 
+class LabelWithBorder(ctk.CTkFrame):
+    """
+    A ctk label that accept borders. 
+    Parameters:
+        - text: Text content of the label.
+        - text_color: Colour of the text.
+        - font: font of the text.
+    """
+    def __init__(
+        self, root, text: str, text_color: str, font: str, **kwargs
+    ):
+        super().__init__(
+            root, 
+            **kwargs
+        )
+        self.label = ctk.CTkLabel(
+            self,
+            text = text,
+            text_color = text_color,
+            font = font,
+        )
+        self.label.pack(padx=5, pady=5, expand=True, fill="both")
+
+    def update_text(self, text):
+        """ 
+        Updates the text of the label.
+        """
+        self.label.configure(
+            text=text
+        )
+
+
 class FixedSizeToplevel(ctk.CTkToplevel):
     """
     A toplevel window that retains its original width and height even if resized
@@ -1085,6 +1117,14 @@ class DoubleLabel(ctk.CTkFrame):
             self.label_value.configure(
                 width=value_width, wraplength=value_width, anchor=anchor
             )
+    
+    def configure_label_value(self, **kwargs):
+        """
+        Allows to configure value label.
+        Parameters:
+            - **kwargs: Attributes used in the original configure method.
+        """
+        self.label_value.configure(**kwargs)
 
     def set_total_width(self, total_width: int) -> None:
         """

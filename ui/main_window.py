@@ -13,8 +13,8 @@ from db.models import Shop
 
 class MainWindow:
     """Main window of the app"""
-    SCREEN_WIDTH = 1200
-    SCREEN_HEIGHT = 750
+    SCREEN_WIDTH = 1280
+    SCREEN_HEIGHT = 768
     
     def __init__(self, root: ctk.CTk, session: Session):
         # Main window

@@ -94,6 +94,7 @@ class DataTable(ctk.CTkFrame, ABC):
             anchor="center",
         )
         
+        
     def refresh_visible_rows(self):
         """
         Creates/shows only visible rows.
@@ -106,7 +107,8 @@ class DataTable(ctk.CTkFrame, ABC):
         if not self.filtered_lines:
             self.lbl_no_results.grid(
                 row=0, column=0, sticky="ew", columnspan=len(self.header_labels)
-            )  
+            )
+            self.rows_container.columnconfigure(1, weight=1)
             return
         
         # Show/create the slice's widgets
@@ -123,7 +125,7 @@ class DataTable(ctk.CTkFrame, ABC):
                 self.line_widget_map[line] = widget
             # Show widget    
             widget.grid(
-                row=i, column=0, columnspan=len(self.headers), pady=2, sticky="ew"
+                row=i, column=0, pady=1, columnspan=len(self.headers), sticky="ew"
             )
         
         # Add responsiveness to the columns     
@@ -141,7 +143,13 @@ class DataTable(ctk.CTkFrame, ABC):
             row_frame: A ctkframe containing the labels of the line (row)
         """
         # Crate row frame
-        row_frame = ctk.CTkFrame(self.rows_container, fg_color="transparent")
+        row_bg = (
+            Colours.BG_ALERT 
+            if hasattr(line, "min_stock") and line.is_below_min_stock
+            else "transparent"
+        )
+        
+        row_frame = ctk.CTkFrame(self.rows_container, fg_color=row_bg)
         # Note: row_frame is placed by refresh_visible_rows
 
         # Create labels of the row

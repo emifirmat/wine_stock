@@ -97,10 +97,15 @@ class AddWineForm(ctk.CTkFrame):
         )
         quantity = IntInput(
             frame_background,
-            label_text="Initial Stock",
+            label_text="Stock" if self.wine else "Initial Stock",
             placeholder="In bottles",
         )
-
+        min_stock = IntInput(
+            frame_background,
+            label_text="Min. Stock",
+            placeholder="In bottles",
+            optional=True
+        )
         purchase_price = DecimalInput(
             frame_background,
             label_text="Purchase Price",
@@ -122,6 +127,7 @@ class AddWineForm(ctk.CTkFrame):
             "code": code,
             "picture_path": wine_picture,
             "quantity": quantity,
+            "min_stock": min_stock,
             "purchase_price": purchase_price,
             "selling_price": selling_price
         }
@@ -249,11 +255,12 @@ class AddWineForm(ctk.CTkFrame):
             else:
                 new_wine = Wine(**wine_attributes)
                 self.session.add(new_wine)
-        except TypeError:
+        except TypeError as e:
             messagebox.showinfo(
                 "Error Saving",
                 "Couldn't save the wine, please contact the admin. (code=1)"
             )
+            print(str(e.orig))
             return
 
         # Save it in the DB
@@ -274,6 +281,7 @@ class AddWineForm(ctk.CTkFrame):
                     "Error Saving",
                     "Couldn't save the wine, please contact the admin. (code=2)"
                 )
+                print(error_msg)
             # Stop function            
             return
 
@@ -283,11 +291,13 @@ class AddWineForm(ctk.CTkFrame):
             "The wine has been successfully saved."
         )
 
+        # Edit mode
         if self.wine:
             # Refresh table
             self.on_save(self.wine)
             # Close top level
             self.winfo_toplevel().destroy()
+        # Save mode
         else:
             # Clear all lines
             self.clear_inputs()
@@ -316,6 +326,7 @@ class AddWineForm(ctk.CTkFrame):
                     "initial stock", self.inputs_dict["quantity"].get(), 
                     allowed_signs="positive"
                 ),
+                "min_stock": self.inputs_dict["min_stock"].get(),
                 "purchase_price": validate_decimal(
                     "purchase price", self.inputs_dict["purchase_price"].get()
                 ),
@@ -331,7 +342,7 @@ class AddWineForm(ctk.CTkFrame):
         
     def set_edition_mode(self, inputs_dict):
         """
-        Set the inputs initial value to the wine instance.
+        Set the inputs; initial value to the wine instance.
         """
         for input_name, input in inputs_dict.items():
             # Get value
@@ -345,5 +356,5 @@ class AddWineForm(ctk.CTkFrame):
             else:
                 # Text inputs
                 input.update_text_value(
-                    new_text=value
+                    new_text=value if value is not None else ""
                 )

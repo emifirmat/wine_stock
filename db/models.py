@@ -94,6 +94,7 @@ class Wine(Base):
     code = Column(String, unique=True, nullable=False)
     picture_path = Column(String) # Optional
     quantity = Column(Integer, default=0, server_default=text("0"))
+    min_stock = Column(Integer) # Optional
     purchase_price = Column(Numeric(10, 2), nullable=False)
     selling_price = Column(Numeric(10, 2), nullable=False)
 
@@ -141,6 +142,18 @@ class Wine(Base):
                 .order_by(func.lower(getattr(cls, order_by)).asc())\
                 .all()
 
+    @validates("origin")
+    def convert_lower(self, key, value):
+        return value.title() if value else value
+    
+    @validates("min_stock")
+    def convert_none(self, key, value):
+        # Cover cases where value is saved as something dif. from None or ""
+        if type(value) is int or (type(value) is str and value.isdigit()):
+            return value
+        else:
+            return None
+
     @property
     def picture_path_display(self):
         """
@@ -153,20 +166,39 @@ class Wine(Base):
     
     
     @property
-    def origin_display(self):
+    def origin_display(self) -> str:
         """
         Displays the origin of the wine or N/A.
         """
         return self.origin if self.origin else "N/A"
     
     @property
-    def varietal_display(self):
+    def varietal_display(self) -> str:
         """
         Displays the varietal name of the wine or N/A.
         """
         return self.varietal.name if self.varietal else "N/A"
-       
     
+    @property
+    def min_stock_display(self) -> str | None:
+        """
+        Displays the min stock of the wine or N/A.
+        """
+        return "N/A" if self.min_stock is None else str(self.min_stock)
+    
+    @property
+    def min_stock_sort(self) -> int:
+        """
+        Returns int value of min_stock or -99 if it is None.
+        """
+        return self.min_stock if self.min_stock else -1
+    
+    @property
+    def is_below_min_stock(self) -> bool:
+        """
+        Returns True if stock is below minimum stock, otherwise False.
+        """
+        return self.quantity < self.min_stock_sort
 
 class Colour(Base, NamedModelMixin):
     """
@@ -252,8 +284,8 @@ class StockMovement(Base):
     def convert_lower(self, key, value):
         return value.lower() if value else value
 
- 
-Base.metadata.create_all(engine)
+# I don't use base.metadata because now it's handled by Alembic
+#Base.metadata.create_all(engine)
 
 # == Session ==
 # Start session for command operations

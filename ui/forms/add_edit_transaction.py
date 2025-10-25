@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from helpers import deep_getattr
 from ui.components import (IntInput, DropdownInput, DoubleLabel, AutocompleteInput,
     ClearSaveButtons)
-from ui.style import Colours, Fonts
+from ui.style import Colours, Fonts, Icons
 from ui.tables.add_line_table import AddLineTable
 from db.models import Wine, StockMovement
 
@@ -192,7 +192,7 @@ class AddTransactionForm(BaseTransactionForm):
             self, 
             self.session, 
             headers,
-            on_lines_change=self.on_lines_change
+            on_lines_change=self.on_lines_removal
         )
         self.table_lines.grid(row=4, column=0, columnspan=3, pady=20)
 
@@ -272,7 +272,9 @@ class AddTransactionForm(BaseTransactionForm):
         # Update stock label
         wine_name = self.wine_name_var.get().strip()
         wine_instance = self.session.query(Wine).filter(Wine.name.ilike(wine_name)).first()
-        self.label_stock.update_text_value(wine_instance.quantity)
+        if wine_instance: # Conditional necessary for edge cases.
+            self.temp_stock[wine_name.lower()] = wine_instance.quantity
+            self.update_label_stock(wine_instance)
         
     def on_entry_change(self, *args) -> None:
         """
@@ -286,7 +288,13 @@ class AddTransactionForm(BaseTransactionForm):
         if selected_wine_name not in self.wine_names_dict:
             self.label_subtotal.update_text_value(f"€ -")
             self.label_wine_code.update_text_value("-")
-            self.label_stock.update_text_value("-")
+            self.label_stock.configure_label_value(
+                text="-", 
+                text_color=Colours.TEXT_MAIN,
+                image=Icons.EMPTY, # Remove image
+                compound=None,
+                padx=0
+            )
             return
 
         # Get wine price
@@ -307,8 +315,9 @@ class AddTransactionForm(BaseTransactionForm):
         
         wine_name_lower = selected_wine_name.lower()
         if wine_name_lower not in self.temp_stock:
-                self.temp_stock[wine_name_lower] = wine_instance.quantity
-        self.label_stock.update_text_value(self.temp_stock[wine_name_lower])
+            self.temp_stock[wine_name_lower] = wine_instance.quantity
+        
+        self.update_label_stock(wine_instance)
 
     def add_new_wine_line(self):
         """
@@ -356,14 +365,14 @@ class AddTransactionForm(BaseTransactionForm):
             self.subtotal_value
         )
 
-        # Update stock
-        self.label_stock.update_text_value(self.temp_stock[wine_name_lower])
-
+        # Update stock and want user if it is below stock
+        self.update_label_stock(wine_instance)
+        
         # Enable save button and clear errors
         self.frame_buttons.enable_save_button()
         self.label_error.configure(text="")
 
-    def on_lines_change(self, lines_size: int, wine_name_lower: str, quantity: int):
+    def on_lines_removal(self, lines_size: int, wine_name: str, quantity: int):
         """
         Check the number of lines and disable save button if it is 0. Also, it
         updates temp stock.
@@ -374,6 +383,8 @@ class AddTransactionForm(BaseTransactionForm):
             - Quantity: Number of wines of the deleted transaction, used for temp
             stock.
         """
+        wine_name_lower = wine_name.lower()
+        wine_instance = self.wine_names_dict[wine_name.title()]
         # Disable save button
         if lines_size == 0:
             self.frame_buttons.disable_save_button()
@@ -383,7 +394,34 @@ class AddTransactionForm(BaseTransactionForm):
         elif self.transaction == "purchase":
             self.temp_stock[wine_name_lower] -= quantity
         if self.wine_name_var.get().strip().lower() == wine_name_lower:
-            self.label_stock.update_text_value(self.temp_stock[wine_name_lower])
+            self.update_label_stock(wine_instance)
+
+    def update_label_stock(self, wine_instance):
+        """
+        Updates the text and color of the stock label.
+        Parameters:
+            - wine_instance: Instance of the wine used for checking stock labels.
+        """
+        # Update text
+        wine_name_lower = wine_instance.name.lower()
+        self.label_stock.update_text_value(self.temp_stock[wine_name_lower])
+        
+        # Update color
+        if self.temp_stock[wine_name_lower] < wine_instance.min_stock_sort:
+            self.label_stock.configure_label_value(
+                text_color=Colours.ERROR,
+                image=Icons.WARNING,
+                compound="right",
+                padx=5,
+            )
+        else:            
+            self.label_stock.configure_label_value(
+                text_color=Colours.TEXT_MAIN,
+                image=Icons.EMPTY, # Remove image
+                compound=None,
+                padx=0
+            )
+            
 
 
 class EditTransactionForm(BaseTransactionForm):

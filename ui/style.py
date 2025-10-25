@@ -2,6 +2,7 @@
 Style file for the app
 """
 import customtkinter as ctk
+from PIL import Image
 
 from helpers import generate_colored_icon
 
@@ -9,6 +10,7 @@ class Colours:
     PRIMARY_WINE = BTN_CLEAR = "#7B2E2E"
     BG_MAIN = "#F9F6F1"
     BG_SECONDARY = TEXT_BUTTON = "#FDFCFB"
+    BG_ALERT = "#F9E5E5"
     BG_HOVER_NAV = "#F0E5E5"
     BG_HOVER_BTN_CLEAR = "#5F2222"
     BG_HOVER_BTN_SAVE = "#688F2E"
@@ -22,6 +24,7 @@ class Colours:
     COMPANY_NAME = BTN_SAVE = BTN_ACTIVE = "#556B2F"
     ERROR = "#C52323"
     ICONS = "#D4AF37"
+    WARNING = "#D89A2B"
 
 
 class Fonts:
@@ -130,3 +133,12 @@ class Icons:
         ),
         size=((small_icon_size)),
     )
+
+    WARNING = ctk.CTkImage(
+        light_image=generate_colored_icon(
+            f"{root_path}/warning.png", Colours.ERROR,
+        ),
+        size=((14, 14)),
+    )
+
+    EMPTY = ctk.CTkImage(light_image=Image.new('RGBA', (1, 1), (0, 0, 0, 0)))

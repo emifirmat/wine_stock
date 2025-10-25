@@ -30,7 +30,7 @@ class WinesTable(DataTable, SortMixin):
         self.opened_toplevels = {}
 
         # Create table
-        self.column_widths = [100, 120, 100, 90, 95, 95, 90, 90, 80]
+        self.column_widths = [100, 120, 100, 90, 95, 95, 90, 90, 90, 80]
         self.remove_lines = True
         self.create_components()
         self.setup_sorting()
@@ -47,8 +47,8 @@ class WinesTable(DataTable, SortMixin):
         """
         return [
             line.code, line.picture_path_display, line.name, str(line.vintage_year), 
-            line.origin_display, str(line.quantity), f"€ {line.purchase_price}", 
-            f"€ {line.selling_price}"
+            line.origin_display, str(line.quantity), line.min_stock_display,
+            f"€ {line.purchase_price}", f"€ {line.selling_price}"
         ]
 
     def on_header_click(self, event, col_index: int):
@@ -70,9 +70,10 @@ class WinesTable(DataTable, SortMixin):
             3: lambda l: l.vintage_year,
             4: lambda l: l.origin.lower(),
             5: lambda l: l.quantity,
-            6: lambda l: l.purchase_price,
-            7: lambda l: l.selling_price,
-            8: None
+            6: lambda l: l.min_stock_sort,
+            7: lambda l: l.purchase_price,
+            8: lambda l: l.selling_price,
+            9: None
         }
  
     def apply_filters(
@@ -143,7 +144,7 @@ class WinesTable(DataTable, SortMixin):
 
         # Create top level
         tl_width = 350
-        tl_height = 500
+        tl_height = 550
         toplevel = ctk.CTkToplevel(
             self,
             fg_color=Colours.BG_MAIN,
@@ -181,14 +182,14 @@ class WinesTable(DataTable, SortMixin):
         # Set up double labels with wine details
         text_labels = [
             "name", "code", "winery", "colour", "style", "varietal", "vintage year",
-            "origin", "stock", "purchase price", "selling price"
+            "origin", "stock", "min. stock", "purchase price", "selling price"
         ]
 
         text_values = [
             line.name, line.code, line.winery, line.colour.name.title(), 
             line.style.name.title(), line.varietal_display.title(), line.vintage_year, 
-            line.origin_display, str(line.quantity), f"€ {line.purchase_price}", 
-            f"€ {line.selling_price}"
+            line.origin_display, str(line.quantity), line.min_stock_display,
+            f"€ {line.purchase_price}", f"€ {line.selling_price}"
         ]
         
         for text_label, text_value in zip(text_labels, text_values):
@@ -316,7 +317,10 @@ class WinesTable(DataTable, SortMixin):
         """
         # Delete old wine address from wine_widget_map
         del self.line_widget_map[wine]
+        # Refresh alert message
+        self.master.update_alert_label()
         # Refresh list
         self.refresh_visible_rows()
         # Refresh lists in filters form
         self.master.filters_form.update_lists()
+        

@@ -20,6 +20,8 @@ def main():
     populate_db_model(wine_styles, Style, session)
     populate_db_model(wine_varietals, Varietal, session)
 
+    #add_wines(session)
+
     # Create default shop values if it is first time using the app
     Shop.get_singleton(session)
 
