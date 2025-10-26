@@ -1,17 +1,26 @@
 """
-Validators for inputs.
+Input validation utilities for form fields.
+
+This module provides validators for different types of user inputs,
+including strings, dropdowns, years, integers, and decimal numbers.
+All validators raise ValueError with descriptive messages on validation failure.
 """
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
 def validate_string(input_name: str, input_content: str) -> str:
     """
-    Strips the string and validates if it has less than 2 chars.
+    Strip whitespace and validate minimum string length.
+    
     Parameters:
-        - input_name: Name of the input, referenced if an error is raised.
-        - input_content: String that needs to be validated.
+        input_name: Name of the input field, used in error messages
+        input_content: String value to be validated
+        
     Returns:
-        - Cleaned version of the input_content
+        Cleaned and validated string
+        
+    Raises:
+        ValueError: If string has fewer than 2 characters after stripping
     """
     cleaned_input = input_content.strip()
     if len(cleaned_input) < 2:
@@ -20,14 +29,19 @@ def validate_string(input_name: str, input_content: str) -> str:
         )
     return cleaned_input
 
-def validate_dropdown(input_name: str, input_content: str) -> str | None:
+def validate_dropdown(input_name: str, input_content: str) -> str:
     """
-    Checks that the selected option of the dropdown is not "".
+    Validate that a dropdown option has been selected.
+    
     Parameters:
-        - input_name: Name of the input, referenced if an error is raised.
-        - input_content: Selected option in the dropdown that needs to be validated.
+        input_name: Name of the dropdown field, used in error messages
+        input_content: Selected dropdown option to be validated
+        
     Returns:
-        - Cleaned version of the input_content
+        Cleaned and lowercased dropdown value
+        
+    Raises:
+        ValueError: If no option is selected (empty string)
     """
     cleaned_input = input_content.strip().lower()
     if not cleaned_input:
@@ -38,12 +52,17 @@ def validate_dropdown(input_name: str, input_content: str) -> str | None:
 
 def validate_year(input_name: str, input_content: str) -> int:
     """
-    Checks that the user picked a non blank option of the dropdown.
+    Validate that the input is a valid year between 0 and current year.
+    
     Parameters:
-        - input_name: Name of the input, referenced if an error is raised.
-        - input_content: Selected option in the dropdown that needs to be validated.
+        input_name: Name of the input field, used in error messages
+        input_content: String representation of the year to be validated
+        
     Returns:
-        - An int versin of the input_content (year).
+        Validated year as an integer
+        
+    Raises:
+        ValueError: If input is not numeric or outside valid year range
     """
     starting_year = 0
     end_year = datetime.now().year
@@ -62,16 +81,22 @@ def validate_year(input_name: str, input_content: str) -> int:
         )
     return input_content_year
 
-def validate_int(input_name: str, input_content: str, allowed_signs: str = "all") -> int:
+def validate_int(
+    input_name: str, input_content: str, allowed_signs: str = "all"
+) -> int:
     """
-    Validates the input_content which should be > 0 if allowed_signs is positive,
-    or < 0 if allowed_sings is negative.
+    Validate integer input with optional sign constraints.
+    
     Parameters:
-        - input_name: Name of the input, referenced if an error is raised.
-        - input_content: Int value of the input.
-        - allowed_signs: Available signs are all, positive, or negative.
+        input_name: Name of the input field, used in error messages
+        input_content: String representation of the integer to be validated
+        allowed_signs: Sign constraint - "all", "positive", or "negative"
+        
     Returns:
-        - The input_content (number).
+        Validated integer value
+        
+    Raises:
+        ValueError: If input is not numeric or violates sign constraints
     """
     try:
         input_content_int = int(input_content)
@@ -83,37 +108,45 @@ def validate_int(input_name: str, input_content: str, allowed_signs: str = "all"
     if allowed_signs == "positive" and input_content_int < 0:
         raise ValueError(
             f"The field '{input_name.title()}' should contain a number bigger "
-            f"than 0."
+            "than 0."
         )
 
     if allowed_signs == "negative" and input_content_int > 0:
         raise ValueError(
             f"The field '{input_name.title()}' should contain a number lower "
-            f"than 0."
+            "than 0."
         )
     
     return input_content_int
 
 def validate_decimal(input_name: str, input_content: str) -> Decimal:
     """
-    Validates the input_content which should be a a decimal value.
+    Validate decimal input and convert to Decimal type.
+    
     Parameters:
-        - input_name: Name of the input, referenced if an error is raised.
-        - input_content: Int value of the input.
+        input_name: Name of the input field, used in error messages
+        input_content: String representation of the decimal to be validated
+        
     Returns:
-        - The input_content (decimal number).
+        Validated Decimal value
+        
+    Raises:
+        ValueError: If input cannot be converted to a valid decimal
+        
+    Note:
+        Handles edge case where input is "." by converting it to 0
     """
-    # Cover edge case field is ".".
+    # Cover edge case where field is "."
     if input_content == ".":
-        input_content = 0
+        input_content = "0"
 
-    # Convert content into decimal
+    # Convert content to decimal
     try:
         input_content_dec = Decimal(input_content)
     except (TypeError, ValueError, InvalidOperation):
         raise ValueError(
             f"The field '{input_name.title()}' should contain a price separated "
-            f"by dot."
+            "by dot."
         )
 
     return input_content_dec

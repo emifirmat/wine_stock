@@ -1,9 +1,15 @@
+"""
+Main application window and layout management.
+
+This module defines the main window structure, including the top bar with shop info,
+sidebar navigation menu, and main content area where different sections are displayed.
+"""
 import platform
 import customtkinter as ctk
 from sqlalchemy.orm import Session
 
 from ui.components import NavLink
-from ui.style import Colours, Fonts, Icons
+from ui.style import Colours, Fonts, Icons, Spacing, Rounding
 from ui.frames.home_frame import HomeFrame
 from ui.frames.wine_frame import WineFrame
 from ui.frames.report_frame import ReportFrame
@@ -12,106 +18,126 @@ from helpers import load_ctk_image, resource_path
 from db.models import Shop
 
 class MainWindow:
-    """Main window of the app"""
+    """
+    Main application window and layout management.
+
+    This module defines the main window structure, including the top bar with shop info,
+    sidebar navigation menu, and main content area where different sections are displayed.
+    """
+
     SCREEN_WIDTH = 1280
     SCREEN_HEIGHT = 768
     
     def __init__(self, root: ctk.CTk, session: Session):
+        """
+        Initialize the main window with all components.
+        
+        Parameters:
+            root: CustomTkinter root window instance
+            session: SQLAlchemy database session
+        """
         # Main window
         self.root = root
         self.setup_main_window()
         # DB
         self.session = session
-        # Layout Frames
+        # Layout frames
         self.frame_top = None
         self.frame_side = None
         self.frame_body = None
         self.create_layout_containers()
-        # Topframe
+        # Topframe components
         self.shop = None
         self.label_logo = None
         self.label_shop_name = None
         self.create_topframe_components()
-        # Sidebar
+        # Sidebar components
         self.button_home = None
         self.button_wine = None
         self.button_report = None
-        self.button_price = None
         self.button_settings = None
         self.create_sidebar_components()
-        # Welcome message
+        # Initial welcome message
         self.create_welcome_message()
 
     def setup_main_window(self) -> None:
         """
-        Configure main windows (title, size, etc)
+        Configure main window properties (title, size, icon, colours).
         """
         self.root.title("Wine Stock App")
         self.root.geometry(f"{self.SCREEN_WIDTH}x{self.SCREEN_HEIGHT}")
-        # Ico file
+        
+        # Set icon for Windows systems
         if platform.system() == "Windows":
             self.root.iconbitmap(resource_path("assets/favicon.ico"))    
-        # Body of the window
+        # Configure background colour
         self.root.configure(
             fg_color=Colours.BG_MAIN
         )
 
     def create_layout_containers(self) -> None:
         """
-        Create frames to keep content organized
+        Create and position the main layout frames (top, sidebar, body).
         """
-        # Set up frames
+        # Create frames
         self.frame_top = ctk.CTkFrame(
             self.root, 
             height=100,
             fg_color="transparent",
-            corner_radius=15
+            corner_radius=Rounding.STRONG
         )
         self.frame_side = ctk.CTkFrame(
             self.root, 
             fg_color=Colours.BG_SECONDARY,
-            corner_radius=15,
+            corner_radius=Rounding.STRONG,
             border_width=1,
             border_color=Colours.BORDERS
         )
         self.frame_body = ctk.CTkFrame(
             self.root, 
             fg_color=Colours.BG_SECONDARY,
-            corner_radius=15
+            corner_radius=Rounding.STRONG,
         )
 
-        # Set expansion behaviour for main window
-        self.root.grid_rowconfigure(1, weight=1) # Only second row grows
-        self.root.grid_columnconfigure(1, weight=1) # Only second col grows
+        # Configure grid expansion (only second row and column grow)
+        self.root.grid_rowconfigure(1, weight=1) 
+        self.root.grid_columnconfigure(1, weight=1)
 
-        # Place and show frames
+        # Position frames in grid
         self.frame_top.grid(
             row=0, 
             column=0, 
             columnspan=2, 
             sticky="nsew", 
-            padx=(10, 20),
-            pady=(20, 10)
+            padx=(Spacing.SMALL, Spacing.LARGE),
+            pady=Spacing.MEDIUM
         )
-        self.frame_side.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 20))
-        self.frame_body.grid(row=1, column=1, sticky="nsew", padx=20, pady=(0, 20))
+        self.frame_side.grid(
+            row=1, column=0, sticky="nsew", 
+            padx=(Spacing.LARGE, Spacing.MEDIUM), pady=(0, Spacing.XLARGE)
+        )
+        self.frame_body.grid(
+            row=1, column=1, sticky="nsew",
+            padx=(0, Spacing.LARGE), pady=(0, Spacing.XLARGE)
+        )
 
-    def create_topframe_components(self):
+    def create_topframe_components(self) -> None:
         """
-        Create the components located at the top of the page.
+        Create and position shop logo and name in the top frame.
         """
-        # Import data from DB
+        # Get shop data from database
         self.shop = self.session.query(Shop).first()
   
-        # Create Logo
+        # Create logo label
         self.label_logo = ctk.CTkLabel(
             self.frame_top,
             image = load_ctk_image(self.shop.logo_path),
             text="",
-            fg_color="transparent"  
+            fg_color="transparent",
+            compound="center"         
         )
         
-        # Create Name
+        # Create shop name label
         self.label_shop_name = ctk.CTkLabel(
             self.frame_top,
             text=self.shop.name,
@@ -121,19 +147,26 @@ class MainWindow:
             justify="center"
         )
         
-        # Responsiveness
+        # Configure grid expansion
         self.frame_top.grid_columnconfigure(0, weight=0)
         self.frame_top.grid_columnconfigure(1, weight=1)
+        self.frame_top.grid_rowconfigure(0, weight=1)
 
-        # Place labels
-        self.label_logo.grid(row=0, column=0, padx=40, pady=10)
-        self.label_shop_name.grid(row=0, column=1, pady=10, sticky="nsew")
+        # Position labels in grid
+        self.label_logo.grid(
+            row=0, column=0, 
+            padx=(Spacing.XLARGE + Spacing.MEDIUM), pady=Spacing.SMALL,
+            sticky="nesw"
+        )
+        self.label_shop_name.grid(
+            row=0, column=1, pady=Spacing.SMALL, sticky="nsew"
+        )
 
     def create_sidebar_components(self):
         """
-        Create each component that will be located in the sidebar.
+        Create and position navigation menu in the sidebar.
         """
-        # Create sidebar's title
+        # Create sidebar title
         title = ctk.CTkLabel(
             self.frame_side,
             text="Menu",
@@ -141,9 +174,9 @@ class MainWindow:
             text_color=Colours.PRIMARY_WINE,
             fg_color="transparent"
         )
-        title.pack(pady=15)
+        title.pack(padx=Spacing.TITLE_X, pady=Spacing.TITLE_Y)
 
-        # Create links with icons
+        # Create navigation links with icons
         self.button_home = NavLink(
             self.frame_side,
             text="Home",
@@ -170,21 +203,24 @@ class MainWindow:
             command=self.show_settings_section,
         )
 
-        # Place buttons
+        # Position navigation buttons
         for btn in [
             self.button_home, 
             self.button_wine, 
             self.button_report, 
             self.button_settings
         ]:
-            btn.pack(fill="x", expand=True, padx=10, pady=5)
+            btn.pack(
+                fill="x", expand=True, padx=Spacing.NAVLINK_X, pady=Spacing.NAVLINK_Y
+            )
 
-    def show_section(self, frame_class, **kwargs):
+    def show_section(self, frame_class: type, **kwargs) -> None:
         """
-        Clears body and display a section frame.
+        Clear body frame and display a new section.
+        
         Parameters:
-            - frame_class: Class of the frame to be displayed
-            - kwargs: Additional arguments added to the frame
+            frame_class: Frame class to be instantiated and displayed
+            **kwargs: Additional keyword arguments passed to the frame constructor
         """
         self.clear_body()
 
@@ -194,81 +230,107 @@ class MainWindow:
             **kwargs
         )
 
-        self.frame_body.grid_rowconfigure(0, weight=1)
-        self.frame_body.grid_columnconfigure(0, weight=1)
+        frame.grid(row=0, column=0, sticky="nsew")
 
-        frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
-
-    def show_home_section(self):
-        """Click event that shows the home section in the body frame"""        
+    def show_home_section(self) -> None:
+        """
+        Display the home section with sales and purchases.
+        """        
         self.show_section(HomeFrame, main_window=self)
             
-    def show_wine_section(self):
-        """Click event that shows the wine section in the body frame"""     
+    def show_wine_section(self) -> None:
+        """
+        Display the wine inventory management section.
+        """     
         self.show_section(WineFrame, main_window=self)
 
-    def show_report_section(self):
-        """Click event that shows the report section in the body frame"""
+    def show_report_section(self) -> None:
+        """
+        Display the wine inventory management section.
+        """
         self.show_section(ReportFrame)     
 
-    def show_settings_section(self):
-        """Click event that shows the settings section in the body frame"""
+    def show_settings_section(self) -> None:
+        """
+        Display the settings section with shop configuration.
+        """
         self.show_section(SettingsFrame, on_save=self.refresh_shop_labels)
 
-    def clear_body(self):
+    def clear_body(self) -> None:
         """
-        Clears the content of frame body removing all the components inside.
+        Remove all widgets from the body frame.
         """
         for component in self.frame_body.winfo_children():
             component.destroy()
         
-    def refresh_shop_labels(self):
+    def refresh_shop_labels(self) -> None:
         """
-        Callback function. Refresh name and logo of the shop located at the top 
-        frame.
-
-        Inputs:
-            new_name =  New name of the shop typed by the user
-            new_logo_path = Path of the new logo picked by the user
+        Refresh shop name and logo in the top frame.
+        
+        Callback function used after saving settings to update the displayed
+        shop information with the latest database values.
         """
         self.session.refresh(self.shop) 
         
         # Update label shop name
         self.label_shop_name.configure(text=self.shop.name)
 
-        # Update image logo
+        # Update logo image
         self.label_logo.configure(image=load_ctk_image(self.shop.logo_path))
 
-    def create_welcome_message(self):
+    def create_welcome_message(self) -> None:
         """
-        Welcome message that appears in frame_body when user starts the app
+        Display welcome message in the body frame on application startup.
         """
+        # Configure grid expansion for body frame
+        self.frame_body.rowconfigure(0, weight=1)
+        self.frame_body.columnconfigure(0, weight=1)
 
-        # Add title
-        title = ctk.CTkLabel(
+        # Create welcome frame
+        frame_welcome = ctk.CTkFrame(
             self.frame_body,
+            fg_color="transparent",
+            corner_radius=Rounding.STRONG,
+            border_color=Colours.BORDERS,
+            border_width=1
+        )
+        frame_welcome.grid(row=0, column=0, sticky="wsen") 
+        
+        # Create title
+        title = ctk.CTkLabel(
+            frame_welcome,
             text="Welcome to WineStock",
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TITLE,
         )
-        title.grid(row=0, column=0, pady=(20, 0), padx=150, sticky="n") # Cannot use pack for layout expansion reasons
-
-        image = load_ctk_image("assets/logos/app_logo.png", (130, 130)) 
-        label_image = ctk.CTkLabel(
-            self.frame_body,
-            image=image,
-            text="",
-            fg_color="transparent",               
+        title.grid(
+            row=0, column=0, padx=Spacing.TITLE_X, pady=Spacing.TITLE_Y, sticky="n"
         )
-        
-        label_image.grid(row=1, column=0, pady=(20, 0), padx=150, sticky="we") # Cannot use pack for layout expansion reasons
 
-        # Add form
-        text = ctk.CTkLabel(
-                self.frame_body,
-                text="Start managing your wine inventory: add sales, record purchases, remove stock movements, and generate reports easily.",
-                text_color=Colours.TEXT_MAIN,
-                font=Fonts.TEXT_MAIN,
-                wraplength=800
-            )
-        text.grid(row=2, column=0, pady=(50, 0), padx=150, sticky="we") # Cannot use pack for layout expansion reasons
+        # Create weoolvome text
+        welcome_text = (
+            "Manage your wine inventory effortlessly: add sales, record "
+            "purchases, track stock levels, receive low-stock alerts, and "
+            "generate detailed reports."
+        )
+        label_welcome = ctk.CTkLabel(
+            frame_welcome,
+            fg_color="transparent",
+            image=load_ctk_image("assets/logos/app_logo.png", (150, 150)),
+            compound="top",
+            text=welcome_text,
+            text_color=Colours.TEXT_MAIN,
+            font=Fonts.TEXT_WELCOME,
+            pady=Spacing.LARGE,
+            wraplength=800,
+        )
+        label_welcome.grid(
+            row=1, column=0, padx=2, pady=Spacing.LARGE, sticky="nwe"
+        ) 
+        
+        # Configure grid expansion
+        frame_welcome.rowconfigure(0, weight=2)
+        frame_welcome.rowconfigure(1, weight=8)
+        frame_welcome.columnconfigure(0, weight=1)
+        
+        
