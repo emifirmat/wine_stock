@@ -5,7 +5,7 @@ import customtkinter as ctk
 
 from db.models import Shop
 from ui.components import (TextInput, ImageInput)
-from ui.style import Colours, Fonts
+from ui.style import Colours, Fonts, Spacing
 
 
 class SettingsForm(ctk.CTkFrame):
@@ -17,7 +17,7 @@ class SettingsForm(ctk.CTkFrame):
         ):
         super().__init__(root, **kwargs)
         self.configure(
-            fg_color = Colours.BG_FORM,
+            fg_color=Colours.BG_FORM,
         )
         
         # Db instances
@@ -69,7 +69,8 @@ class SettingsForm(ctk.CTkFrame):
             cursor="hand2",
             command=self.save_changes
         )
-        save_button.pack(side="bottom", pady=(20, 30), expand=True)
+        save_button.pack(
+            side="bottom", padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y)
 
     def save_changes(self) -> None:
         """

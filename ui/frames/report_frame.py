@@ -1,55 +1,67 @@
 """
-Classes related with the report section
+Report section frame and export functionality.
+
+This module defines the report section where users can generate and export
+reports of wines, sales, and purchases in CSV or Excel format.
 """
 import csv
 import customtkinter as ctk
 import tkinter.messagebox as messagebox
 import xlsxwriter
 from datetime import datetime
+from sqlalchemy.orm import Session
 
 from helpers import deep_getattr
 from ui.components import Card, ToggleInput
-from ui.style import Colours, Fonts
+from ui.style import Colours, Fonts, Spacing, Rounding
 from db.models import StockMovement, Wine
 
 class ReportFrame(ctk.CTkScrollableFrame):
     """
-    Contains all components and logic related to the report section.
+    Report section frame with export functionality.
+    
+    Provides cards for generating different types of reports (wines, sales, purchases)
+    and allows exporting data in CSV or Excel format.
     """
     def __init__(
-            self, root: ctk.CTkFrame, session, **kwargs
-        ):
+        self, root: ctk.CTkFrame, session: Session, **kwargs
+    ):
+        """
+        Initialize the report frame with export options.
+        
+        Parameters:
+            root: Parent frame container
+            session: SQLAlchemy database session
+            **kwargs: Additional keyword arguments for CTkScrollableFrame
+        """
         super().__init__(root, **kwargs)
-        self.configure(
-            fg_color = Colours.BG_SECONDARY,
-            corner_radius=10,
-            border_color=Colours.BORDERS,
-            border_width=1
-        )
-        # DB
+        
+        # DB instances
         self.session = session
+        
         # Variables
         self.export_format = ctk.StringVar(value="csv")
+        
         # UI
         self.create_components()
 
     def create_components(self) -> None:
         """
-        Creates all UI components for the report section.
+        Create and display all UI components for the report section.
         """
-        # Title
+        # Create title
         title = ctk.CTkLabel(
             self,
             text="REPORTS",
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TITLE
         )
-        title.pack(pady=(20, 0))
+        title.pack(padx=Spacing.TITLE_X, pady=Spacing.TITLE_Y)
 
-        # Intro Text
+        # Create introduction text
         text = (
             "Generate and review reports of your sales, purchases and stock. "
-            + "You can export data in CSV or Excel format."
+            "You can export data in CSV or Excel format."
         )
         introduction = ctk.CTkLabel(
             self,
@@ -58,30 +70,30 @@ class ReportFrame(ctk.CTkScrollableFrame):
             justify="center",
             font=Fonts.TEXT_SECONDARY
         )
-        introduction.pack(pady=15)
+        introduction.pack(padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y)
 
-        # == Export format toggle ==
+        # Create export format toggle
         toggle_export = ToggleInput(
             self,
             label_text="Export Format",
             variable=self.export_format,
-            item_list = [("CSV", "csv"), ("Excel", "xlsx")],
+            item_list=[("CSV", "csv"), ("Excel", "xlsx")],
             fg_color="transparent",
             optional=True,
         )
-        toggle_export.pack(pady=10)
+        toggle_export.pack(padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y)
         toggle_export.set_label_layout(60)
 
-        # ==Cards frame==
-        # Container
+        # ==Cards==
+        # Create cards container
         frame_cards = ctk.CTkFrame(
             self,
             fg_color="transparent",
-            corner_radius=10,
+            corner_radius=Rounding.CARD,
         )
-        frame_cards.pack(pady=15)
+        frame_cards.pack(padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y)
         
-        # Cards
+        # Create report cards
         card_specs = [
             ("Purchases and \nSales Report", "assets/cards/full_report.png", None),
             ("Sales Report", "assets/cards/sales_report.png", "sale"),
@@ -94,16 +106,20 @@ class ReportFrame(ctk.CTkScrollableFrame):
                 image_path=image,
                 title=title,
                 on_click=(lambda f=filter_type: self.generate_report(f))
-            ).grid(row=i // 2, column=i % 2, padx=(0, 20), pady=(0, 15))
+            ).grid(
+                row=i // 2, column=i % 2, 
+                padx=Spacing.CARDS_X, pady=Spacing.CARDS_Y
+            )
 
     def generate_report(self, filter_type: str | None = None) -> None:
         """
-        Generate a CSV or Excel report of wine or stock movements.
+        Generate and export a CSV or Excel report.
         
-        Inputs:
-            - filter_type: One of 'wine', 'sale', or 'purchase'. No filter_type
-            means a full movements report.
-            
+        Opens a file dialog for the user to choose the save location,
+        then generates the report with the selected data and format.
+        
+        Parameters:
+            filter_type: Type of report - "wine", "sale", "purchase", or None for full report   
         """
         file_ext = self.export_format.get()
         file_type = "CSV" if file_ext == "csv" else "Excel"
@@ -126,7 +142,7 @@ class ReportFrame(ctk.CTkScrollableFrame):
         elif file_ext == "xlsx":
             self._write_excel(file_path, ws_title, field_names, attribute_names, data_list)
         else:
-            raise ValueError("Wrong file extension.")
+            raise ValueError(f"Unsupported file extension: {file_ext}")
         
         # Show success message
         messagebox.showinfo(
@@ -135,9 +151,19 @@ class ReportFrame(ctk.CTkScrollableFrame):
         )
 
         
-    def _get_data_config(self, filter_type: str | None):
+    def _get_data_config(self, filter_type: str | None) -> tuple[str, tuple, tuple, list]:
         """
-        Returns worksheet title, headers, attributes, and queryset.
+        Get report configuration based on filter type.
+        
+        Parameters:
+            filter_type: Type of report - "wine", "sale", "purchase", or None
+            
+        Returns:
+            Tuple containing:
+                - Worksheet title
+                - Field names (column headers)
+                - Attribute names (for data extraction)
+                - Data list (query results).
         """
         if filter_type == "wine":
             return (
@@ -154,7 +180,7 @@ class ReportFrame(ctk.CTkScrollableFrame):
                 ),
                 Wine.all_ordered(self.session, order_by="code")
             )
-        else: # StockMovements
+        else: # StockMovements (sale, purchase, or all)
             return (
                 "Movements",
                 (
@@ -169,22 +195,24 @@ class ReportFrame(ctk.CTkScrollableFrame):
             )
 
     def _write_csv(
-        self, file_path: str, field_names: list[str], attribute_names: list[str], 
-        data_list
+        self, file_path: str, 
+        field_names: tuple[str, ...], attribute_names: tuple[str, ...], 
+        data_list: list
     ) -> None:
         """
-        Write report to CSV file.
+        Write report data to a CSV file.
+        
         Parameters:
-            - file_path: Location of the field to write.
-            - field_names: List of column names/headers.
-            - attribute_names: List of attribute names used to get the field values.
-            - data_list: List of a class table containing the datafield values.
+            file_path: Destination path for the CSV file
+            field_names: Column headers for the CSV
+            attribute_names: Attribute paths for extracting values from data objects
+            data_list: List of data objects (Wine or StockMovement instances)
         """
         with open(file_path, newline="", mode="w", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=field_names)
             writer.writeheader()
 
-            # Write rows
+            # Write data rows
             for data_row in data_list:
                 row = {}
                 for field, attr_name in zip(field_names, attribute_names):
@@ -193,7 +221,7 @@ class ReportFrame(ctk.CTkScrollableFrame):
                     if field == "subtotal":
                         value = data_row.quantity * data_row.price
                     elif field == "datetime" and isinstance(value, datetime):
-                        # Remove microseconds
+                        # Remove microseconds for cleaner output
                         value = value.replace(microsecond=0).isoformat(sep=" ")
 
                     row[field] = value
@@ -201,22 +229,25 @@ class ReportFrame(ctk.CTkScrollableFrame):
                 writer.writerow(row)
 
     def _write_excel(
-        self, file_path: str, ws_title: str, field_names: list[str], 
-        attribute_names: list[str], data_list
+        self, file_path: str, ws_title: str, 
+        field_names: tuple[str, ...], 
+        attribute_names: tuple[str, ...], 
+        data_list: list
     ) -> None:
         """
-        Write report to Excel file.
+        Write report data to an Excel file with formatting.
+        
         Parameters:
-            - file_path: Location of the field to write.
-            - ws_title: Title of the excel worksheet.
-            - field_names: List of column names/headers.
-            - attribute_names: List of attribute names used to get the field values.
-            - data_list: List of a class table containing the datafield values.
+            file_path: Destination path for the Excel file
+            ws_title: Title for the Excel worksheet
+            field_names: Column headers for the spreadsheet
+            attribute_names: Attribute paths for extracting values from data objects
+            data_list: List of data objects (Wine or StockMovement instances)
         """
         workbook = xlsxwriter.Workbook(file_path)
         worksheet = workbook.add_worksheet(ws_title)
 
-        # Formats
+        # Define cell formats
         header_fmt = workbook.add_format({"bold": True, "border": 1})
         date_fmt = workbook.add_format({"num_format": "yyyy-mm-dd hh:mm:ss"})
         money_fmt = workbook.add_format({"num_format": "€ 0.00"})
@@ -227,7 +258,7 @@ class ReportFrame(ctk.CTkScrollableFrame):
             worksheet.write(0, col, title, header_fmt)
             col_widths.append(len(title))
 
-        # Write content
+        # Write data rows
         for row_idx, data_row in enumerate(data_list, start=1):
             for col_idx, (field, attr_name) in enumerate(zip(field_names, attribute_names)):
                 value = (
@@ -246,10 +277,10 @@ class ReportFrame(ctk.CTkScrollableFrame):
                     worksheet.write(row_idx, col_idx, value)
                     display_value = str(value)
                 
-                # Track maximum width
+                # Track maximum column width
                 col_widths[col_idx] = max(col_widths[col_idx], len(display_value))
 
-        # Adjust column widths based on content + padding
+        # Adjust column widths based on content with padding
         for i, width in enumerate(col_widths):
             worksheet.set_column(i, i, width + 1)     
 

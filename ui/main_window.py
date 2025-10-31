@@ -226,11 +226,17 @@ class MainWindow:
 
         frame = frame_class(
             self.frame_body, 
-            self.session, 
+            self.session,
+            fg_color=Colours.BG_SECONDARY,
+            corner_radius=Rounding.FRAME,
+            border_color=Colours.BORDERS,
+            border_width=1,
             **kwargs
         )
 
         frame.grid(row=0, column=0, sticky="nsew")
+  
+
 
     def show_home_section(self) -> None:
         """

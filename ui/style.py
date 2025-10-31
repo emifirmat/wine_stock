@@ -51,7 +51,7 @@ class Fonts:
     NAVLINK_ACTIVE = ("Segoe UI", 15, "bold", "underline")
     TEXT_LABEL = ("Segoe UI", 14)
     TEXT_HEADER = ("Segoe UI", 14, "bold")
-    TEXT_SECONDARY = ("Segoe UI", 13, "italic")
+    TEXT_SECONDARY = ("Segoe UI", 14, "italic")
     TEXT_HEADER_CALENDAR = ("Segoe UI", 13, "bold")
     TEXT_ERROR = ("Segoe UI", 12)
     TEXT_AUTOCOMPLETE = ("Segoe UI", 9)
@@ -182,11 +182,14 @@ class Spacing:
     XLARGE = BASE * 5
 
     # Widget-specific spacing (horizontal, vertical)
-    TITLE_X, TITLE_Y = SMALL, (LARGE, SMALL) # Includes subtitle
+    BUTTONS_X, BUTTONS_Y = MEDIUM, MEDIUM # Or SMALL depeding on context
+    CARDS_X, CARDS_Y = LARGE, SMALL
     NAVLINK_X, NAVLINK_Y = MEDIUM, SMALL
-    BUTTONS_X, BUTTONS_Y = MEDIUM, MEDIUM # OR SMALL depeding on context
-    SECCION_X, SECCION_Y = MEDIUM, MEDIUM # or LARGE depending on context
+    
+    SECTION_X, SECTION_Y = MEDIUM, MEDIUM # or LARGE depending on context
+    SUBSECTION_X, SUBSECTION_Y = MEDIUM, SMALL
     TABLE_X, TABLE_Y = SMALL, LARGE
+    TITLE_X, TITLE_Y = SMALL, (LARGE, SMALL) # Includes subtitle
     WINDOW_X, WINDOW_Y =  XLARGE, XLARGE
 
 

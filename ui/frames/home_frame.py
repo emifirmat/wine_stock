@@ -1,71 +1,87 @@
 """
-Classes related with the home section
+Home section frame and navigation.
+
+This module defines the home section where users can add sales, purchases,
+and manage transactions. It provides a card-based interface for quick access
+to transaction operations.
 """
 import customtkinter as ctk
+from sqlalchemy.orm import Session
 
 from ui.components import Card, ButtonGoBack
 from ui.forms.add_edit_transaction import AddTransactionForm
 from ui.forms.manage_transaction import ManageTransactionForm
-from ui.tables.transactions_table import TransactionsTable
-from ui.style import Colours, Fonts, Icons
+from ui.style import Colours, Fonts, Spacing, Rounding
 
-from db.models import Wine, StockMovement
+from db.models import Wine
 
 class HomeFrame(ctk.CTkScrollableFrame):
     """
-    It contains all the components and logic related to home section
+    Home section frame with transaction management interface.
+    
+    Displays cards for adding sales, purchases, and managing transactions.
+    If no wines exist in the database, shows a prompt to add wines first.
     """
     def __init__(
-            self, root: ctk.CTkFrame, session, main_window, **kwargs
-        ):
-        super().__init__(root, **kwargs)
-        self.configure(
-            fg_color = Colours.BG_SECONDARY,
-            corner_radius=10,
-            border_color=Colours.BORDERS,
-            border_width=1,
-        )
+        self, root: ctk.CTkFrame, session: Session, main_window, **kwargs
+    ):
+        """
+        Initialize the home frame with transaction cards.
         
+        Parameters:
+            root: Parent frame container
+            session: SQLAlchemy database session
+            main_window: Reference to MainWindow for navigation
+            **kwargs: Additional keyword arguments for CTkScrollableFrame
+        """
+        super().__init__(root, **kwargs)
+        
+        # DB instances
         self.session = session
         self.wine_list = self.session.query(Wine).all()
+        
+        # Widget references
         self.main_window = main_window
         self.button_go_back = None
-
+        
+        # Components
         self.create_components()
 
     def create_components(self) -> None:
         """
-        Creates the home section components
+        Create and display home section components (title, cards, or empty state).
         """
-        # Title
+        # Create title
         title = ctk.CTkLabel(
             self,
             text="HOME",
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TITLE
         )
-        title.pack(pady=(20, 0))
-
+        title.pack(padx=Spacing.TITLE_X, pady=Spacing.TITLE_Y)
+        
+        # Show empty state if no wines exist
         if not self.wine_list:
-            # Warning Text
             text = "Add at least one wine to enable and view this section."
             
-            warning_text = ctk.CTkLabel(
+            no_wine_text = ctk.CTkLabel(
                 self,
                 text=text,
                 text_color=Colours.TEXT_MAIN,
                 justify="center",
                 font=Fonts.TEXT_MAIN
             )
-            warning_text.pack(pady=150)
+            no_wine_text.pack(
+                padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y,
+            )
             
             # Stop generating components
             return
         
-        # Introduction Text
+        # Create introduction text
         text = (
-            "Add and track wine sales and purchases to keep a clear record of "
-            + "your winery's transactions."
+            "Add, track, and manage wine sales and purchases to stay on top of "
+            "your winery's activity."
         )
         introduction = ctk.CTkLabel(
             self,
@@ -74,30 +90,30 @@ class HomeFrame(ctk.CTkScrollableFrame):
             justify="center",
             font=Fonts.TEXT_SECONDARY
         )
-        introduction.pack(pady=15)
+        introduction.pack(padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y)
 
         # ==Frame cards==
+        # Create cards container
         frame_cards = ctk.CTkFrame(
             self,
-            fg_color = "transparent",
-            corner_radius=10,
+            fg_color="transparent",
+            corner_radius=Rounding.CARD,
         )
-        frame_cards.pack(pady=15)
-        # New sale
+        frame_cards.pack(padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y)
+
+        # Create transaction cards
         card_new_sale = Card(
             frame_cards,
             image_path="assets/cards/add_sale.png",
             title= "New Sale",
             on_click=self.show_add_sale_section,
         )
-        # New purhase
         card_new_purchase = Card(
             frame_cards,
             image_path="assets/cards/add_purchase.png",
             title="New Purchase",
             on_click=self.show_add_purchase_section,
         )
-        # New purhase
         card_manage_transaction = Card(
             frame_cards,
             image_path="assets/cards/manage_transaction.png",
@@ -105,33 +121,44 @@ class HomeFrame(ctk.CTkScrollableFrame):
             on_click=self.show_manage_transaction_section,
         )
 
-        # Place cards
-        card_new_sale.grid(row=0, column=0, pady=(0, 15))
-        card_new_purchase.grid(row=0, column=1, pady=(0, 15), padx=20)
-        card_manage_transaction.grid(row=1, column=0, pady=(0, 15))
+        # Position cards in grid
+        card_new_sale.grid(
+            row=0, column=0, padx=Spacing.CARDS_X, pady=Spacing.CARDS_Y
+        )
+        card_new_purchase.grid(
+            row=0, column=1, padx=Spacing.CARDS_X, pady=Spacing.CARDS_Y
+        )
+        card_manage_transaction.grid(
+            row=1, column=0, padx=Spacing.CARDS_X, pady=Spacing.CARDS_Y
+        )
+
+        # Note: ScrollableFrames can't expand vertically due to internal design.
+        # Horizontal expansion for cards doesn't look aesthetically pleasing.
+
     
-    def show_subsection(self, text_title: str, form_class, **kwargs):
+    def show_subsection(self, text_title: str, form_class: type, **kwargs) -> None:
         """
-        Clears body and display a subsection.
+        Clear content and display a transaction form subsection.
+        
         Parameters:
-            - text_title: Title of the section
-            - form_class: Form to be displayed
-            - kwargs: Additional arguments from the forms
+            text_title: Title displayed at the top of the subsection
+            form_class: Form class to instantiate and display
+            **kwargs: Additional keyword arguments passed to the form constructor
         """
-        # Clear displayed section
+        # Clear current content
         self.clear_content()
 
-        # Set up window expansion
+        # Configure grid expansion
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        # Add Go back button
+        # Create and position go back button
         self.button_go_back = ButtonGoBack(
             self.main_window.root,
             command=self.main_window.show_home_section
         )
 
-        # Add title
+        # Create title
         title = ctk.CTkLabel(
             self,
             text=text_title,
@@ -139,24 +166,30 @@ class HomeFrame(ctk.CTkScrollableFrame):
             font=Fonts.SUBTITLE,
         )
 
-        # Place button and title
+        # Position button and title
         x = self.winfo_rootx() - self.main_window.root.winfo_rootx()
         y = self.winfo_rooty() - self.main_window.root.winfo_rooty()
         
         self.button_go_back.place(x=x, y=y)
-        title.grid(row=0, column=0, pady=(20, 0), sticky="nsew") 
+        title.grid(
+            row=0, column=0, 
+            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="nsew"
+        ) 
 
-        # Add form
+        # Create and position form
         form = form_class(
             self,
             session=self.session,
             **kwargs
         )
-        form.grid(row=1, column=0, pady=(10, 0), sticky="nsew") 
+        form.grid(
+            row=1, column=0, 
+            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="nsew"
+        ) 
 
     def show_add_sale_section(self) -> None:
         """
-        Shows the form for adding a sale.
+        Display the form for adding a new sale transaction.
         """
         self.show_subsection(
             "NEW SALE", 
@@ -166,7 +199,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
 
     def show_add_purchase_section(self) -> None:
         """
-        Shows the form for adding a new purchase.
+        Display the form for adding a new purchase transaction.
         """
         self.show_subsection(
             "NEW PURCHASE", 
@@ -176,7 +209,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
 
     def show_manage_transaction_section(self) -> None:
         """
-        Shows the form for removing a transaction.
+        Display the form for viewing and removing transactions.
         """
         self.show_subsection(
             "MANAGE TRANSACTION",
@@ -185,14 +218,14 @@ class HomeFrame(ctk.CTkScrollableFrame):
 
     def clear_content(self) -> None:
         """
-        Removes any content in home frame
+        Remove all widgets from the home frame.
         """
         for component in self.winfo_children():
             component.destroy()
 
     def destroy(self) -> None:
         """
-        Override function to include the destruction of the button go back.
+        Destroy the frame and its go back button.
         """
         if self.button_go_back:
             self.button_go_back.destroy()

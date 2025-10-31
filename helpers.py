@@ -60,7 +60,7 @@ def get_by_id(model: type, id_: int, session: Session) -> Any | None:
         Model instance if found, None otherwise
 
     """
-    return session.query(model).get(id_)
+    return session.get(model, id_)
 
 
 def load_ctk_image(

@@ -1,31 +1,39 @@
 """
-Classes related with the settings section
+Settings section frame and shop configuration.
+
+This module defines the settings section where users can configure
+shop details such as name and logo.
 """
 import customtkinter as ctk
-from PIL import Image
+from sqlalchemy.orm import Session
+from typing import Callable
 
-from ui.components import TextInput, ImageInput
 from ui.forms.settings import SettingsForm
-from ui.style import Colours, Fonts
-from helpers import load_ctk_image
-from db.models import Shop
+from ui.style import Colours, Fonts, Spacing, Rounding
+
 
 class SettingsFrame(ctk.CTkFrame):
     """
-    It contains all the components and logic related to settings
+    Settings section frame with shop configuration form.
+    
+    Provides interface for updating shop name and logo that appear
+    in the top bar of the application.
     """
     def __init__(
-            self, root: ctk.CTkFrame, session, on_save, **kwargs
-        ):
-        super().__init__(root, **kwargs)
-        self.configure(
-            fg_color = Colours.BG_SECONDARY,
-            corner_radius=10,
-            border_color=Colours.BORDERS,
-            border_width=1
-        )
+        self, root: ctk.CTkFrame, session: Session, on_save: Callable, **kwargs
+    ):
+        """
+        Initialize the settings frame with configuration form.
         
-        # Db instances
+        Parameters:
+            root: Parent frame container
+            session: SQLAlchemy database session
+            on_save: Callback function to refresh shop labels after saving
+            **kwargs: Additional keyword arguments for CTkFrame
+        """
+        super().__init__(root, **kwargs)
+        
+        # DB instances
         self.session = session
 
         # Callbacks
@@ -36,31 +44,31 @@ class SettingsFrame(ctk.CTkFrame):
 
     def create_components(self) -> None:
         """
-        Creates the setting option components
+        Create and display settings section components (title, intro, form).
         """
-        # Title
+        # Create title
         title = ctk.CTkLabel(
             self,
             text="SETTINGS",
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TITLE
         )
-        title.pack(pady=(20, 0))
+        title.pack(padx=Spacing.TITLE_X, pady=Spacing.TITLE_Y)
 
-        # Introduction
+        # Create introduction text
         introduction = ctk.CTkLabel(
             self,
             text="Set the name and logo that represent your winery within the app.",
             text_color=Colours.TEXT_SECONDARY,
             justify="center",
-            font=Fonts.TEXT_SECONDARY
+            font=Fonts.TEXT_SECONDARY,
         )
-        introduction.pack(pady=15)
+        introduction.pack(padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y)
 
-        # == Setting Form ==
+        # Create settings form
         settings_form = SettingsForm(
             self,
             self.session,
             on_save=self.on_save
         )
-        settings_form.pack(pady=15)
+        settings_form.pack(padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y)
