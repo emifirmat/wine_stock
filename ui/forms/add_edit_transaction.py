@@ -286,8 +286,8 @@ class AddTransactionForm(BaseTransactionForm):
         
         # If used typed invalid wine name, stop the function
         if selected_wine_name not in self.wine_names_dict:
-            self.label_subtotal.update_text_value(f"€ -")
-            self.label_wine_code.update_text_value("-")
+            self.label_subtotal.configure_label_value(text=f"€ -")
+            self.label_wine_code.configure_label_value(text="-")
             self.label_stock.configure_label_value(
                 text="-", 
                 text_color=Colours.TEXT_MAIN,
@@ -310,8 +310,8 @@ class AddTransactionForm(BaseTransactionForm):
         self.subtotal_value = quantity * transaction_price
         
         # Update labels
-        self.label_subtotal.update_text_value(f"€ {self.subtotal_value}")
-        self.label_wine_code.update_text_value(wine_instance.code)
+        self.label_subtotal.configure_label_value(text=f"€ {self.subtotal_value}")
+        self.label_wine_code.configure_label_value(text=wine_instance.code)
         
         wine_name_lower = selected_wine_name.lower()
         if wine_name_lower not in self.temp_stock:
@@ -404,7 +404,7 @@ class AddTransactionForm(BaseTransactionForm):
         """
         # Update text
         wine_name_lower = wine_instance.name.lower()
-        self.label_stock.update_text_value(self.temp_stock[wine_name_lower])
+        self.label_stock.configure_label_value(text=self.temp_stock[wine_name_lower])
         
         # Update color
         if self.temp_stock[wine_name_lower] < wine_instance.min_stock_sort:
@@ -512,15 +512,12 @@ class EditTransactionForm(BaseTransactionForm):
             # Get value
             value = deep_getattr(self.movement, input_name)
             
-            if isinstance(input, DropdownInput):
+            if hasattr(input, "set_to_value"):
                 input.set_to_value(value)
-            elif isinstance(input, DoubleLabel) and input_name != "datetime":
-                continue # Updated by tkvariable
-            else:
-                # Text inputs
-                input.update_text_value(
-                    new_text=value
-                )
+            elif hasattr(input,"update_text_value"):
+                input.update_text_value(value)
+            elif input_name == "datetime":
+                input.configure_label_value(text=value)
         
         # Align and place widgets
         for index, input in enumerate(inputs_dict.values()):
@@ -568,28 +565,28 @@ class EditTransactionForm(BaseTransactionForm):
 
         # If used typed invalid wine name, stop the function
         if selected_wine_name not in self.wine_names_dict:
-            self.label_wine_code.update_text_value("-")
-            self.label_price.update_text_value(f"€ -")
-            self.label_subtotal.update_text_value(f"€ -")
+            self.label_wine_code.configure_label_value(text="-")
+            self.label_price.configure_label_value(text=f"€ -")
+            self.label_subtotal.configure_label_value(text=f"€ -")
             return
 
         # Get wine price
         wine_instance = self.wine_names_dict[selected_wine_name]
         
         # Update Labels
-        self.label_wine_code.update_text_value(wine_instance.code)            
+        self.label_wine_code.configure_label_value(text=wine_instance.code)            
         if transaction == "sale":
             transaction_price = wine_instance.selling_price
         elif transaction == "purchase":
             transaction_price = wine_instance.purchase_price
         else:
-            self.label_price.update_text_value(f"€ -")
-            self.label_subtotal.update_text_value(f"€ -")
+            self.label_price.configure_label_value(text=f"€ -")
+            self.label_subtotal.configure_label_value(text=f"€ -")
             return
         
-        self.label_price.update_text_value(f"€ {transaction_price}")
+        self.label_price.configure_label_value(text=f"€ {transaction_price}")
         self.subtotal_value = quantity * transaction_price
-        self.label_subtotal.update_text_value(f"€ {self.subtotal_value}")
+        self.label_subtotal.configure_label_value(text=f"€ {self.subtotal_value}")
     
     def save_values(self) -> None:
         """

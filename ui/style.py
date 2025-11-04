@@ -42,19 +42,21 @@ class Fonts:
     """
     Font configurations for different text elements.
     """
-    SHOP_NAME = ("Segoe UI", 40, "bold")
+    SHOP_NAME = ("Segoe UI", 38, "bold")
     TITLE = ("Segoe UI", 22, "bold")
-    TEXT_WELCOME = ("Segoe UI", 17)
-    SUBTITLE = ("Segoe UI", 16, "bold")
-    TEXT_MAIN = TEXT_BUTTON = ("Segoe UI", 15)
+    TEXT_WELCOME = ("Segoe UI", 18)
+    SUBTITLE = ("Segoe UI", 17, "bold")
+    TEXT_MAIN = TEXT_SECONDARY = ("Segoe UI", 16)
+    TEXT_BUTTON = ("Segoe UI", 15)
     NAVLINK = ("Segoe UI", 15, "bold")
     NAVLINK_ACTIVE = ("Segoe UI", 15, "bold", "underline")
     TEXT_LABEL = ("Segoe UI", 14)
     TEXT_HEADER = ("Segoe UI", 14, "bold")
-    TEXT_SECONDARY = ("Segoe UI", 14, "italic")
     TEXT_HEADER_CALENDAR = ("Segoe UI", 13, "bold")
-    TEXT_ERROR = ("Segoe UI", 12)
-    TEXT_AUTOCOMPLETE = ("Segoe UI", 9)
+    TEXT_ERROR = ("Segoe UI", 13, "bold")
+    TEXT_DROPDOWN = ("Segoe UI", 13)
+    TEXT_AUTOCOMPLETE = ("Segoe UI", 11)
+    
 
 class Icons:
     """
@@ -184,8 +186,8 @@ class Spacing:
     # Widget-specific spacing (horizontal, vertical)
     BUTTONS_X, BUTTONS_Y = MEDIUM, MEDIUM # Or SMALL depeding on context
     CARDS_X, CARDS_Y = LARGE, SMALL
+    LABELS_X, LABELS_Y = SMALL, SMALL
     NAVLINK_X, NAVLINK_Y = MEDIUM, SMALL
-    
     SECTION_X, SECTION_Y = MEDIUM, MEDIUM # or LARGE depending on context
     SUBSECTION_X, SUBSECTION_Y = MEDIUM, SMALL
     TABLE_X, TABLE_Y = SMALL, LARGE
@@ -203,10 +205,10 @@ class Rounding:
     STRONG = BASE * 4
     
     BUTTON = REGULAR
+    CALENDAR = STRONG
+    CARD = STRONG
+    CELL = SOFT
     ENTRY = SOFT
     FRAME = STRONG
-    CARD = STRONG
-    TOGGLE = STRONG
     LABEL = STRONG
-    CELL = SOFT
-
+    TOGGLE = STRONG

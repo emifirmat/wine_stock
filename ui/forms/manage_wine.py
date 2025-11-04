@@ -97,7 +97,7 @@ class ManageWineForm(ctk.CTkFrame):
             else:
                 words = ["are", "wines"]
         
-            self.alert_label.update_text(
+            self.alert_label.configure_label(
                 text=f"There {words[0]} {low_stock_count} {words[1]} under the minimum stock.",
             )
             self.alert_label.grid(row=1, column=0, pady=(10, 20), sticky="nsew")

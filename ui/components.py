@@ -1,5 +1,9 @@
 """
-Custom components useful for the app
+Custom UI components and widgets.
+
+This module provides reusable CustomTkinter components including specialized
+entry fields, input containers, buttons, and composite widgets designed for
+the wine stock management application.
 """
 import calendar
 import customtkinter as ctk
@@ -9,52 +13,57 @@ import re
 from decimal import Decimal
 from typing import Callable
 
-from helpers import load_ctk_image, resource_path
-from db.models import Wine
-from ui.style import Colours, Fonts, Icons
+from helpers import load_ctk_image
+from ui.style import Colours, Fonts, Icons, Spacing, Rounding
 
 
 class EntryInputMixin:
     """
-    Mixin that provides utility methods for handling entry widgets.
+    Mixin providing utility methods for entry widget management.
+    
+    Provides methods for setting width, clearing content, getting values,
+    and updating text in entry widgets.
     """
     def set_entry_width(self, entry_width: int) -> None:
         """
-        Sets the width of the entry widget.
+        Set the width of the entry widget.
+        
         Parameters:
-            - entry_width: The width to apply to the entry widget.
+            entry_width: Width to apply to the entry widget in pixels
         """
-        self.entry.configure(
-            width=entry_width
-        )
+        self.entry.configure(width=entry_width)
     
     def clear(self) -> None:
         """
-        Removes the current text from the entry widget.
+        Remove all text from the entry widget.
         """
         self.entry.delete(0, "end") 
 
     def get(self) -> str:
         """
-        Returns the current value of the entry widget.
+        Get the current value of the entry widget.
+        
         Returns:
-            str: The text currently contained in the entry
+            Text currently contained in the entry
         """
         return self.entry.get()
 
     def set_total_width(self, total_width: int) -> None:
         """
-        Sets the total width of the input for alignment purposes.
-        Creates an empty label to fill the remaining width.
+        Set total width of the input container for alignment.
+        
+        Creates an empty label to fill remaining width, ensuring
+        consistent alignment across multiple input fields.
+        
         Parameters:
-            - input_width: Total width of the input container.
-        Raises:
-            ValueError: If the total width is smaller than the sum of its components.
-        Requirements:
-            - The class must inherit from CTkFrame.
-            - The class must define `self.label`, `self.label_optional`, and 
-            `self.entry`.
+            total_width: Total width of the input container in pixels
             
+        Raises:
+            ValueError: If total width is smaller than sum of components
+            
+        Requirements:
+            - Class must inherit from CTkFrame
+            - Class must define self.label, self.label_optional, and self.entry
         """
         # Ensure widgets are rendered before measuring
         self.update_idletasks()
@@ -66,9 +75,11 @@ class EntryInputMixin:
         empty_label_width = total_width - (label_width + entry_width + label_asterisk_width)
 
         if empty_label_width < 0:
-            raise ValueError("input_width must be greater than label_width + entry_width")
+            raise ValueError(
+                "total_width must be greater than label_width + entry_width + labels_asterisk_width"
+            )
 
-        # Create empty label for aligment
+        # Create empty label for alignment
         empty_label = ctk.CTkLabel(
             self, # frame that contains all ctk components
             text="",
@@ -78,9 +89,10 @@ class EntryInputMixin:
 
     def update_text_value(self, new_text: str) -> None:
         """
-        Updates the text of the entry widget.
+        Update the text in the entry widget.
+        
         Parameters:
-            new_text: New text to be inserted.
+            new_text: New text to insert
         """
         self.entry.delete(0, ctk.END) 
         self.entry.insert(0, new_text)
@@ -88,157 +100,110 @@ class EntryInputMixin:
 
 class LabelWithBorder(ctk.CTkFrame):
     """
-    A ctk label that accept borders. 
-    Parameters:
-        - text: Text content of the label.
-        - text_color: Colour of the text.
-        - font: font of the text.
+    Label with customizable border.
+    
+    CTkLabel doesn't support borders, so this wraps a label in a frame
+    to achieve border styling.
     """
     def __init__(
-        self, root, text: str, text_color: str, font: str, **kwargs
+        self, root, text: str, text_color: str, font: tuple, **kwargs
     ):
-        super().__init__(
-            root, 
-            **kwargs
-        )
+        """
+        Initialize labeled frame with border.
+        
+        Parameters:
+            root: Parent widget
+            text: Label text content
+            text_color: Text color in hex format
+            font: Font tuple (family, size, weight)
+            **kwargs: Additional CTkFrame keyword arguments
+        """
+        super().__init__(root, **kwargs)
+        
         self.label = ctk.CTkLabel(
             self,
-            text = text,
-            text_color = text_color,
-            font = font,
+            text=text,
+            text_color=text_color,
+            font=font,
         )
-        self.label.pack(padx=5, pady=5, expand=True, fill="both")
+        self.label.pack(
+            padx=Spacing.LABELS_X, pady=Spacing.LABELS_Y, expand=True, fill="both"
+        )
 
-    def update_text(self, text):
+    def configure_label(self, **kwargs):
         """ 
-        Updates the text of the label.
-        """
-        self.label.configure(
-            text=text
-        )
-
-
-class FixedSizeToplevel(ctk.CTkToplevel):
-    """
-    A toplevel window that retains its original width and height even if resized
-    by the user.
-    """
-    def __init__(self, root, width: int, height: int, **kwargs):
-        super().__init__(root, **kwargs)
-        self.original_width = width
-        self.original_height = height
-        self.geometry(f"{width}x{height}")
-
-        self.resizable(False, False)
-        self.bind("<Configure>", self.on_configure)
-
-    def on_configure(self, event: tk.Event) -> None:
-        """
-        Restores the window size if it was changed by the user.
+        Configure label attributes.
+        
         Parameters:
-            - event: The configure event triggered by resizing.
+            **kwargs: Keyword arguments passed to label.configure()
         """
-        if event.width != self.original_width or event.height != self.original_height:
-            self.after(
-                10, 
-                lambda: self.geometry(
-                    f"{self.original_width}x{self.original_height}+{self.winfo_x()}+{self.winfo_y()}"
-                )
-            )
+        self.label.configure(**kwargs)
+
 
 class TextEntry(ctk.CTkEntry):
     """
-    An entry widget with a maximum length validation.
+    Entry widget with maximum length validation.
     """
-    def __init__(self, root, placeholder:str, max_len: int = 60, **kwargs):
+    def __init__(self, root, placeholder: str, max_len: int = 60, **kwargs):
+        """
+        Initialize text entry with length limit.
+        
+        Parameters:
+            root: Parent widget
+            placeholder: Placeholder text
+            max_len: Maximum allowed character length
+            **kwargs: Additional CTkEntry keyword arguments
+        """
         super().__init__(
             root, 
             placeholder_text=placeholder, 
             placeholder_text_color=Colours.TEXT_SECONDARY,
-            **kwargs)
+            **kwargs
+        )
 
         self.max_len = max_len
 
-        # Register a tkinter function, to validate field
+        # Register validation function
         validate_cmd = self.register(self._validate_len) 
 
         self.configure(
-            validate="key", # Every time user types, it will validate
-            # Pass tk function and input contet as argument to valdiate_integer.
+            validate="key", # Every time user types, it will do a validation
             # %P is from Tkinter and means "new content after typing"
-            validatecommand=(validate_cmd, "%P") ,      
+            validatecommand=(validate_cmd, "%P"),      
         )
 
     def _validate_len(self, text: str) -> bool:
         """
-        Validates that the input text does not exceed the maximum allowed length.
-
+        Validate text length.
+        
         Parameters:
-            - text: The current text in the entry.
-
+            text: Current text in entry
+            
         Returns:
-            - bool: True if valid, False otherwise.
+            True if valid, False otherwise
         """
         return len(text) <= self.max_len
 
 
 class IntEntry(ctk.CTkEntry):
     """
-    An entry widget that only accepts integer values.
+    Entry widget that only accepts integer values within a range.
     """
-    def __init__(self, root, placeholder: str, from_: int | None = None, 
-        to: int | None = None, textvariable: tk.StringVar | None = None, **kwargs
+    def __init__(
+        self, root, placeholder: str, from_: int | None = None, to: int | None = None, 
+        textvariable: tk.StringVar | None = None, **kwargs
     ):
-        super().__init__(root, 
-            placeholder_text=placeholder, 
-            placeholder_text_color=Colours.TEXT_SECONDARY,
-            **kwargs
-        )
-        self.min_val = from_
-        self.max_val = to
-        # Register a tkinter function, to validate field
-        validate_cmd = self.register(self._validate_value) 
-
-        self.configure(
-            validate="key", # Every time user types, it will validate
-            # Pass tk function and input contet as argument to valdiate_integer.
-            # %P is from Tkinter and means "new content after typing"
-            validatecommand=(validate_cmd, "%P") ,
-            textvariable=textvariable
-        )       
-
-    def _validate_value(self, text: str) -> bool:
         """
-        Validates that the input is an integer within the allowed range.
-
+        Initialize integer entry with optional range constraints.
+        
         Parameters:
-            - text: Text typed by the user
-        Returns:
-            - bool: True if valid, False otherwise.
-            
+            root: Parent widget
+            placeholder: Placeholder text
+            from_: Minimum allowed value (inclusive)
+            to: Maximum allowed value (inclusive)
+            textvariable: Optional Tk variable to bind
+            **kwargs: Additional CTkEntry keyword arguments
         """
-        if text == "":
-            return True
-        if text.isdigit():
-            number = int(text)
-            # Number is lower than min
-            if self.min_val and number < self.min_val:
-                return False
-            # Number is higher than max
-            if self.max_val and number > self.max_val:
-                return False
-            # Number is in range
-            return True
-        # Number is not an integer
-        return False
-    
-class DecimalEntry(ctk.CTkEntry):
-    """
-    An entry widget that accepts decimal values within a specified range.
-    """
-    def __init__(self, root, placeholder: str, from_: int | None = None, 
-        to: int | None = None, textvariable: tk.StringVar | None = None, **kwargs
-    ):
         super().__init__(
             root, 
             placeholder_text=placeholder, 
@@ -247,62 +212,142 @@ class DecimalEntry(ctk.CTkEntry):
         )
         self.min_val = from_
         self.max_val = to
-        # Register a tkinter function, to validate field
+        
+        # Register validation function
         validate_cmd = self.register(self._validate_value) 
 
-        self.configure( 
-            validate="key", # Every time user types, it will validate
-            # Pass tk function and input contet as argument to valdiate_integer.
+        self.configure(
+            validate="key", # Every time user types, it will do a validation
             # %P is from Tkinter and means "new content after typing"
-            validatecommand=(validate_cmd, "%P") ,
+            validatecommand=(validate_cmd, "%P"),
             textvariable=textvariable
         )       
 
     def _validate_value(self, text: str) -> bool:
         """
-        Validates that the input is a decimal number within the allowed range.
-
+        Validate integer input and range.
+        
         Parameters:
-            - text: The text entered by the user.
+            text: Text entered by user
+            
         Returns:
-            - bool: True if valid, False otherwise.
+            True if valid, False otherwise   
+        """
+        if text == "":
+            return True
+        
+        if text.isdigit():
+            number = int(text)
+
+            # Check minimum bound
+            if self.min_val is not None and number < self.min_val:
+                return False
+            
+            # Check maximum bound
+            if self.max_val is not None and number > self.max_val:
+                return False
+            
+            return True
+        
+        # Number is not an integer
+        return False
+    
+
+class DecimalEntry(ctk.CTkEntry):
+    """
+    Entry widget that accepts decimal values within a range.
+    """
+    def __init__(
+        self, root, placeholder: str, from_: int | None = None, to: int | None = None, 
+        textvariable: tk.StringVar | None = None, **kwargs
+    ):
+        """
+        Initialize decimal entry with optional range constraints.
+        
+        Parameters:
+            root: Parent widget
+            placeholder: Placeholder text
+            from_: Minimum allowed value (inclusive)
+            to: Maximum allowed value (inclusive)
+            textvariable: Optional Tk variable to bind
+            **kwargs: Additional CTkEntry keyword arguments
+        """
+        super().__init__(
+            root, 
+            placeholder_text=placeholder, 
+            placeholder_text_color=Colours.TEXT_SECONDARY,
+            **kwargs
+        )
+        self.min_val = from_
+        self.max_val = to
+
+        # Register validation function
+        validate_cmd = self.register(self._validate_value) 
+
+        self.configure( 
+            validate="key", 
+            validatecommand=(validate_cmd, "%P"),
+            textvariable=textvariable
+        )       
+
+    def _validate_value(self, text: str) -> bool:
+        """
+        Validate decimal input and range.
+        
+        Accepts formats like "123", "0.5", ".5", "5."
+        
+        Parameters:
+            text: Text entered by user
+            
+        Returns:
+            True if valid, False otherwise
         """
         
         if text == "" :
             return True
 
-        # Accept only numbers and dor ("123", "0.5", ".5", "5.")
+        # Accept only numbers and dot
         if not re.fullmatch(r"\d*\.?\d*", text):
             return False
         
-        # Accept edge cases of dot
+        # Accept trailing dot (intermediate state)
         if text.endswith('.'):
             return True
      
-        # Catch other weird symbols
+        # Convert to Decimal 
         try:   
             number = Decimal(text)
+        # Catch other symbols
         except (ValueError, TypeError):
             return False
         
-        # Number is lower than min
-        if self.min_val and number < self.min_val:
+        # Check minimum bound
+        if self.min_val is not None and number < self.min_val:
             return False
-        # Number is higher than max
-        if self.max_val and number > self.max_val:
+        
+        # Check maximum bound
+        if self.max_val is not None and number > self.max_val:
             return False
-        # Number is in range
+        
         return True
 
 
 class DateEntry(ctk.CTkEntry):
     """
-    An entry widget that allows users to select a date from a pop-up calendar.
+    Entry widget with popup calendar for date selection.
     """
-    def __init__(self, root, textvariable: str | None = None, **kwargs):
+    def __init__(self, root, textvariable: tk.StringVar | None = None, **kwargs):
+        """
+        Initialize date entry with calendar popup.
+        
+        Parameters:
+            root: Parent widget
+            textvariable: Optional Tk variable to bind
+            **kwargs: Additional CTkEntry keyword arguments
+        """
         self.text_var = textvariable or tk.StringVar()
         
-        super().__init__(root, textvariable=textvariable, **kwargs)     
+        super().__init__(root, textvariable=self.text_var, **kwargs)     
 
         self.year = None
         self.month = None
@@ -313,100 +358,81 @@ class DateEntry(ctk.CTkEntry):
 
     def open_calendar(self, event: tk.Event | None = None) -> None:
         """
-        Opens a calendar pop-up for selecting a date.
+        Open calendar popup for date selection.
+        
         Parameters:
-            - event: The triggering event.
+            event: Triggering event (unused but required by bind)
         """
-        # Get current date details
+        # Get current date
         today = datetime.date.today()
         self.year = today.year
         self.month = today.month
         
-        # Destroy any previous calendar (important)
+        # Destroy any previous calendar
         self.close_calendar()
 
-        # Create a calendar frame
+        # Create calendar frame
         self.frame_calendar = ctk.CTkFrame(
             self.winfo_toplevel(),
             fg_color=Colours.BG_MAIN,
             border_width=2,
             border_color=Colours.BORDERS,
+            corner_radius=Rounding.CALENDAR,
         )
         
-        # Locate calendar
+        # Position calendar below entry
         x = self.winfo_rootx() - self.winfo_toplevel().winfo_rootx()
         y = self.winfo_rooty() - self.winfo_toplevel().winfo_rooty() + self.winfo_height() + 5
         self.frame_calendar.place(x=x, y=y)
         self.frame_calendar.lift()
        
-        # Build calendar
+        # Build calendar UI
         self.build_calendar()
     
     def build_calendar(self) -> None:
         """
-        Builds the structure of the calendar, including navigation and day buttons.
+        Build calendar structure with navigation and day buttons.
         """
+        # Clear previous calendar widgets
         for widget in self.frame_calendar.winfo_children():
             widget.destroy()
 
         calendar_ = calendar.monthcalendar(self.year, self.month)
 
-        # Header (middle position)
+        # Header with month and year
         header = ctk.CTkLabel(
             self.frame_calendar, 
             text=f"{calendar.month_name[self.month]} {self.year}",
             font=Fonts.TEXT_HEADER_CALENDAR
         )
-        header.grid(row=0, column=2, columnspan=3, pady=5)
+        header.grid(row=0, column=2, columnspan=3, pady=Spacing.SMALL)
 
-        # Navigation buttons (besides header)
-        year_prev_btn = ctk.CTkButton(
-            self.frame_calendar, 
-            text="<<", 
-            width=30, 
-            fg_color=Colours.BG_HOVER_NAV,
-            text_color=Colours.TEXT_MAIN,
-            hover_color=Colours.DROPDOWN_HOVER,
-            command=self.prev_year
-        )
-        month_prev_btn = ctk.CTkButton(
-            self.frame_calendar, 
-            text="<", 
-            width=30, 
-            fg_color=Colours.BG_HOVER_NAV,
-            text_color=Colours.TEXT_MAIN,
-            hover_color=Colours.DROPDOWN_HOVER,
-            command=self.prev_month
-        )         
-        month_next_btn = ctk.CTkButton(
-            self.frame_calendar, 
-            text=">", 
-            width=30, 
-            fg_color=Colours.BG_HOVER_NAV,
-            text_color=Colours.TEXT_MAIN,
-            hover_color=Colours.DROPDOWN_HOVER,
-            command=self.next_month
-        )
-        year_next_btn = ctk.CTkButton(
-            self.frame_calendar, 
-            text=">>", 
-            width=30, 
-            fg_color=Colours.BG_HOVER_NAV,
-            text_color=Colours.TEXT_MAIN,
-            hover_color=Colours.DROPDOWN_HOVER,
-            command=self.next_year
-        )
-        year_prev_btn.grid(row=0, column=0, padx=(5, 0))
-        month_prev_btn.grid(row=0, column=1)
-        month_next_btn.grid(row=0, column=5)
-        year_next_btn.grid(row=0, column=6, padx=(0, 5))
+        # Navigation buttons
+        buttons_config = [
+            ("<<", 0, 0, (Spacing.SMALL, 0), self.prev_year),
+            ("<", 0, 1, 0, self.prev_month),
+            (">", 0, 5, 0, self.next_month),
+            (">>", 0, 6, (0, Spacing.SMALL), self.next_year),
+        ]
 
-        # Days
+        for text, row, col, padx, command in buttons_config:
+            ctk.CTkButton(
+                self.frame_calendar,
+                text=text,
+                width=30,
+                fg_color=Colours.BG_HOVER_NAV,
+                text_color=Colours.TEXT_MAIN,
+                hover_color=Colours.DROPDOWN_HOVER,
+                command=command
+            ).grid(row=row, column=col, padx=padx)
+
+        # Days headers
         for i, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
-            label = ctk.CTkLabel(self.frame_calendar, text=day)
-            label.grid(row=1, column=i, padx=2, pady=2)
+            ctk.CTkLabel(
+                self.frame_calendar, text=day
+            ).grid(row=1, column=i, padx=2, pady=2)
 
-        # Days of the month (start from 2 because 1 is days)
+        # Days buttons
         for r, week in enumerate(calendar_, start=2):
             for c, day in enumerate(week):
                 if day != 0:
@@ -420,19 +446,21 @@ class DateEntry(ctk.CTkEntry):
                         hover_color=Colours.BG_HOVER_NAV,
                         command=lambda d=day: self.select_date(d)
                     )
-                    # Set pads for borders
+                    
+                    # Set padding for borders
                     if c == 0:
-                        padx = (3, 1)
+                        padx = (Spacing.SMALL, 1)
                     elif c == len(week) - 1:
-                        padx = (1, 3)
+                        padx = (1, Spacing.SMALL)
                     else:
                         padx = 1
-                    pady = 1 if r != len(calendar_) + 1 else (1, 3)
+
+                    pady = 1 if r != len(calendar_) + 1 else (1, Spacing.SMALL)
                     button.grid(row=r, column=c, padx=padx, pady=pady)
 
     def prev_month(self) -> None:
         """
-        Displays the previous month in the calendar.
+        Navigate to previous month in calendar.
         """
         if self.month == 1:
             self.month = 12
@@ -443,7 +471,7 @@ class DateEntry(ctk.CTkEntry):
 
     def next_month(self) -> None:
         """
-        Displays the next month in the calendar.
+        Navigate to next month in calendar.
         """
         if self.month == 12:
             self.month = 1
@@ -454,48 +482,62 @@ class DateEntry(ctk.CTkEntry):
 
     def prev_year(self) -> None:
         """
-        Displays the previous year in the calendar.
+        Navigate to previous year in calendar.
         """
         self.year -= 1
         self.build_calendar()
 
     def next_year(self):
         """
-        Displays the next year in the calendar.
+        Navigate to next year in calendar.
         """
         self.year += 1
         self.build_calendar()
 
     def select_date(self, day: int) -> None:
         """
-        Handles date selection from the calendar.
+        Handle date selection from calendar.
+        
         Parameters:
-            - day: The day selected by the user.
+            day: Selected day of the month
         """
-        # Get date and show it on the input
+        # Format and display selected date
         selected = datetime.date(self.year, self.month, day)
         self.text_var.set(selected.strftime("%d/%m/%Y"))
-        # Destroy calendar
+        
+        # Close calendar
         self.close_calendar()
 
     def close_calendar(self) -> None:
-        """Closes the calendar pop-up if it exists."""
+        """
+        Close the calendar popup if it exists.
+        """
         if self.frame_calendar:
             self.frame_calendar.destroy()
             self.frame_calendar = None
     
     def destroy(self) -> None:
         """
-        Destroys the entry and any associated calendar pop-up.
+        Destroy the entry and any associated calendar popup.
         """
         self.close_calendar()
         super().destroy()
 
+
 class AutocompleteEntry(ctk.CTkEntry):
     """
-    An entry widget that provides autocomplete suggestions from a wine list.
+    Entry widget with autocomplete suggestions from a list.
     """
     def __init__(self, root, placeholder: str, item_list: list[str], **kwargs):
+        """
+        Initialize autocomplete entry.
+        
+        Parameters:
+            root: Parent widget
+            placeholder: Placeholder text
+            item_list: List of items for autocomplete suggestions
+            **kwargs: Additional CTkEntry keyword arguments
+        """
         super().__init__(
             root, 
             placeholder_text=placeholder, 
@@ -507,65 +549,70 @@ class AutocompleteEntry(ctk.CTkEntry):
         self.listbox = None
         self.listbox_frame = None
         self.main_window = self.winfo_toplevel()
+        self.hovered_index = None
         
         self.bind("<KeyRelease>", self.show_suggestions)
         self.bind("<Button-1>", self.show_suggestions)
 
     def on_click_outside(self, event: tk.Event) -> None:
         """
-        Closes the suggestion list when clicking outside the entry or listbox.
+        Close suggestion list when clicking outside.
+        
         Parameters:
-            - event: The triggering event.
+            event: Click event.
         """
-        if self.listbox_frame:
-            # Get click's coordinates
-            x = event.x_root
-            y = event.y_root
+        if not self.listbox_frame:
+            return
+        
+        # Get click coordinates
+        x = event.x_root
+        y = event.y_root
+        
+        # Check if click was in entry
+        entry_x = self.winfo_rootx()
+        entry_y = self.winfo_rooty()
+        entry_width = self.winfo_width()
+        entry_height = self.winfo_height()
+        
+        in_entry = (entry_x <= x <= entry_x + entry_width and 
+                    entry_y <= y <= entry_y + entry_height)
+        
+        # Check if click was in listbox
+        if self.listbox_frame and self.listbox_frame.winfo_exists():
+            listbox_x = self.listbox_frame.winfo_rootx()
+            listbox_y = self.listbox_frame.winfo_rooty()
+            listbox_width = self.listbox_frame.winfo_width()
+            listbox_height = self.listbox_frame.winfo_height()
             
-            # Check if the click was in the entry
-            entry_x = self.winfo_rootx()
-            entry_y = self.winfo_rooty()
-            entry_width = self.winfo_width()
-            entry_height = self.winfo_height()
-            
-            in_entry = (entry_x <= x <= entry_x + entry_width and 
-                       entry_y <= y <= entry_y + entry_height)
-            
-            # Check if the click was in the listbox
-            if self.listbox_frame and self.listbox_frame.winfo_exists():
-                listbox_x = self.listbox_frame.winfo_rootx()
-                listbox_y = self.listbox_frame.winfo_rooty()
-                listbox_width = self.listbox_frame.winfo_width()
-                listbox_height = self.listbox_frame.winfo_height()
-                
-                in_listbox = (listbox_x <= x <= listbox_x + listbox_width and 
-                            listbox_y <= y <= listbox_y + listbox_height)
-            else:
-                in_listbox = False
-            
-            # Destroy listbox if not in entry or listbox
-            if not in_entry and not in_listbox:
-                self.destroy_listbox()
+            in_listbox = (listbox_x <= x <= listbox_x + listbox_width and 
+                        listbox_y <= y <= listbox_y + listbox_height)
+        else:
+            in_listbox = False
+        
+        # Close listbox if clicked outside
+        if not in_entry and not in_listbox:
+            self.destroy_listbox()
 
     def show_suggestions(self, event: tk.Event | None = None) -> None:
         """
-        Displays autocomplete suggestions based on user input.
-
+        Display autocomplete suggestions based on input.
+        
         Parameters:
-            - event: The triggering event.
+            event: Triggering event (unused but required by bind)
         """
         typed = self.get().lower()
 
-        # Clean previous listbox
+        # Clear previous listbox
         self.destroy_listbox()
 
         if not typed:
             return
      
+        # Find matches (case-insensitive substring search)
         matches = [wine for wine in self.wine_list if typed in wine.lower()]
-    
+
         if matches:
-            # Create temporary frame for the listbox
+            # Create listbox container frame
             self.listbox_frame = tk.Frame(
                 self.main_window,
                 highlightbackground=Colours.BORDERS,
@@ -573,112 +620,164 @@ class AutocompleteEntry(ctk.CTkEntry):
             )
             
             # Create listbox
+            listbox_font = Fonts.TEXT_AUTOCOMPLETE
             self.listbox = tk.Listbox(
                 self.listbox_frame,
                 height=min(5, len(matches)),
                 selectmode="single",
-                font=Fonts.TEXT_AUTOCOMPLETE,
+                font=listbox_font,
                 bg=Colours.BG_MAIN,
                 selectbackground=Colours.BG_HOVER_NAV,
-                borderwidth=0
+                borderwidth=0,
+                fg=Colours.TEXT_MAIN,
             )
             
-            # Calculate position relative to main window (top level)
+            # Calculate ideal width according to matches length
+            font_obj = tk.font.Font(font=listbox_font)
+            longest_text_width = max(font_obj.measure(m) for m in matches)
+            entry_width = self.winfo_width()
+            max_width = int(self.main_window.winfo_width() * 0.6)
+    
+            # Listbox width should be from entry_width to max_width
+            listbox_width = max(entry_width, min(longest_text_width + 24, max_width))
+
+            # Calculate position relative to main window
             x = self.winfo_rootx() - self.main_window.winfo_rootx()
             y = self.winfo_rooty() - self.main_window.winfo_rooty() + self.winfo_height()
             
-            # Place frame
+            # Position frame
             self.listbox_frame.place(
                 x=x, 
                 y=y, 
-                width=self.winfo_width(),
+                width=listbox_width,
                 height=min(150, len(matches) * 25)  # Max height 150px
             )
             
-            # Add matches in listbox
+            # Populate listbox with matches
             for match in matches:
                 self.listbox.insert(tk.END, match)
             
-            # Fill frame with listbox
+            # Pack listbox in frame
             self.listbox.pack(fill="both", expand=True)
             
-            # Put listbox frame at front
+            # Bring to front
             self.listbox_frame.lift()
             
-            # Bind selection
+            # Bind selection events
             self.listbox.bind("<<ListboxSelect>>", self.select_suggestion)
             self.listbox.bind("<Button-1>", lambda e: self.select_on_click(e))
+            # Bind hover events
+            self.listbox.bind("<Motion>", self.on_hover)
+            self.listbox.bind("<Leave>", self.on_leave)
 
             # Global bind, click outside
             self.main_window.bind("<Button-1>", self.on_click_outside, add="+")
-        
+
     def select_suggestion(self, event: tk.Event) -> None:
         """
-        Inserts the selected suggestion into the entry.
+        Insert selected suggestion into entry.
+        
         Parameters:
-            - event: The triggering event.
+            event: Selection event
         """
         if self.listbox and self.listbox.curselection():
             selected = self.listbox.get(self.listbox.curselection())
-            # Clean entry 
+            
+            # Update entry with selection
             self.delete(0, tk.END) 
-            # Add selected suggestion in entry
             self.insert(0, selected)
-            # Clean listbox
+            
+            # Close listbox
             self.destroy_listbox()
     
     def select_on_click(self, event: tk.Event) -> None:
         """
-        Selects a suggestion with a single mouse click.
+        Select suggestion with single mouse click.
+        
         Parameters:
-            - event: The triggering event.
+            event: Click event
         """
-        # Get index of the clicked event
+        # Get clicked item index
         index = self.listbox.nearest(event.y)
         if index >= 0:
-            # Clear previous selections
+            # Update selection
             self.listbox.selection_clear(0, tk.END)
-            # Set current selection
             self.listbox.selection_set(index)
             self.select_suggestion(event)
     
     def destroy_listbox(self) -> None:
         """
-        Destroys the suggestion listbox and its frame.
+        Destroy suggestion listbox and its frame.
         """
         if self.listbox_frame:
             self.main_window.unbind("<Button-1>")   
             self.listbox_frame.destroy()
             self.listbox_frame = None
             self.listbox = None
+            self.hovered_index = None 
 
     def destroy(self) -> None:
         """
-        Destroys the entry and any existing listbox..
+        Destroy the entry and any existing listbox.
         """
         self.destroy_listbox()
         super().destroy()
+
+    def on_hover(self, event: tk.Event) -> None:
+        """
+        Highlight the item under the cursor when hovering.
+        
+        Parameters:
+            event: Motion event
+        """
+        if not self.listbox:
+            return
+
+        index = self.listbox.nearest(event.y)
+        if index != self.hovered_index:
+            # Remove highlight from previous item
+            if self.hovered_index is not None:
+                self.listbox.itemconfig(self.hovered_index, bg=Colours.BG_MAIN)
+
+            # Highlight current item
+            self.listbox.itemconfig(index, bg=Colours.BG_HOVER_NAV)
+            self.hovered_index = index
+
+
+    def on_leave(self, event: tk.Event) -> None:
+        """
+        Restore background when leaving the listbox area.
+
+        Parameters:
+            event: Leave listbox event
+        """
+        if self.listbox and self.hovered_index is not None:
+            self.listbox.itemconfig(self.hovered_index, bg=Colours.BG_MAIN)
+            self.hovered_index = None
 
 
 class BaseInput(ctk.CTkFrame):
     """
     Base frame for labeled input components.
-
-    Parameters:
-        - root: Parent frame.
-        - label_text: Label text for the input.
-        - optional: If True, the field is optional (no asterisk shown).
-        - **kwargs: Additional keyword arguments passed to CTkFrame.
+    
+    Provides consistent label layout with optional required indicator (asterisk).
     """
     def __init__(
         self, root, label_text: str, optional: bool = False, **kwargs
     ):
-        super().__init__(root, **kwargs)
-        self.configure(
-            fg_color="transparent",
-        )
+        """
+        Initialize base input frame with label.
         
-        # Create components
+        Parameters:
+            root: Parent widget
+            label_text: Text for the input label
+            optional: If True, field is optional (no asterisk shown)
+            **kwargs: Additional CTkFrame keyword arguments
+        """
+        super().__init__(root, **kwargs)
+        self.configure(fg_color="transparent")
+        
+        # Create label components
         self.label = ctk.CTkLabel(
             self,
             text=label_text,
@@ -701,26 +800,34 @@ class BaseInput(ctk.CTkFrame):
         
         # Place components
         self.label.grid(row=0, column=0, sticky="w") 
-        self.label_optional.grid(row=0, column=1, padx=(0, 5))
+        self.label_optional.grid(row=0, column=1, padx=(0, Spacing.SMALL))
 
     def set_label_layout(self, label_width: int) -> None:
         """
-        Set the width and wraplength of the label.
+        Set width and wraplength of the label.
+        
         Parameters:
-            - label_width: Width of the column label.
+            label_width: Width in pixels for the label column
         """
-        self.label.configure(
-            width=label_width, wraplength=label_width
-        )
+        self.label.configure(width=label_width, wraplength=label_width)
 
 
 class TextInput(BaseInput, EntryInputMixin):
     """
-    A frame that contains a label and text entry component.
+    Frame containing label and text entry component.
     """
-    def __init__(self, root, placeholder: str | None = None, max_len: int = 60, 
-        **kwargs):
+    def __init__(
+        self, root, placeholder: str | None = None, max_len: int = 60, **kwargs
+    ):
+        """
+        Initialize text input.
         
+        Parameters:
+            root: Parent widget
+            placeholder: Placeholder text
+            max_len: Maximum character length
+            **kwargs: Additional BaseInput keyword arguments
+        """
         super().__init__(root, **kwargs)
         
         self.entry = TextEntry(
@@ -733,18 +840,28 @@ class TextInput(BaseInput, EntryInputMixin):
             max_len = max_len,
         )
         
-        # Place components
         self.entry.grid(row=0, column=2)
 
 
 class IntInput(BaseInput, EntryInputMixin):
     """
-    A frame that contains a label and an integer entry component.
+    Frame containing label and integer entry component.
     """
     def __init__(
         self, root, placeholder: str | None = None, from_: int | None = None,
         to: int | None = None, textvariable: tk.Variable | None = None, **kwargs
     ):
+        """
+        Initialize integer input.
+        
+        Parameters:
+            root: Parent widget
+            placeholder: Placeholder text
+            from_: Minimum allowed value
+            to: Maximum allowed value
+            textvariable: Optional Tk variable to bind
+            **kwargs: Additional BaseInput keyword arguments
+        """
         super().__init__(root, **kwargs)
 
         self.entry = IntEntry(
@@ -759,18 +876,28 @@ class IntInput(BaseInput, EntryInputMixin):
             placeholder=placeholder,
         )
         
-        # Place components
         self.entry.grid(row=0, column=2)
 
 
 class DecimalInput(BaseInput, EntryInputMixin):
     """
-    A frame that contains a label and an decimal entry component.
+    Frame containing label and decimal entry component.
     """
     def __init__(
         self, root, placeholder: str | None = None, from_: Decimal | None = None,
         to: Decimal | None = None, textvariable: tk.Variable | None = None, **kwargs
     ):
+        """
+        Initialize decimal input.
+        
+        Parameters:
+            root: Parent widget
+            placeholder: Placeholder text
+            from_: Minimum allowed value
+            to: Maximum allowed value
+            textvariable: Optional Tk variable to bind
+            **kwargs: Additional BaseInput keyword arguments
+        """
         super().__init__(root, **kwargs)
 
         self.entry = DecimalEntry(
@@ -785,25 +912,28 @@ class DecimalInput(BaseInput, EntryInputMixin):
             placeholder=placeholder,
         )
         
-        # Place components
         self.entry.grid(row=0, column=2)
 
 
 class AutocompleteInput(BaseInput, EntryInputMixin):
     """
-    A frame that contains a label and an AutoComplete entry component.
-    Parameters:
-        - root: Parent widget.
-        - placeholder: Placeholder text for the entry.
-        - textvariable: Optional Tk variable to bind the entry to.
-        - item_list: List of items used for autocomplete.
-        - **kwargs: Additional keyword arguments passed to BaseInput.
+    Frame containing label and autocomplete entry component.
     """
     def __init__(
         self, root, placeholder: str | None = None, 
-        textvariable: tk.Variable | None = None, item_list: list = [],
+        textvariable: tk.Variable | None = None, item_list: list[str] = [],
         **kwargs
     ):
+        """
+        Initialize autocomplete input.
+        
+        Parameters:
+            root: Parent widget
+            placeholder: Placeholder text
+            textvariable: Optional Tk variable to bind
+            item_list: List of items for autocomplete suggestions
+            **kwargs: Additional BaseInput keyword arguments
+        """
         super().__init__(root, **kwargs)
 
         self.entry = AutocompleteEntry(
@@ -817,17 +947,24 @@ class AutocompleteInput(BaseInput, EntryInputMixin):
             placeholder=placeholder,
         )
         
-        # Place components
         self.entry.grid(row=0, column=2)
 
 
 class DateInput(BaseInput, EntryInputMixin):
     """
-    A frame that contains a label and an date entry components
+    Frame containing label and date entry with calendar popup.
     """
     def __init__(
         self, root, textvariable: tk.Variable | None = None, **kwargs
     ):
+        """
+        Initialize date input.
+        
+        Parameters:
+            root: Parent widget
+            textvariable: Optional Tk variable to bind
+            **kwargs: Additional BaseInput keyword arguments
+        """
         super().__init__(root, **kwargs)
 
         self.entry = DateEntry(
@@ -844,7 +981,7 @@ class DateInput(BaseInput, EntryInputMixin):
 
     def clear(self) -> None:
         """
-        Removes the text typed by the user.
+        Remove the selected date from the entry.
         """
         self.entry.configure(state="normal")
         self.entry.delete(0, "end") 
@@ -853,12 +990,22 @@ class DateInput(BaseInput, EntryInputMixin):
 
 class DropdownInput(BaseInput):
     """
-    A frame that contains a label and a dropdown components
+    Frame containing label and dropdown menu component.
     """
     def __init__(
         self, root, values: list[str], variable: tk.Variable | None = None, 
         command: Callable | None = None, **kwargs
     ):
+        """
+        Initialize dropdown input.
+        
+        Parameters:
+            root: Parent widget
+            values: List of dropdown options
+            variable: Optional Tk variable to bind
+            command: Callback executed when selection changes
+            **kwargs: Additional BaseInput keyword arguments
+        """
         super().__init__(root, **kwargs)
       
         self.dropdown = ctk.CTkOptionMenu(
@@ -869,6 +1016,7 @@ class DropdownInput(BaseInput):
             fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN,
             button_color=Colours.BG_HOVER_NAV,
+            dropdown_font= Fonts.TEXT_DROPDOWN,
             dropdown_fg_color=Colours.BG_MAIN,
             dropdown_hover_color=Colours.BG_HOVER_NAV,
             dropdown_text_color=Colours.TEXT_MAIN,
@@ -876,57 +1024,63 @@ class DropdownInput(BaseInput):
             command=command
         )
         
-        # Place components
         self.dropdown.grid(row=0, column=2)
     
     def get(self) -> str:
         """
-        Returns the selected value of Dropdown.
+        Get the currently selected dropdown value.
+        
+        Returns:
+            Selected value as string
         """
         return self.dropdown.get()
     
     def set_to_first_value(self) -> None:
         """
-        Sets the dropdown to its first available value.
+        Set dropdown to its first available value.
         """
         return self.dropdown.set(self.dropdown.cget("values")[0])
 
     def set_to_value(self, text: str) -> None:
         """
-        Sets the value according to the searched text. Sets the dropdown to first
-        value if text is not found. 
+        Set dropdown to specified value or first value if not found.
+        
+        Parameters:
+            text: Value to set (case-insensitive)
         """
         values = self.dropdown.cget("values")
-        # Text is empty ("", None)
+        
+        # Handle empty text
         if not text:
             self.set_to_first_value()
-        # Text has a values
+            return
+        
+        # Try to match value (dropdowns usually use title case)
+        formatted_text = text.title()
+        if formatted_text in values: 
+            self.dropdown.set(formatted_text)
         else:
-            formatted_text = text.title()
-            if formatted_text in values: # Dropdowns usually are in title format.
-                self.dropdown.set(formatted_text)
-            else:
-                self.set_to_first_value()
+            self.set_to_first_value()
         
 
-    def update_values(self, values: list[str]) -> None:
+    def configure_dropdown(self, **kwargs) -> None:
         """
-        Updates the available values of the dropdown.
-
-        Inputs:
-            - Values: New list of values that will be available in the dropdown.
-        """
-        self.dropdown.configure(values=values)
-
-    def set_total_width(self, total_width: int):
-        """
-        Sets the total with of the dropdown used for aligment. 
-        It creates an empty label to cover the remaning width.
+        Configure dropdown attributes.
+        
         Parameters:
-            - input_width: Total width of the input.
+            **kwargs: Keyword arguments passed to dropdown.configure()
+        """
+        self.dropdown.configure(**kwargs)
+
+    def set_total_width(self, total_width: int) -> None:
+        """
+        Update the available dropdown options.
+        
+        Parameters:
+            values: New list of dropdown options
    
         """
-        # Wait for the program to render widgets before gettign info
+        # Wait for widgets to render
         self.update_idletasks()
         
         # Calculate widths
@@ -936,31 +1090,33 @@ class DropdownInput(BaseInput):
         empty_label_width = total_width - (label_width + dropdown_width + label_asterisk_width)
 
         if empty_label_width < 0:
-            raise ValueError("input_width should be higher than labels width + dropdown width")
+            raise ValueError("total_width must be greater than label widths + dropdown width.")
 
-        # Create empty label for aligment
-        empty_label = ctk.CTkLabel(
-            self, # frame that contains all ctk components
+        # Create empty label for alignment
+        ctk.CTkLabel(
+            self, 
             text="",
             width=empty_label_width
-        )
-        empty_label.grid(row=0, column=3)
+        ).grid(row=0, column=3)
 
 
 class RadioInput(BaseInput):
     """
-    A frame that contains a label and Radio Buttons components.
-    Parameters:
-        - root: Parent widget.
-        - variable: Optional Tk variable to bind the entry to.
-        - item_list: List of items representing each radio button. The item is a 
-        tuple (text, value).
-        - **kwargs: Additional keyword arguments passed to BaseInput.
+    Frame containing label and radio button components.
     """
     def __init__(
         self, root, item_list: list[tuple], variable: tk.Variable | None = None, 
         **kwargs
     ):
+        """
+        Initialize radio button input.
+        
+        Parameters:
+            root: Parent widget
+            item_list: List of tuples (display_text, value) for each radio button
+            variable: Optional Tk variable to bind
+            **kwargs: Additional BaseInput keyword arguments
+        """
         super().__init__(root, **kwargs)
 
         for index, item_ in enumerate(item_list, start=2):
@@ -978,24 +1134,26 @@ class RadioInput(BaseInput):
                 width=50,
             )
             
-            # Place component
             self.radio.grid(row=0, column=index, padx=(0, 15))
 
 
 class ToggleInput(BaseInput):
     """
-    A frame that contains a label and toggle-style buttons 
-    for selecting one of multiple options.
-    Parameters:
-        - root: Parent widget.
-        - variable: Tk variable to store the selected value.
-        - item_list: List of tuples (text, value) for each toggle option.
-        - **kwargs: Additional keyword arguments passed to BaseInput.
+    Frame containing label and toggle-style button group."
     """
     def __init__(
-        self, root, item_list: list[tuple], variable: tk.Variable | None = None, 
-        **kwargs
+        self, root, item_list: list[tuple[str, str]],
+        variable: tk.Variable | None = None, **kwargs
     ):
+        """
+        Initialize toggle button input.
+        
+        Parameters:
+            root: Parent widget
+            item_list: List of tuples (display_text, value) for each toggle option
+            variable: Tk variable to store selected value
+            **kwargs: Additional BaseInput keyword arguments
+        """
         super().__init__(root, **kwargs)
         self.variable = variable
         self.buttons = {}
@@ -1009,7 +1167,7 @@ class ToggleInput(BaseInput):
                 text=text,
                 width=90,
                 height=30,
-                corner_radius=8,
+                corner_radius=Rounding.TOGGLE,
                 fg_color=Colours.BG_SECONDARY,
                 text_color=Colours.TEXT_SECONDARY,
                 hover_color=Colours.BG_HOVER_NAV,
@@ -1017,21 +1175,24 @@ class ToggleInput(BaseInput):
                 border_width=1,
                 command=lambda v=value: self._select(v),
             )
-            btn.pack(side="left", padx=5)
+            btn.pack(side="left", padx=Spacing.BUTTONS_X, pady=Spacing.BUTTONS_Y)
             self.buttons[btn] = value
 
         self._update_buttons()
 
-    def _select(self, value: str):
+    def _select(self, value: str) -> None:
         """
-        Updates variable and button states.
+        Update variable and button states when selection changes.
+        
+        Parameters:
+            value: Selected value
         """
         self.variable.set(value)
         self._update_buttons()
 
-    def _update_buttons(self):
+    def _update_buttons(self) -> None:
         """
-        Updates the visual appearance based on selected value.
+        Update visual appearance of buttons based on selected value.
         """
         for btn, val in self.buttons.items():
             if self.variable.get() == val:
@@ -1050,18 +1211,26 @@ class ToggleInput(BaseInput):
         
 class DoubleLabel(ctk.CTkFrame):
     """
-    A frame that contains a title label and a value label.
+    Frame containing a title label and a value label.
     """
     def __init__(
         self, root, label_title_text: str, label_value_text: str = "",  
         text_variable: tk.Variable | None = None, **kwargs
     ):
-        super().__init__(root, **kwargs)
-        self.configure(
-            fg_color="transparent",
-        )
+        """
+        Initialize double label component.
         
-        # Create components
+        Parameters:
+            root: Parent widget
+            label_title_text: Text for the title label
+            label_value_text: Initial text for the value label
+            text_variable: Optional Tk variable to bind to value label
+            **kwargs: Additional CTkFrame keyword arguments
+        """
+        super().__init__(root, **kwargs)
+        self.configure(fg_color="transparent")
+        
+        # Create labels
         self.label_title = ctk.CTkLabel(
             self,
             text=label_title_text,
@@ -1075,39 +1244,32 @@ class DoubleLabel(ctk.CTkFrame):
             text_color=Colours.TEXT_MAIN, 
             font=Fonts.TEXT_LABEL,
             fg_color=Colours.BG_MAIN,
-            corner_radius=10,
+            corner_radius=Rounding.LABEL,
             textvariable=text_variable
         )
 
-        # Place components
-        self.label_title.grid(row=0, column=0, sticky="w", padx=(0, 10)) 
-        self.label_value.grid(row=0, column=1)
-
-    def update_text_value(self, new_text: str) -> None:
-        """
-        Update the text of the value label.
-
-        Inputs:
-            new_text = New text to include in the label_value.
-        """
-        self.label_value.configure(
-            text=new_text
-        )
+        # Place labels
+        self.label_title.grid(
+            row=0, column=0, sticky="w", padx=(0, Spacing.SMALL), pady=Spacing.LABELS_Y) 
+        self.label_value.grid(row=0, column=1, padx=Spacing.LABELS_X, pady=Spacing.LABELS_Y)
 
     def bold_value_text(self) -> None:
         """
-        Make the value label use the bold header font.
+        Apply bold header font to value label.
         """
         self.label_value.configure(font=Fonts.TEXT_HEADER)
 
-    def set_columns_layout(self, title_width: int, 
-        value_width: int | None = None, anchor: str = "w") -> None: 
+    def set_columns_layout(
+        self, title_width: int, 
+        value_width: int | None = None, anchor: str = "w"
+    ) -> None: 
         """
-        Set the width and anchor of both the title label and the value label.
+        Set width and anchor for both labels.
+        
         Parameters:
-            - title_width: Width of the label_title column.
-            - value_width: Width of the label_value column.
-            - anchor: Position of the text. By default is set to left.
+            title_width: Width of title label in pixels
+            value_width: Width of value label in pixels (optional)
+            anchor: Text anchor position (default: "w" for left)
         """ 
         self.label_title.configure(
             width=title_width, wraplength=title_width, anchor=anchor
@@ -1118,24 +1280,28 @@ class DoubleLabel(ctk.CTkFrame):
                 width=value_width, wraplength=value_width, anchor=anchor
             )
     
-    def configure_label_value(self, **kwargs):
+    def configure_label_value(self, **kwargs) -> None:
         """
-        Allows to configure value label.
+        Configure value label attributes.
+        
         Parameters:
-            - **kwargs: Attributes used in the original configure method.
+            **kwargs: Keyword arguments passed to label.configure()
         """
         self.label_value.configure(**kwargs)
 
     def set_total_width(self, total_width: int) -> None:
         """
-        Sets the total width of the double label for alignment purposes.
-        Creates an empty label to fill the remaining width.
+        Set total width of double label for alignment.
+        
+        Creates an empty label to fill remaining width.
+        
         Parameters:
-            - total_width: Total width of the double label.
+            total_width: Total width in pixels
+            
         Raises:
-            - ValueError: If the total width is smaller than the sum of its components.
+            ValueError: If total width is smaller than sum of components
         """
-        # Ensure widgets are rendered before measuring
+        # Ensure widgets are rendered
         self.update_idletasks()
         
         # Calculate widths
@@ -1144,7 +1310,7 @@ class DoubleLabel(ctk.CTkFrame):
         empty_label_width = total_width - (title_width + value_width)
 
         if empty_label_width < 0:
-            raise ValueError("input_width must be greater than label_width + entry_width")
+            raise ValueError("total_width must be greater than label_width + value_width.")
 
         # Create empty label for aligment
         ctk.CTkLabel(
@@ -1156,31 +1322,35 @@ class DoubleLabel(ctk.CTkFrame):
 
 class ImageInput(BaseInput):
     """
-    A frame that contains a text label, a file dialog button, and an image preview
-    label.
+    Frame containing label, file dialog button, and image preview.
     """
-    def __init__(
-        self, root, image_path: str | None = None, **kwargs
-    ):
-        super().__init__(root, **kwargs)
-        self.configure(
-            fg_color="transparent",
-        )
+    def __init__(self, root, image_path: str | None = None, **kwargs):
+        """
+        Initialize image input with file selector and preview.
         
-        # Create components
+        Parameters:
+            root: Parent widget
+            image_path: Initial image path to display
+            **kwargs: Additional BaseInput keyword arguments
+        """
+        super().__init__(root, **kwargs)
+        self.configure(fg_color="transparent")
+        
+        # Create file selection button
         self.button = ctk.CTkButton(
             self,
             text="Choose File",
             text_color=Colours.BG_MAIN,
             fg_color=Colours.PRIMARY_WINE,
             font=Fonts.TEXT_MAIN,
-            corner_radius=10,
+            corner_radius=Rounding.BUTTON,
             hover_color=Colours.BG_HOVER_BTN_CLEAR,
             cursor="hand2",
             command=self.load_logo,
             width=170
         )
 
+        # Create preview label
         image = load_ctk_image(image_path) if image_path else None
         self.label_preview = ctk.CTkLabel(
             self,
@@ -1194,12 +1364,12 @@ class ImageInput(BaseInput):
         self.temp_file_path = None
 
         # Place components
-        self.button.grid(row=0, column=2, padx=5)
-        self.label_preview.grid(row=0, column=3, padx=(15, 0))
+        self.button.grid(row=0, column=2, padx=Spacing.BUTTONS_X, pady=Spacing.BUTTONS_Y)
+        self.label_preview.grid(row=0, column=3, padx=Spacing.LABELS_X, pady=Spacing.LABELS_Y)
 
     def load_logo(self) -> None:
         """
-        Shows file dialog to the user and update the preview image.
+        Open file dialog and update preview with selected image.
         """
         self.temp_file_path = ctk.filedialog.askopenfilename(
             title="Select Image",
@@ -1210,35 +1380,39 @@ class ImageInput(BaseInput):
     
     def show_preview(self) -> None:
         """
-        Loads the selected image on the preview label.
+        Load and display the selected image in preview label.
         """
         new_image = load_ctk_image(self.temp_file_path) if self.temp_file_path else None    
-        self.label_preview.configure(
-            image=new_image
-        )
+        self.label_preview.configure(image=new_image)
 
     def get_new_path(self) -> str | None:
         """
-        Returns the temporary file path selected by the user, or None.
+        Get the selected file path.
+        
+        Returns:
+            File path selected by user, or None if no file selected
         """
         return self.temp_file_path
 
     def clear(self) -> None:
         """
-        Sets the preview image to None
+        Clear the preview image.
         """
-        self.label_preview.configure(
-            image=None
-        )
+        self.label_preview.configure(image=None)
 
     def set_total_width(self, total_width: int) -> None:
         """
-        Sets the total width of the image input used for alignment.
-        It creates an empty label to cover the remaining width.
+        Set total width of image input for alignment.
+        
+        Creates an empty label to fill remaining width.
+        
         Parameters:
-            - input_width: Total width of the input.
+            total_width: Total width in pixels
+            
+        Raises:
+            ValueError: If total width is smaller than sum of components
         """
-        # Wait for the program to render widgets before gettign info
+        # Wait for widgets to render
         self.update_idletasks()
         
         # Calculate widths
@@ -1250,11 +1424,11 @@ class ImageInput(BaseInput):
             label_asterisk_width + button_width + 25)
 
         if empty_label_width < 0:
-            raise ValueError("input_width should be higher than labels width.")
+            raise ValueError("total_width must be greater than sum of component widths.")
 
-        # Create empty label for aligment
+        # Create empty label for alignment
         empty_label = ctk.CTkLabel(
-            self, # frame that contains all ctk components
+            self,
             text="",
             width=empty_label_width
         )
@@ -1262,9 +1436,10 @@ class ImageInput(BaseInput):
 
     def set_file_path(self, file_path: str) -> None:
         """
-        Sets a value for temp_file_path and loads the preview label.
+        Set file path and load preview.
+        
         Parameters:
-            - file_path: Location of the image.
+            file_path: Path to image file
         """
         self.temp_file_path = file_path
         self.show_preview()
@@ -1272,21 +1447,23 @@ class ImageInput(BaseInput):
 
 class ClearSaveButtons(ctk.CTkFrame):
     """
-    A frame with Clear and Save buttons.
-
-    Parameters:
-        root: Parent widget.
-        btn_clear_function: Callback executed when Clear is clicked.
-        btn_save_function: Callback executed when Save is clicked.
-        **kwargs: Additional keyword arguments passed to CTkFrame.
+    Frame with Clear and Save action buttons.
     """
-    def __init__(self, root, btn_clear_function: Callable, 
-    btn_save_function: Callable, **kwargs):
+    def __init__(
+        self, root, btn_clear_function: Callable, 
+        btn_save_function: Callable, **kwargs
+    ):
+        """
+        Initialize button group.
+        
+        Parameters:
+            root: Parent widget
+            btn_clear_function: Callback for Clear button
+            btn_save_function: Callback for Save button
+            **kwargs: Additional CTkFrame keyword arguments
+        """
         super().__init__(root, **kwargs)
-        self.configure(
-            root,
-            fg_color="transparent"
-        )
+        self.configure(fg_color="transparent")
 
         self.btn_clear_function = btn_clear_function
         self.btn_save_function = btn_save_function
@@ -1298,7 +1475,7 @@ class ClearSaveButtons(ctk.CTkFrame):
             text_color=Colours.BG_MAIN,
             font=Fonts.TEXT_MAIN,
             hover_color=Colours.BG_HOVER_BTN_CLEAR,
-            corner_radius=10,
+            corner_radius=Rounding.BUTTON,
             cursor="hand2",
             command=self.clear_on_click,
         )
@@ -1309,61 +1486,75 @@ class ClearSaveButtons(ctk.CTkFrame):
             text_color=Colours.TEXT_BUTTON,
             font=Fonts.TEXT_BUTTON,
             hover_color=Colours.BG_HOVER_BTN_SAVE,
-            corner_radius=10,
+            corner_radius=Rounding.BUTTON,
             state="disabled",
             command=self.save_on_click, 
         )
         
-        self.button_clear.grid(row=0, column=0)
-        self.button_save.grid(row=0, column=1, padx=20)
+        self.button_clear.grid(
+            row=0, column=0, padx=(0, Spacing.BUTTONS_X), pady=Spacing.BUTTONS_Y
+        )
+        self.button_save.grid(
+            row=0, column=1, padx=Spacing.BUTTONS_X, pady=Spacing.BUTTONS_Y
+        )
 
     def clear_on_click(self) -> None:
         """
-        Executes callback function for the Clear button.
+        Execute Clear button callback.
         """
         self.btn_clear_function()
 
     def save_on_click(self) -> None:
         """
-        Executes callback function for the Save button.
+        Execute Save button callback.
         """
         self.btn_save_function()
 
     def enable_save_button(self) -> None:
         """
-        Enables the Save button.
+        Enable the Save button.
         """
         if self.button_save.cget("state") == "disabled":
             self.button_save.configure(state="normal", cursor="hand2")
 
     def disable_save_button(self) -> None:
         """
-        Disables the save button.
+        Disable the save button.
         """
         self.button_save.configure(state="disabled", cursor="arrow")
 
 
 class Card(ctk.CTkFrame):
     """
-    A card that contains an image and a title button.
+    Clickable card with image and title.
     """
     def __init__(
         self, root, title: str, image_path: str = "assets/cards/add_wine.png",
         on_click: Callable | None = None, **kwargs
     ):
+        """
+        Initialize card component.
+        
+        Parameters:
+            root: Parent widget
+            title: Card title text
+            image_path: Path to card image
+            on_click: Callback executed when card is clicked
+            **kwargs: Additional CTkFrame keyword arguments
+        """
         super().__init__(root, **kwargs)
         # Frame
         self.configure(
             fg_color=Colours.BG_MAIN,
             border_width=1,
             border_color=Colours.BG_MAIN,
-            corner_radius=10,
+            corner_radius=Rounding.CARD,
             cursor="hand2",
             
         )
         self.on_click = on_click 
            
-        # Create components (They work better as buttons rather than labels)
+        # Create image button
         self.image = ctk.CTkButton(
             self,
             image=load_ctk_image(image_path, (150, 120)),
@@ -1372,6 +1563,8 @@ class Card(ctk.CTkFrame):
             hover_color=Colours.BG_HOVER_NAV,
             command=on_click,
         )
+
+        # Create title button
         self.title = ctk.CTkButton(
             self,
             text=title,
@@ -1383,18 +1576,19 @@ class Card(ctk.CTkFrame):
             height=50,
             command=on_click,  
         )
-        self.image.pack(pady=(5,0))
-        self.title.pack(pady=5)
+        self.image.pack(padx=Spacing.LABELS_X, pady=Spacing.LABELS_Y)
+        self.title.pack(padx=Spacing.LABELS_X, pady=(0, Spacing.LABELS_Y))
 
-        # Add binds
+        # Add hover bindings
         self.add_binds()
        
     def add_binds(self) -> None:
         """
-        Add bindings so the whole frame behaves as a single clickable control.
+        Bind hover and click events to frame and children.
         """
         if self.on_click:
             self.bind("<Button-1>", self.frame_clicked)
+            
         for control in self.winfo_children():
             control.bind("<Enter>", self.frame_on_enter)
             control.bind("<Leave>", self.frame_on_leave)
@@ -1407,7 +1601,10 @@ class Card(ctk.CTkFrame):
 
     def frame_on_enter(self, event: tk.Event) -> None:
         """
-        Hover enter: change hover color for frame and children.
+        Handle hover enter event.
+        
+        Parameters:
+            event: Hover event (unused but required by bind)
         """
         self.configure(fg_color=Colours.BG_HOVER_NAV)
         for control in self.winfo_children():
@@ -1415,7 +1612,10 @@ class Card(ctk.CTkFrame):
 
     def frame_on_leave(self, event: tk.Event) -> None:
         """
-        Hover leave: restore original colors.
+        Handle hover leave event.
+        
+        Parameters:
+            event: Hover event (unused but required by bind)
         """
         self.configure(fg_color=Colours.BG_MAIN)
         for control in self.winfo_children():
@@ -1424,23 +1624,24 @@ class Card(ctk.CTkFrame):
 
 class NavLink(ctk.CTkButton):
     """
-    A button that behaves as a navigation link.
-
-    Parameters:
-        root: Parent widget.
-        text: Button text.
-        image: Optional icon image.
-        command: Callback executed when clicked.
-        **kwargs: Additional CTkButton keyword arguments.
+    Navigation link button with active state management.
     """
     def __init__(
         self, root, text: str = "", image: ctk.CTkImage | None = None, 
         command: Callable | None = None, **kwargs
     ):
+        """
+        Initialize navigation link.
+        
+        Parameters:
+            root: Parent widget
+            text: Link text
+            image: Optional icon image
+            command: Callback executed when clicked
+            **kwargs: Additional CTkButton keyword arguments
+        """
         super().__init__(root, **kwargs)
-        # Frame
         self.configure(
-            root,
             text=text,
             text_color=Colours.TEXT_MAIN,
             font=Fonts.NAVLINK,
@@ -1449,7 +1650,7 @@ class NavLink(ctk.CTkButton):
             compound="left",
             fg_color="transparent",
             hover_color=Colours.BG_HOVER_NAV,
-            corner_radius=10,
+            corner_radius=Rounding.BUTTON,
             cursor="hand2",
             text_color_disabled=Colours.TEXT_MAIN,
             command=self.on_click
@@ -1459,13 +1660,12 @@ class NavLink(ctk.CTkButton):
 
     def on_click(self) -> None:
         """
-        Disable previously active navlink and execute callback.
+        Handle click event, updating active state and executing callback.
         """
-        # Do nothing if there is no function
         if self.callback is None:
             return
 
-        # Set other navlinks enabled
+        # Deactivate other navlinks
         for widget in self.root.winfo_children():
             if isinstance(widget, NavLink) and widget.cget("state") == "disabled":
                 widget.configure(
@@ -1475,6 +1675,7 @@ class NavLink(ctk.CTkButton):
                     fg_color="transparent"
                 )
         
+        # Activate this navlink
         self.configure(
             state="disabled",
             cursor="arrow",
@@ -1487,9 +1688,17 @@ class NavLink(ctk.CTkButton):
 
 class ButtonGoBack(ctk.CTkButton):
     """
-    Button to go back to the previous section.
+    Button for navigating back to previous section.
     """
     def __init__(self, root, command: Callable, **kwargs):
+        """
+        Initialize go back button.
+        
+        Parameters:
+            root: Parent widget
+            command: Callback executed when clicked
+            **kwargs: Additional CTkButton keyword arguments
+        """
         super().__init__(root, **kwargs)
        
         self.configure(
@@ -1510,19 +1719,24 @@ class ButtonGoBack(ctk.CTkButton):
 
 class ActionMenuButton(ctk.CTkFrame):
     """
-    Button that shows a contextual menu with actions (Show, Edit, Delete).
-
-    Parameters:
-        root: Parent widget.
-        on_show: Callback executed when 'Show Details' is selected.
-        on_edit: Callback executed when 'Edit' is selected.
-        on_delete: Callback executed when 'Delete' is selected.
-        **kwargs: Additional CTkFrame keyword arguments.
+    Button displaying contextual menu with Show, Edit, and Delete actions.
     """
     def __init__(
-        self, root, btn_name: str, on_show = None, on_edit = None, 
-        on_delete = None, **kwargs
+        self, root, btn_name: str, on_show: Callable | None = None, 
+        on_edit: Callable | None = None, on_delete: Callable | None = None, 
+        **kwargs
     ):
+        """
+        Initialize action menu button.
+        
+        Parameters:
+            root: Parent widget
+            btn_name: Name used in menu action labels (e.g., "Wine", "Transaction")
+            on_show: Callback for Show Details action
+            on_edit: Callback for Edit action
+            on_delete: Callback for Delete action
+            **kwargs: Additional CTkFrame keyword arguments
+        """
         super().__init__(
             root, 
             fg_color="transparent", 
@@ -1538,7 +1752,7 @@ class ActionMenuButton(ctk.CTkFrame):
         self.menu_visible = False
         self.menu_frame = None
 
-        # Button
+        # Menu trigger button
         self.menu_button = ctk.CTkButton(
             self,
             text="",
@@ -1554,7 +1768,7 @@ class ActionMenuButton(ctk.CTkFrame):
 
     def toggle_menu(self) -> None:
         """
-        Shows or hides the menu.
+        Toggle menu visibility.
         """
         if self.menu_visible:
             self.hide_menu()
@@ -1563,22 +1777,22 @@ class ActionMenuButton(ctk.CTkFrame):
 
     def show_menu(self) -> None:
         """
-        Shows and creates the contextual menu with actions.
+        Create and display the contextual action menu.
         """
         self.menu_visible = True
 
-        # Frame container of the menu
+        # Create menu container
         self.menu_frame = ctk.CTkFrame(
             self.winfo_toplevel(), # First Parent
-            corner_radius=8,
+            corner_radius=Rounding.FRAME,
             fg_color="white",
             border_color="#DDD",
             border_width=1
         )
 
-        # Action buttons
+        # Create action buttons
         if self.on_show:
-            btn_show_detail = ctk.CTkButton(
+            ctk.CTkButton(
                 self.menu_frame,
                 text="Show Details",
                 image=Icons.SHOW,
@@ -1588,11 +1802,10 @@ class ActionMenuButton(ctk.CTkFrame):
                 hover_color="#F0E0E0",
                 height=28,
                 command=lambda: self._handle_action(self.on_show)
-            )
-            btn_show_detail.pack(fill="x", padx=5, pady=(3, 0))
+            ).pack(fill="x", padx=Spacing.BUTTONS_X, pady=(Spacing.BUTTONS_Y, 0))
 
         if self.on_edit:
-            btn_edit = ctk.CTkButton(
+            ctk.CTkButton(
                 self.menu_frame,
                 text=f"Edit {self.btn_name}",
                 image=Icons.EDIT,
@@ -1602,11 +1815,10 @@ class ActionMenuButton(ctk.CTkFrame):
                 hover_color="#F0E0E0",
                 height=28,
                 command=lambda: self._handle_action(self.on_edit)
-            )
-            btn_edit.pack(fill="x", padx=5, pady=(3, 0))
+            ).pack(fill="x", padx=Spacing.BUTTONS_X, pady=Spacing.BUTTONS_Y)
 
         if self.on_delete:
-            btn_delete = ctk.CTkButton(
+            ctk.CTkButton(
                 self.menu_frame,
                 text=f"Delete {self.btn_name}",
                 image=Icons.DELETE,
@@ -1616,67 +1828,68 @@ class ActionMenuButton(ctk.CTkFrame):
                 hover_color="#F8E5E5",
                 height=28,
                 command=lambda: self._handle_action(self.on_delete)
-            )
-            btn_delete.pack(fill="x", padx=5, pady=(3, 3))
+            ).pack(fill="x", padx=Spacing.BUTTONS_X, pady=(0, Spacing.BUTTONS_Y))
 
-        # Place the menu under the clicked button
+        # Position menu below button
         x = self.menu_button.winfo_rootx() - self.winfo_toplevel().winfo_rootx() - self.menu_button.winfo_width()
         y = self.menu_button.winfo_rooty() - self.winfo_toplevel().winfo_rooty() + 30
         
         self.menu_frame.place(x=x, y=y)
         self.menu_frame.lift()
 
-        # Bind click outside to close menu
+        # Bind click outside handler
         self.winfo_toplevel().bind("<Button-1>", self._check_click_outside, add="+")
 
     def hide_menu(self) -> None:
         """
-        Destroys the menu if exists.
+        Destroy the menu if it exists.
         """
         if self.menu_frame:
             self.menu_frame.destroy()
             self.menu_frame = None
             self.menu_visible = False
 
-            # Unbind the click event
+            # Unbind click event
             try:
-                self.winfo_toplevel().unbind("<Button-1>", self._check_click_outside)
+                self.winfo_toplevel().unbind("<Button-1>")
             except:
                 pass
 
     def _handle_action(self, callback: Callable | None) -> None:
         """
-        Destroys the menu and executes the triggered function through a callback.
-        """
+        Execute action callback and close menu.
         
+        Parameters:
+            callback: Action callback function
+        """
         self.hide_menu()
         if callback:
             callback()
 
     def destroy(self) -> None:
         """
-        Destroys any existing menu before destroying itself.
+        Destroy menu and frame.
         """    
-        # Destroy existing menu frame
         self.hide_menu()
-
         super().destroy()
 
     def _check_click_outside(self, event: tk.Event) -> None:
         """
-        Checks if click was outside the menu and closes it.
+        Check if click was outside menu and close if so.
+        
+        Parameters:
+            event: Click event
         """
         if not self.menu_visible:
             return
             
-        # Get the widget that was clicked
+        # Get clicked widget
         widget = event.widget
         
-        # Check if click was inside menu_frame or menu_button
+        # Check if click was inside menu or button
         is_inside_menu = False
         is_inside_button = False
         
-        # Check if clicked widget is the menu or a child of it
         if self.menu_frame and widget.winfo_exists():
             try:
                 parent = widget
@@ -1694,5 +1907,3 @@ class ActionMenuButton(ctk.CTkFrame):
         # Close menu if clicked outside (but not on the button itself)
         if not is_inside_menu and not is_inside_button:
             self.hide_menu()
-
-        

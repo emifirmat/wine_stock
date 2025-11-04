@@ -8,7 +8,7 @@ from typing import Callable, Dict, List
 
 from db.models import Wine
 from helpers import load_ctk_image, get_coords_center
-from ui.components import DoubleLabel, FixedSizeToplevel, ActionMenuButton
+from ui.components import DoubleLabel, ActionMenuButton
 from ui.forms.add_edit_wine import AddWineForm
 from ui.style import Colours, Fonts
 from ui.tables.mixins import SortMixin
