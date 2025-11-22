@@ -1,33 +1,47 @@
 """
-Table that contains the movements of the stock
+Base table component with incremental loading and sorting.
+
+This module provides an abstract base class for data tables with features
+like lazy loading, sorting, filtering, and customizable row rendering.
 """
 import customtkinter as ctk
-import tkinter.messagebox as messagebox
 from abc import ABC, abstractmethod
-from datetime import datetime, date
-from typing import Callable, Dict, List
+from sqlalchemy.orm import Session
+from typing import Callable
 
 from helpers import load_ctk_image
-from ui.style import Colours, Fonts
+from ui.style import Colours, Fonts, Spacing
 
 
 class DataTable(ctk.CTkFrame, ABC):
     """
-    Contains the components of the table with the wine purchases and sellings.
-    Uses incremental data loading and it can sort and filter rows.
+    Abstract base table with incremental data loading.
+    
+    Provides core functionality for displaying large datasets with pagination,
+    sorting capabilities, and customizable row rendering. Subclasses must
+    implement get_line_columns() for specific data formatting..
     """
     INITIAL_ROWS = 40 
     LOAD_MORE_ROWS = 30
     
     def __init__(
-            self, root: ctk.CTkFrame, session, headers: list[str], lines: list, 
-            **kwargs
+            self, root: ctk.CTkFrame, session: Session, headers: list[str],
+            lines: list, **kwargs
         ):
-        # Set up form frame
+        """
+        Initialise data table with headers and data.
+        
+        Parameters:
+            root: Parent frame container
+            session: SQLAlchemy database session
+            headers: List of column header labels
+            lines: List of data rows to display
+            **kwargs: Additional CTkFrame keyword arguments
+        """
         super().__init__(root, **kwargs)
         self.configure(fg_color=Colours.BG_MAIN, height=500)
         
-        # Include db instances
+        # DB instances
         self.session = session
 
         # Table data
@@ -37,23 +51,25 @@ class DataTable(ctk.CTkFrame, ABC):
         self.visible_rows_count = self.INITIAL_ROWS
         self.line_widget_map = {}
         
-        # Table UI
+        # Table UI components
         self.header_labels = []
         self.column_widths = None
         self.rows_container = None
         self.load_more_btn = None
         self.lbl_no_results = None       
 
-    def create_components(self):
+    def create_components(self) -> None:
         """
-        Create headers, rows container, and "no results" message.
+        Create and display table headers, rows container, and empty state label.
         """
-        # Headers
+        # Create header row
         row_header_frame = ctk.CTkFrame(self, fg_color="transparent")
-        row_header_frame.pack(fill="x", pady=2)
+        row_header_frame.pack(
+            fill="x", padx=Spacing.TABLE_CELL_X, pady=Spacing.TABLE_CELL_Y
+        )
 
         for i, header in enumerate(self.headers):
-            # Create label
+            # Create header label
             label = ctk.CTkLabel(
                 row_header_frame, 
                 text=header.upper(),
@@ -63,29 +79,28 @@ class DataTable(ctk.CTkFrame, ABC):
                 wraplength=self.column_widths[i],
                 anchor="center",
             )
-            label.grid(row=0, column=i, padx=5, sticky="ew")
+            label.grid(
+                row=0, column=i, 
+                padx=Spacing.TABLE_CELL_X, pady=Spacing.TABLE_CELL_Y, sticky="ew"
+            )
 
-            if header != "picture" and header != "actions":
-                # Bind label with a click
-                label.configure(
-                    cursor="hand2"
-                )
+            # Make header clickable for sorting (except special columns)
+            if header.lower() not in ["picture", "actions"]:
+                label.configure(cursor="hand2")
                 label.bind(
                     "<Button-1>", 
                     lambda e, col_index=i: self.on_header_click(e, col_index)
                 )
-
-                # Add label in header_labels 
                 self.header_labels.append(label)
 
-            # Add responsiveness to the column
+            # Configure column responsiveness
             row_header_frame.grid_columnconfigure(i, weight=1)
 
-        # Rows container
+        # Create rows container
         self.rows_container = ctk.CTkFrame(self, fg_color="transparent")
         self.rows_container.pack(fill="both", expand=True) 
 
-        # No results label  
+        # Create "no results" label (hidden by default)
         self.lbl_no_results = ctk.CTkLabel(
             self.rows_container,
             text="No results found.",
@@ -94,77 +109,92 @@ class DataTable(ctk.CTkFrame, ABC):
             anchor="center",
         )
         
+    def refresh_visible_rows(self) -> None:
+        """
+        Update displayed rows based on current filter and pagination state.
         
-    def refresh_visible_rows(self):
+        Shows only the visible slice of filtered data, creating or reusing
+        widgets as needed. Displays "no results" message if no data matches.
         """
-        Creates/shows only visible rows.
-        """
-        # Hide all the widgets
+        # Hide all existing widgets
         for widget in self.rows_container.winfo_children():
             widget.grid_forget()
         
-        # If there is no filtered_lines, show message "no results"
+        # Show "no results" message if no filtered data
         if not self.filtered_lines:
             self.lbl_no_results.grid(
-                row=0, column=0, sticky="ew", columnspan=len(self.header_labels)
+                row=0, column=0, sticky="ew", columnspan=len(self.headers)
             )
             self.rows_container.columnconfigure(1, weight=1)
             return
         
-        # Show/create the slice's widgets
+        # Determine rows to display
         rows_to_show = min(self.visible_rows_count, len(self.filtered_lines))
         visible_slice = self.filtered_lines[:rows_to_show]
         
+        # Show or create widgets for visible rows
         for i, line in enumerate(visible_slice):
-            # Get existing widget
+            # Reuse existing widget if available
             if line in self.line_widget_map:
                 widget = self.line_widget_map[line]
             # Create new widget
             else:
                 widget = self.create_row_widget(line)
                 self.line_widget_map[line] = widget
-            # Show widget    
+            
+            # Display widget
             widget.grid(
-                row=i, column=0, pady=1, columnspan=len(self.headers), sticky="ew"
+                row=i, column=0, columnspan=len(self.headers),
+                padx=Spacing.TABLE_CELL_X, pady=Spacing.TABLE_CELL_Y, sticky="ew"
             )
         
-        # Add responsiveness to the columns     
+        # Configure column responsiveness
         self.rows_container.grid_columnconfigure(0, weight=1)
         
-        # Add "load more" button
+        # Add "load more" button if needed
         self.create_load_more_button()
 
     def create_row_widget(self, line) -> ctk.CTkFrame:
         """
-        Create a row for the line called by refresh visible rows.
+        Create a widget for a single data row.
+        
+        Builds a frame with labels for each column value. Handles both
+        text and image content. Applies alert background for low stock items.
+        
         Parameters:
-            line: Instance of a stock_movement (purchase or sale)
+            line: Data instance (e.g., Wine or StockMovement)
+            
         Returns:
-            row_frame: A ctkframe containing the labels of the line (row)
+            Frame containing all column labels for the row
         """
-        # Crate row frame
+        # Determine background color (alert if below minimum stock)
         row_bg = (
             Colours.BG_ALERT 
             if hasattr(line, "min_stock") and line.is_below_min_stock
             else "transparent"
         )
         
-        row_frame = ctk.CTkFrame(self.rows_container, fg_color=row_bg)
+        # Create row frame
         # Note: row_frame is placed by refresh_visible_rows
+        row_frame = ctk.CTkFrame(self.rows_container, fg_color=row_bg)
 
-        # Create labels of the row
+        # Create label for each row
         line_values = self.get_line_columns(line)
         for i, line_value in enumerate(line_values):
-            # Text labels
-            if not (isinstance(line_value, str) 
-                and line_value.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
-            ): 
+            # Detect if value is an image path
+            is_image = (
+                isinstance(line_value, str) and
+                line_value.lower().endswith((".png", ".jpg", ".jpeg", ".webp"))
+            )
+
+            # Configure label for text or image
+            if not is_image:
                 label_config = {
-                    "text": line_value,
+                    "text": str(line_value),
                     "text_color": Colours.TEXT_MAIN,
                     "font": Fonts.TEXT_LABEL,   
                 }
-           # Image labels
+            # Image labels
             else:
                 label_config = {
                     "image": load_ctk_image(line_value),
@@ -172,6 +202,7 @@ class DataTable(ctk.CTkFrame, ABC):
                     "fg_color": "transparent"
                 }
             
+            # Create and position label
             label = ctk.CTkLabel(
                 row_frame, 
                 width=self.column_widths[i],
@@ -179,46 +210,54 @@ class DataTable(ctk.CTkFrame, ABC):
                 **label_config
             )
             
-            label.grid(row=0, column=i, padx=5, sticky="ew")
+            label.grid(
+                row=0, column=i, 
+                padx=Spacing.TABLE_CELL_X, pady=Spacing.TABLE_CELL_Y, sticky="ew"
+            )
 
-            # Add responsiveness to the columns
+            # Configure column responsiveness
             row_frame.grid_columnconfigure(i, weight=1)
 
-        # Additional widgets
+        # Allow subclasses to add custom widgets
         self.customize_row(line, row_frame)
 
         return row_frame
 
     @abstractmethod
-    def get_line_columns(self, line) -> List:
+    def get_line_columns(self, line) -> list:
         """
-        Returns a list with the values of the instance stored in "line".
+        Get formatted column values for a data row.
+        
+        Subclasses must implement this to extract and format values
+        from their specific data model.
+        
         Parameters:
-            - line: DB instance of an imported table
+            line: Data instance from the table
+            
         Returns:
-            - A list with the values of the instance formatted to be used as
-            the text of a label.
+            List of formatted values for each column
         """
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement get_line_columns()")
 
 
-    def create_load_more_button(self):
+    def create_load_more_button(self) -> None:
         """
-        Creates or updates button "Load More"
+        Create or update the 'Load More' button based on remaining rows.
         """
-        # Destroy existing button
+        # Remove existing button
         if self.load_more_btn:
             self.load_more_btn.destroy()
             self.load_more_btn = None
 
-        # Only show button if there are more rows to show
+        # Calculate remaining rows
         remaining_rows = len(self.filtered_lines) - self.visible_rows_count
-        text_content = (
-            f"Load {min(remaining_rows, self.LOAD_MORE_ROWS)} More Rows "
-            f"({remaining_rows} left)"
-        )
-                        
+
+        # Only show button if more rows available                
         if remaining_rows > 0:
+            text_content = (
+                f"Load {min(remaining_rows, self.LOAD_MORE_ROWS)} More Rows "
+                f"({remaining_rows} left)"
+            )
             self.load_more_btn = ctk.CTkButton(
                 self.rows_container,
                 text=text_content,
@@ -230,23 +269,40 @@ class DataTable(ctk.CTkFrame, ABC):
                 cursor="hand2",
                 command=self.load_more_rows
             )
-            # Place it at the end of the table
-            self.load_more_btn.grid(row=self.visible_rows_count, pady=15, sticky="ew")
+            # Position at end of visible rows
+            self.load_more_btn.grid(
+                row=self.visible_rows_count, 
+                padx=Spacing.BUTTON_X, pady=Spacing.BUTTON_Y, sticky="ew"
+            )
 
-    def load_more_rows(self):
-        """Load more rows incrementally"""
-        # Increase count
+    def load_more_rows(self) -> None:
+        """
+        Increase visible row count and refresh display.
+        """
         self.visible_rows_count += self.LOAD_MORE_ROWS
-        
-        # Refresh rows
         self.refresh_visible_rows()
 
-    def on_header_click(self, event, col_index: int):
+    def on_header_click(self, event, col_index: int) -> None:
         """
-        After clicking a header, add an arrow on its name and sort it.
+        Handle header click event for sorting.
+        
+        Override this method to implement sorting functionality.
+        
+        Parameters:
+            event: Click event from header label
+            col_index: Index of clicked column
         """
-        # Sort rows
         pass
 
-    def customize_row(self, line, widget):
+    def customize_row(self, line, widget: ctk.CTkFrame) -> None:
+        """
+        Add custom widgets to a row.
+        
+        Override this method to add action buttons or other custom
+        widgets to specific rows.
+        
+        Parameters:
+            line: Data instance for the row
+            widget: Row frame to customize
+        """
         pass

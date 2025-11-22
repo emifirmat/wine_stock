@@ -223,7 +223,7 @@ class TransactionFiltersForm(BaseFiltersForm):
             else:
                 label_width = 60    
             input.set_label_layout(label_width)
-            input.set_total_width(250)
+            input.set_total_width(300)
 
         # Clear button
         button_clear = ctk.CTkButton(
@@ -402,7 +402,7 @@ class WineFiltersForm(BaseFiltersForm):
 
         for _, input in self.inputs_dict.items():
             input.set_label_layout(60)
-            input.set_total_width(250)
+            input.set_total_width(300)
 
         # Clear button
         button_clear = ctk.CTkButton(

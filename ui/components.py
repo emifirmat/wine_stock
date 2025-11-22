@@ -69,23 +69,24 @@ class EntryInputMixin:
         self.update_idletasks()
         
         # Calculate widths
-        label_width = self.label.winfo_width()
-        label_asterisk_width = self.label_optional.winfo_width()
-        entry_width = self.entry.winfo_width()
-        empty_label_width = total_width - (label_width + entry_width + label_asterisk_width)
+        label_width = self.label.winfo_width() + Spacing.LABEL_X * 2
+        label_asterisk_width = self.label_optional.winfo_width() + Spacing.LABEL_X
+        entry_width = self.entry.winfo_width() + Spacing.LABEL_X
+        empty_label_width = total_width - (
+            label_width + entry_width + label_asterisk_width
+        )
 
         if empty_label_width < 0:
             raise ValueError(
-                "total_width must be greater than label_width + entry_width + labels_asterisk_width"
+                "total_width must be greater than label widths + entry width."
             )
 
         # Create empty label for alignment
-        empty_label = ctk.CTkLabel(
+        ctk.CTkLabel(
             self, # frame that contains all ctk components
             text="",
             width=empty_label_width
-        )
-        empty_label.grid(row=0, column=3)
+        ).grid(row=0, column=3)
 
     def update_text_value(self, new_text: str) -> None:
         """
@@ -127,7 +128,7 @@ class LabelWithBorder(ctk.CTkFrame):
             font=font,
         )
         self.label.pack(
-            padx=Spacing.LABELS_X, pady=Spacing.LABELS_Y, expand=True, fill="both"
+            padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y, expand=True, fill="both"
         )
 
     def configure_label(self, **kwargs):
@@ -799,8 +800,13 @@ class BaseInput(ctk.CTkFrame):
         )
         
         # Place components
-        self.label.grid(row=0, column=0, sticky="w") 
-        self.label_optional.grid(row=0, column=1, padx=(0, Spacing.SMALL))
+        self.label.grid(
+            row=0, column=0, 
+            padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y, sticky="w",
+        ) 
+        self.label_optional.grid(
+            row=0, column=1, padx=(0, Spacing.SMALL), pady=Spacing.LABEL_Y
+        )
 
     def set_label_layout(self, label_width: int) -> None:
         """
@@ -840,7 +846,9 @@ class TextInput(BaseInput, EntryInputMixin):
             max_len = max_len,
         )
         
-        self.entry.grid(row=0, column=2)
+        self.entry.grid(
+            row=0, column=2, padx=(0, Spacing.LABEL_X), pady=Spacing.LABEL_Y
+        )
 
 
 class IntInput(BaseInput, EntryInputMixin):
@@ -876,7 +884,9 @@ class IntInput(BaseInput, EntryInputMixin):
             placeholder=placeholder,
         )
         
-        self.entry.grid(row=0, column=2)
+        self.entry.grid(
+            row=0, column=2, padx=(0, Spacing.LABEL_X), pady=Spacing.LABEL_Y
+        )
 
 
 class DecimalInput(BaseInput, EntryInputMixin):
@@ -912,7 +922,9 @@ class DecimalInput(BaseInput, EntryInputMixin):
             placeholder=placeholder,
         )
         
-        self.entry.grid(row=0, column=2)
+        self.entry.grid(
+            row=0, column=2, padx=(0, Spacing.LABEL_X), pady=Spacing.LABEL_Y
+        )
 
 
 class AutocompleteInput(BaseInput, EntryInputMixin):
@@ -947,7 +959,9 @@ class AutocompleteInput(BaseInput, EntryInputMixin):
             placeholder=placeholder,
         )
         
-        self.entry.grid(row=0, column=2)
+        self.entry.grid(
+            row=0, column=2, padx=(0, Spacing.LABEL_X), pady=Spacing.LABEL_Y
+        )
 
 
 class DateInput(BaseInput, EntryInputMixin):
@@ -977,7 +991,9 @@ class DateInput(BaseInput, EntryInputMixin):
             state="readonly"
         )
 
-        self.entry.grid(row=0, column=2)
+        self.entry.grid(
+            row=0, column=2, padx=(0, Spacing.LABEL_X), pady=Spacing.LABEL_Y
+        )
 
     def clear(self) -> None:
         """
@@ -1024,7 +1040,9 @@ class DropdownInput(BaseInput):
             command=command
         )
         
-        self.dropdown.grid(row=0, column=2)
+        self.dropdown.grid(
+            row=0, column=2, padx=(0, Spacing.LABEL_X), pady=Spacing.LABEL_Y
+        )
     
     def get(self) -> str:
         """
@@ -1084,13 +1102,17 @@ class DropdownInput(BaseInput):
         self.update_idletasks()
         
         # Calculate widths
-        label_width = self.label.winfo_width()
-        label_asterisk_width = self.label_optional.winfo_width()
-        dropdown_width = self.dropdown.winfo_width()
-        empty_label_width = total_width - (label_width + dropdown_width + label_asterisk_width)
+        label_width = self.label.winfo_width() + Spacing.LABEL_X * 2
+        label_asterisk_width = self.label_optional.winfo_width() + Spacing.LABEL_X
+        dropdown_width = self.dropdown.winfo_width() + Spacing.LABEL_X
+        empty_label_width = total_width - (
+            label_width + dropdown_width + label_asterisk_width
+        )
 
         if empty_label_width < 0:
-            raise ValueError("total_width must be greater than label widths + dropdown width.")
+            raise ValueError(
+                "total_width must be greater than label widths + dropdown width."
+            )
 
         # Create empty label for alignment
         ctk.CTkLabel(
@@ -1134,7 +1156,9 @@ class RadioInput(BaseInput):
                 width=50,
             )
             
-            self.radio.grid(row=0, column=index, padx=(0, 15))
+            self.radio.grid(
+                row=0, column=index, padx=(0, Spacing.LABEL_X), pady=Spacing.LABEL_Y
+            )
 
 
 class ToggleInput(BaseInput):
@@ -1175,7 +1199,7 @@ class ToggleInput(BaseInput):
                 border_width=1,
                 command=lambda v=value: self._select(v),
             )
-            btn.pack(side="left", padx=Spacing.BUTTONS_X, pady=Spacing.BUTTONS_Y)
+            btn.pack(side="left", padx=Spacing.BUTTON_X, pady=Spacing.BUTTON_Y)
             self.buttons[btn] = value
 
         self._update_buttons()
@@ -1250,8 +1274,11 @@ class DoubleLabel(ctk.CTkFrame):
 
         # Place labels
         self.label_title.grid(
-            row=0, column=0, sticky="w", padx=(0, Spacing.SMALL), pady=Spacing.LABELS_Y) 
-        self.label_value.grid(row=0, column=1, padx=Spacing.LABELS_X, pady=Spacing.LABELS_Y)
+            row=0, column=0, sticky="w", padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y
+        ) 
+        self.label_value.grid(
+            row=0, column=1, padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y
+        )
 
     def bold_value_text(self) -> None:
         """
@@ -1305,12 +1332,14 @@ class DoubleLabel(ctk.CTkFrame):
         self.update_idletasks()
         
         # Calculate widths
-        title_width = self.label_title.winfo_width()
-        value_width = self.label_value.winfo_width()
+        title_width = self.label_title.winfo_width() + Spacing.LABEL_X * 2
+        value_width = self.label_value.winfo_width() + Spacing.LABEL_X * 2
         empty_label_width = total_width - (title_width + value_width)
 
         if empty_label_width < 0:
-            raise ValueError("total_width must be greater than label_width + value_width.")
+            raise ValueError(
+                "total_width must be greater than title width + value width."
+            )
 
         # Create empty label for aligment
         ctk.CTkLabel(
@@ -1319,6 +1348,16 @@ class DoubleLabel(ctk.CTkFrame):
             width=empty_label_width,
         ).grid(row=0, column=2)
 
+    def fix_value_width(self, chars_count: int = 6) -> None:
+        """
+        Calculate and fix the width of the value label based on character count.
+
+        Parameters:
+            chars_count: Number of average-width characters used to estimate label width (default: 6)
+        """
+        font_obj = tk.font.Font(font=Fonts.TEXT_LABEL)
+        self.label_value.configure(width=font_obj.measure("Z" * chars_count))
+        
 
 class ImageInput(BaseInput):
     """
@@ -1334,7 +1373,7 @@ class ImageInput(BaseInput):
             **kwargs: Additional BaseInput keyword arguments
         """
         super().__init__(root, **kwargs)
-        self.configure(fg_color="transparent")
+        self.configure(fg_color="transparent", corner_radius=Rounding.FRAME)
         
         # Create file selection button
         self.button = ctk.CTkButton(
@@ -1351,21 +1390,30 @@ class ImageInput(BaseInput):
         )
 
         # Create preview label
-        image = load_ctk_image(image_path) if image_path else None
+        self.no_image = load_ctk_image("assets/logos/no_image.png")
+        self.current_image = load_ctk_image(image_path) if image_path else self.no_image
+        
         self.label_preview = ctk.CTkLabel(
             self,
-            image=image,
+            image=self.current_image,
             text="",
+            text_color=Colours.TEXT_SECONDARY,
+            font=Fonts.TEXT_DROPDOWN,
             width=100,
             height=80,
-            fg_color=Colours.BG_MAIN,               
+            fg_color="transparent", # Necessary to keep corner radious
+            justify="center"              
         )
         
         self.temp_file_path = None
-
+        
         # Place components
-        self.button.grid(row=0, column=2, padx=Spacing.BUTTONS_X, pady=Spacing.BUTTONS_Y)
-        self.label_preview.grid(row=0, column=3, padx=Spacing.LABELS_X, pady=Spacing.LABELS_Y)
+        self.button.grid(
+            row=0, column=2, padx=(0, Spacing.BUTTON_X), pady=Spacing.BUTTON_Y
+        )
+        self.label_preview.grid(
+            row=0, column=3, padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y
+        )
 
     def load_logo(self) -> None:
         """
@@ -1382,8 +1430,9 @@ class ImageInput(BaseInput):
         """
         Load and display the selected image in preview label.
         """
-        new_image = load_ctk_image(self.temp_file_path) if self.temp_file_path else None    
-        self.label_preview.configure(image=new_image)
+        self.current_image = load_ctk_image(self.temp_file_path) if self.temp_file_path else self.no_image
+        self.label_preview.configure(image=self.current_image)
+        
 
     def get_new_path(self) -> str | None:
         """
@@ -1416,23 +1465,25 @@ class ImageInput(BaseInput):
         self.update_idletasks()
         
         # Calculate widths
-        label_width = self.label.winfo_width()
-        label_asterisk_width = self.label_optional.winfo_width()
-        label_preview_width = self.label_preview.winfo_width()
-        button_width = self.button.winfo_width()
-        empty_label_width = total_width - (label_width + label_preview_width + 
-            label_asterisk_width + button_width + 25)
+        label_width = self.label.winfo_width() + Spacing.LABEL_X * 2
+        label_asterisk_width = self.label_optional.winfo_width() + Spacing.LABEL_X
+        button_width = self.button.winfo_width() + Spacing.BUTTON_X
+        label_preview_width = self.label_preview.winfo_width() + Spacing.LABEL_X * 2
+        empty_label_width = total_width - (
+            label_width + label_preview_width + label_asterisk_width + button_width
+        )
 
         if empty_label_width < 0:
-            raise ValueError("total_width must be greater than sum of component widths.")
+            raise ValueError(
+                "total_width must be greater than sum of component widths."
+            )
 
         # Create empty label for alignment
-        empty_label = ctk.CTkLabel(
+        ctk.CTkLabel(
             self,
             text="",
             width=empty_label_width
-        )
-        empty_label.grid(row=0, column=4)
+        ).grid(row=0, column=4)
 
     def set_file_path(self, file_path: str) -> None:
         """
@@ -1492,10 +1543,10 @@ class ClearSaveButtons(ctk.CTkFrame):
         )
         
         self.button_clear.grid(
-            row=0, column=0, padx=(0, Spacing.BUTTONS_X), pady=Spacing.BUTTONS_Y
+            row=0, column=0, padx=(0, Spacing.BUTTON_X), pady=Spacing.BUTTON_Y
         )
         self.button_save.grid(
-            row=0, column=1, padx=Spacing.BUTTONS_X, pady=Spacing.BUTTONS_Y
+            row=0, column=1, padx=Spacing.BUTTON_X, pady=Spacing.BUTTON_Y
         )
 
     def clear_on_click(self) -> None:
@@ -1576,8 +1627,8 @@ class Card(ctk.CTkFrame):
             height=50,
             command=on_click,  
         )
-        self.image.pack(padx=Spacing.LABELS_X, pady=Spacing.LABELS_Y)
-        self.title.pack(padx=Spacing.LABELS_X, pady=(0, Spacing.LABELS_Y))
+        self.image.pack(padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y)
+        self.title.pack(padx=Spacing.LABEL_X, pady=(0, Spacing.LABEL_Y))
 
         # Add hover bindings
         self.add_binds()
@@ -1802,7 +1853,7 @@ class ActionMenuButton(ctk.CTkFrame):
                 hover_color="#F0E0E0",
                 height=28,
                 command=lambda: self._handle_action(self.on_show)
-            ).pack(fill="x", padx=Spacing.BUTTONS_X, pady=(Spacing.BUTTONS_Y, 0))
+            ).pack(fill="x", padx=Spacing.BUTTON_X, pady=(Spacing.BUTTON_Y, 0))
 
         if self.on_edit:
             ctk.CTkButton(
@@ -1815,7 +1866,7 @@ class ActionMenuButton(ctk.CTkFrame):
                 hover_color="#F0E0E0",
                 height=28,
                 command=lambda: self._handle_action(self.on_edit)
-            ).pack(fill="x", padx=Spacing.BUTTONS_X, pady=Spacing.BUTTONS_Y)
+            ).pack(fill="x", padx=Spacing.BUTTON_X, pady=Spacing.BUTTON_Y)
 
         if self.on_delete:
             ctk.CTkButton(
@@ -1828,7 +1879,7 @@ class ActionMenuButton(ctk.CTkFrame):
                 hover_color="#F8E5E5",
                 height=28,
                 command=lambda: self._handle_action(self.on_delete)
-            ).pack(fill="x", padx=Spacing.BUTTONS_X, pady=(0, Spacing.BUTTONS_Y))
+            ).pack(fill="x", padx=Spacing.BUTTON_X, pady=(0, Spacing.BUTTON_Y))
 
         # Position menu below button
         x = self.menu_button.winfo_rootx() - self.winfo_toplevel().winfo_rootx() - self.menu_button.winfo_width()

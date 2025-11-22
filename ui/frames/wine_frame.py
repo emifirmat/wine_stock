@@ -99,10 +99,10 @@ class WineFrame(ctk.CTkScrollableFrame):
 
         # Position cards in grid
         card_manage_wine.grid(
-            row=0, column=0, padx=Spacing.CARDS_X, pady=Spacing.CARDS_Y
+            row=0, column=0, padx=Spacing.CARD_X, pady=Spacing.CARD_Y
         )
         card_add_wine.grid(
-            row=0, column=1, padx=Spacing.CARDS_X, pady=Spacing.CARDS_Y
+            row=0, column=1, padx=Spacing.CARD_X, pady=Spacing.CARD_Y
         )
         
     

@@ -184,13 +184,14 @@ class Spacing:
     XLARGE = BASE * 5
 
     # Widget-specific spacing (horizontal, vertical)
-    BUTTONS_X, BUTTONS_Y = MEDIUM, MEDIUM # Or SMALL depeding on context
-    CARDS_X, CARDS_Y = LARGE, SMALL
-    LABELS_X, LABELS_Y = SMALL, SMALL
+    BUTTON_X, BUTTON_Y = MEDIUM, MEDIUM # Or SMALL depeding on context
+    CARD_X, CARD_Y = LARGE, SMALL
+    LABEL_X, LABEL_Y = SMALL, SMALL
     NAVLINK_X, NAVLINK_Y = MEDIUM, SMALL
     SECTION_X, SECTION_Y = MEDIUM, MEDIUM # or LARGE depending on context
     SUBSECTION_X, SUBSECTION_Y = MEDIUM, SMALL
     TABLE_X, TABLE_Y = SMALL, LARGE
+    TABLE_CELL_Y, TABLE_CELL_X = SMALL, SMALL
     TITLE_X, TITLE_Y = SMALL, (LARGE, SMALL) # Includes subtitle
     WINDOW_X, WINDOW_Y =  XLARGE, XLARGE
 

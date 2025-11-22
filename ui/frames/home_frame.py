@@ -123,13 +123,13 @@ class HomeFrame(ctk.CTkScrollableFrame):
 
         # Position cards in grid
         card_new_sale.grid(
-            row=0, column=0, padx=Spacing.CARDS_X, pady=Spacing.CARDS_Y
+            row=0, column=0, padx=Spacing.CARD_X, pady=Spacing.CARD_Y
         )
         card_new_purchase.grid(
-            row=0, column=1, padx=Spacing.CARDS_X, pady=Spacing.CARDS_Y
+            row=0, column=1, padx=Spacing.CARD_X, pady=Spacing.CARD_Y
         )
         card_manage_transaction.grid(
-            row=1, column=0, padx=Spacing.CARDS_X, pady=Spacing.CARDS_Y
+            row=1, column=0, padx=Spacing.CARD_X, pady=Spacing.CARD_Y
         )
 
         # Note: ScrollableFrames can't expand vertically due to internal design.

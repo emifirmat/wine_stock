@@ -108,7 +108,7 @@ class ReportFrame(ctk.CTkScrollableFrame):
                 on_click=(lambda f=filter_type: self.generate_report(f))
             ).grid(
                 row=i // 2, column=i % 2, 
-                padx=Spacing.CARDS_X, pady=Spacing.CARDS_Y
+                padx=Spacing.CARD_X, pady=Spacing.CARD_Y
             )
 
     def generate_report(self, filter_type: str | None = None) -> None:

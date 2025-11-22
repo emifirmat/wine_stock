@@ -1,26 +1,42 @@
 """
-File for settings form.
+Settings form for shop configuration.
+
+This module provides the form interface for updating shop name and logo
+in the settings section.
 """
 import customtkinter as ctk
+from sqlalchemy.orm import Session
+from typing import Callable
 
 from db.models import Shop
-from ui.components import (TextInput, ImageInput)
-from ui.style import Colours, Fonts, Spacing
+from helpers import load_image_from_file
+from ui.components import TextInput, ImageInput
+from ui.style import Colours, Fonts, Spacing, Rounding
 
 
 class SettingsForm(ctk.CTkFrame):
     """
-    It contains all the components and logic related to settings
+    Settings form for shop configuration.
+    
+    Provides input fields for shop name and logo, allowing users to
+    customize the shop information displayed in the application.
     """
     def __init__(
-            self, root: ctk.CTkFrame, session, on_save, **kwargs
+            self, root: ctk.CTkFrame, session: Session, on_save: Callable, **kwargs
         ):
-        super().__init__(root, **kwargs)
-        self.configure(
-            fg_color=Colours.BG_FORM,
-        )
+        """
+        Initialize the settings form.
         
-        # Db instances
+        Parameters:
+            root: Parent frame container
+            session: SQLAlchemy database session
+            on_save: Callback function executed after saving changes
+            **kwargs: Additional CTkFrame keyword arguments
+        """
+        super().__init__(root, **kwargs)
+        self.configure(fg_color=Colours.BG_FORM, corner_radius=Rounding.FRAME)
+        
+        # DB instances
         self.session = session
         self.shop = session.query(Shop).first()
         
@@ -34,9 +50,9 @@ class SettingsForm(ctk.CTkFrame):
 
     def create_components(self) -> None:
         """
-        Creates the setting option components
+        Create and display settings form inputs and save button.
         """
-        # Name input
+        # Shop name input
         self.input_name = TextInput(
             self,
             label_text="Shop Name",
@@ -44,20 +60,22 @@ class SettingsForm(ctk.CTkFrame):
             optional=True
         )
 
-        # Logo input
+        # Shop logo input
         self.input_image = ImageInput(
             self,
             label_text="Shop Logo",
             image_path=self.shop.logo_path,
             optional=True
         )
-    
         
-        for input in [self.input_name, self.input_image]:
-            input.set_total_width(450)
-            input.pack(padx= 15, pady=(20, 0), expand=True)
+        # Configure and position inputs
+        for input_widget in [self.input_name, self.input_image]:
+            input_widget.set_total_width(450)
+            input_widget.pack(
+                padx=Spacing.SECTION_X, pady=(Spacing.SECTION_Y, 0), expand=True
+            )
 
-        # Save Button
+        # Create Save Button
         save_button = ctk.CTkButton(
             self,
             text="Save",
@@ -65,28 +83,39 @@ class SettingsForm(ctk.CTkFrame):
             fg_color=Colours.BTN_SAVE,
             hover_color=Colours.BG_HOVER_BTN_SAVE,
             font=Fonts.TEXT_MAIN,
-            corner_radius=10,
+            corner_radius=Rounding.BUTTON,
             cursor="hand2",
             command=self.save_changes
         )
         save_button.pack(
-            side="bottom", padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y)
+            side="bottom", padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y
+        )
 
     def save_changes(self) -> None:
         """
-        Store and load logo, and update label_preview
+        Save shop name and logo changes to database.
+        
+        Updates the shop record with new name (if provided) and logo path,
+        then executes the callback to refresh the main window display.
         """ 
-        # Update name
+        # Update shop name if provided
         new_name = self.input_name.entry.get().strip()
         if new_name:
             self.shop.name = new_name
 
-        # Update logo
+        # Update shop logo if new file selected
         new_logo_path = self.input_image.get_new_path()
-        self.shop.logo_path = new_logo_path if new_logo_path else "assets/logos/app_logo.png"
+        if new_logo_path:
+            # Save logo to assets folder and get destination path
+            saved_path = load_image_from_file(new_logo_path)
+            self.shop.logo_path = str(saved_path)
 
-        # Sabe changes in db
+        # If no new logo selected, keep existing or use default
+        elif not self.shop.logo_path:
+            self.shop.logo_path = "assets/logos/app_logo.png"
+
+        # Save changes to DB
         self.session.commit()
 
-        # Call back to main window
+        # Execute callback to refresh main window
         self.on_save()

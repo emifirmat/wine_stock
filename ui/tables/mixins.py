@@ -1,93 +1,122 @@
 """
-Classes to add features to the tables
+Mixins for adding features to table components.
+
+This module provides reusable mixins that can be added to table classes
+to extend their functionality with sorting, filtering, and other features.
 """
 import customtkinter as ctk
 from abc import ABC, abstractmethod
-from typing import Callable, List, Dict
+from typing import Callable
 
 
 class SortMixin(ABC):
     """
-    Mixin to add sorting capabilities to a table.
-
+    Mixin adding column sorting capabilities to tables.
+    
+    Provides methods for sorting table data by column with visual indicators
+    (arrows) showing sort direction. Supports toggling between ascending and
+    descending order.
+    
     Requirements:
-        - The class must define filtered_lines: list
-        - The class must define `header_labels: list[ctk.CTkLabel]`
-        - Must implement get_sorting_keys()
+        - Class must define filtered_lines: list
+        - Class must define header_labels: list[ctk.CTkLabel]
+        - Class must implement get_sorting_keys()
     """
-    def setup_sorting(self):
+    def setup_sorting(self) -> None:
         """
-        Call this in the table's __init__ after headers are set.
+        Initialize sorting state variables.
+        
+        Call this in the table's __init__ after headers are created.
         """
-        # Sorting data
         self.sort_reverse: bool = False
         self.last_sort: int | None = None
-        self.sorting_keys: Dict[int, Callable] = self.get_sorting_keys()
+        self.sorting_keys: dict[int, Callable] = self.get_sorting_keys()
      
     @abstractmethod
-    def get_sorting_keys(self) -> Dict[int, Callable]:
+    def get_sorting_keys(self) -> dict[int, Callable]:
         """
-        Returns a dict of int-callables, one per column, to be used as sorting keys.
-        Example: [1: lambda row: row.name, 2: lambda row: row.date]
+        Get sorting key functions for each sortable column.
+        
+        Returns dictionary mapping column indices to functions that extract
+        the sort key from a row object.
+        
+        Returns:
+            Dictionary where keys are column indices and values are callables
+            that take a row object and return a sortable value
+            
+        Example:
+            {
+                0: lambda row: row.name,
+                1: lambda row: row.date,
+                2: lambda row: row.quantity
+            }
         """        
-        raise NotImplementedError
+        raise NotImplementedError("Subclasses must implement get_sorting_keys()")
     
-    def sort_table(self, event, col_index: int):
+    def sort_table(self, event, col_index: int) -> None:
         """
-        Sort triggered from a UI event.
+        Sort table by column when header is clicked.
+        
         Parameters:
-            - event: Triggered UI event
-            - col_index: Index of the clicked header
-            - headers: header labels that can be used for sorting
+            event: Click event from header label
+            col_index: Index of clicked column header
         """
-        # Get ctkLabel of the clicked header
+        # Get label that was clicked
         event_label = event.widget.master
 
-        # Prevents an error when user click on label but not on the text
-        if (not (
-            0 <= event.x <= event_label.winfo_width() 
-            and 0 <= event.y <= event_label.winfo_height()
-        )):
+        # Verify click was within label bounds (prevent edge case issues)
+        if not (
+            0 <= event.x <= event_label.winfo_width() and 
+            0 <= event.y <= event_label.winfo_height()
+        ):
             return
         
-        # Clean arrows and sort
+        # Update arrow indicators and perform sort
         self.clean_arrows(event_label)
         self.sort_by(col_index)
 
-    def clean_arrows(self, event_label: ctk.CTkLabel):
+    def clean_arrows(self, event_label: ctk.CTkLabel) -> None:
         """
-        Clears the arrows in all the headers and set a new one for the clicked
-        one. ↑ means sorted in ascending order, ↓ means sorted in descending order.
+        Clear sort arrows from all headers and add arrow to clicked header.
+        
+        Arrow indicators: ↑ = ascending order, ↓ = descending order
+        
         Parameters:
-            - event: Triggered UI event
-            - col_index: Index of the clicked header
-            - headers: header labels that can be used for sorting
+            event_label: Header label that was clicked
         """
-        # Ignore picture header
+        # Remove arrows from clicked label
         clean_text = event_label.cget("text").replace("↑", "").replace("↓", "")
         
-        # Clean arrow in all labels
+        # Remove arrows from all header labels
         for lbl in self.header_labels:
             lbl_text = lbl.cget("text").replace("↑", "").replace("↓", "")
             lbl.configure(text=lbl_text)
 
-        # Add arrow depending on order
+        # Add arrow to clicked label based on sort direction
         arrow = "↓" if self.sort_reverse else "↑"
         event_label.configure(text=clean_text + arrow)
     
-    def sort_by(self, col_index: int, new_sort: bool = True):
+    def sort_by(self, col_index: int, new_sort: bool = True) -> None:
         """
-        Order lines by column index.
+        Sort filtered lines by specified column.
+        
+        Parameters:
+            col_index: Index of column to sort by
+            new_sort: If True, toggle sort direction; if False, keep current direction
         """
-        # Stop function is the header can't be used as sorting key
-        if not self.sorting_keys[col_index]:
+        # Skip if column is not sortable
+        if col_index not in self.sorting_keys or not self.sorting_keys[col_index]:
             return
         
-        # Sort the list of filtered lines
+        # Determine sort direction
         reverse = self.sort_reverse if new_sort else not self.sort_reverse
-        self.filtered_lines.sort(key=self.sorting_keys[col_index], reverse=reverse)
         
-        # Toggle reverse mode and save last sort
+        # Sort the filtered data
+        self.filtered_lines.sort(
+            key=self.sorting_keys[col_index], reverse=reverse
+        )
+        
+        # Update sort state
         if new_sort:
             self.sort_reverse = not self.sort_reverse
             self.last_sort = col_index  

@@ -1,53 +1,73 @@
 """
-Table that contains lines with name, quantity, price and subtotal of a transaction
-included by the user adter clicking on add line.
+Transaction lines table for adding multiple wines.
+
+This module provides a table component for displaying and managing
+transaction lines (sales/purchases) added by the user before saving.
 """
 import customtkinter as ctk
 import tkinter as tk
-import tkinter.messagebox as messagebox
 from decimal import Decimal
+from sqlalchemy.orm import Session
+from typing import Callable
 
 from db.models import Wine
-from ui.style import Colours, Fonts
+from ui.style import Colours, Fonts, Spacing
 from ui.components import DoubleLabel
+
 
 class AddLineTable(ctk.CTkFrame):
     """
-    A frame that contains the components of a table including the row number,
-    name, quantity, price, and subtotal of a transaction with a remove button.
+    Table for managing transaction lines before saving.
+    
+    Displays a list of wines with quantity, price, and subtotal for each line.
+    Users can add and remove lines, with automatic total calculation.
     """
-    def __init__(self, root: ctk.CTkFrame, session, headers: list[str], 
-        on_lines_change=None, **kwargs):
-        # Set up form frame
-        super().__init__(root, **kwargs)
-        self.configure(
-            fg_color=Colours.BG_MAIN,
-        )
+
+    def __init__(
+        self, root: ctk.CTkFrame, session: Session, headers: list[str], 
+        on_lines_change: Callable | None = None, **kwargs
+    ):
+        """
+        Initialise transaction lines table.
         
-        # Include db instances
+        Parameters:
+            root: Parent frame container
+            session: SQLAlchemy database session
+            headers: List of column header labels
+            on_lines_change: Callback executed when lines are removed,
+                receives (lines_count, wine_name, quantity)
+            **kwargs: Additional CTkFrame keyword arguments
+        """
+        super().__init__(root, **kwargs)
+        self.configure(fg_color=Colours.BG_MAIN)
+        
+        # DB instances
         self.session = session
 
         # Table data
         self.headers = headers
         self.line_counter = 0
-        self.line_list = [] # It contains dicts
-        self.total_var = tk.StringVar(value=f"€ 0.00")
+        self.line_list = [] # List of transaction dictionaries
+        self.total_var = tk.StringVar(value="€ 0.00")
 
         # Callback
         self.on_lines_change = on_lines_change
 
-        # Add components
+        # Create components
         self.create_components()
 
-    def create_components(self):
+    def create_components(self) -> None:
         """
-        Create Inputs and buttons.
+        Create and display table headers and total label.
         """
-        # Headers
+        # Create header row
         row_header_frame = ctk.CTkFrame(self, fg_color="transparent")
         row_header_frame.pack(fill="x", pady=2)
         
+        # Define column widths
         widths = [50, 200, 100, 100, 100, 30]
+        
+        # Create header labels
         for i, (header, width) in enumerate(zip(self.headers, widths)):
             label = ctk.CTkLabel(
                 row_header_frame, 
@@ -57,9 +77,12 @@ class AddLineTable(ctk.CTkFrame):
                 width=width,
                 wraplength=width
             )
-            label.grid(row=0, column=i, padx=(0, 10))
+            label.grid(
+                row=0, column=i, 
+                padx=Spacing.TABLE_CELL_X, pady=Spacing.TABLE_CELL_Y
+            )
 
-        # Total amount
+        # Create total amount label
         total = DoubleLabel(
             self,
             label_title_text="Total",
@@ -68,28 +91,34 @@ class AddLineTable(ctk.CTkFrame):
         total.bold_value_text()
         total.pack(side="bottom", anchor="se")
 
-    def add_new_transaction_line(self, wine_instance: Wine, transaction_type: str, 
-            quantity: int, subtotal: Decimal):
+    def add_new_transaction_line(
+        self, wine_instance: Wine, transaction_type: str, quantity: int, 
+        subtotal: Decimal
+    ) -> None:
         """
-        It creates a new line with the data of the name, quantity, price, and 
-        subtotal of a transaction added by the user, including a remove button. 
-        It also updates the value in label_total.
-        Inputs:
-            - wine_instance: Object of the wine selected by the user
-            - transaction_type: Can be "sale" or "purchase"
-            - quantity: Amount of bottes selected by the user.
-            - subtotal: Result of doing quantity x price.
+        Add a new transaction line to the table.
+        
+        Creates a row with wine details and a remove button, updates
+        the running total.
+        
+        Parameters:
+            wine_instance: Wine object selected by the user
+            transaction_type: Type of transaction - "sale" or "purchase"
+            quantity: Number of bottles
+            subtotal: Pre-calculated subtotal (quantity x price)
         """
-
-        # Update line counter
+        # Increment line counter
         self.line_counter += 1
 
-        # Add transaction in the list
+        # Get transaction price
         if transaction_type == "sale":
             price = wine_instance.selling_price
         elif transaction_type == "purchase": 
             price = wine_instance.purchase_price
+        else:
+            raise ValueError("Transaction type must be 'sale' or 'purchase'")
         
+        # Add transaction to list
         self.line_list.append({
             "wine": wine_instance,
             "transaction_type": transaction_type,
@@ -97,12 +126,10 @@ class AddLineTable(ctk.CTkFrame):
             "price": price
         })
 
-        # Create line components
-        frame_line = ctk.CTkFrame(
-            self,
-            fg_color="transparent"
-        )
+        # Create line frame
+        frame_line = ctk.CTkFrame(self, fg_color="transparent")
 
+        # Create line number label
         column_line_number = ctk.CTkLabel(
             frame_line,
             text=f"{self.line_counter}.",
@@ -112,6 +139,7 @@ class AddLineTable(ctk.CTkFrame):
             wraplength=50
         )
 
+        # Create wine name label
         column_name = ctk.CTkLabel(
             frame_line,
             text=wine_instance.name,
@@ -121,23 +149,35 @@ class AddLineTable(ctk.CTkFrame):
             wraplength=200
         )
 
-        column_line_number.grid(row=0, column=0, padx=(0, 10))
-        column_name.grid(row=0, column=1, padx=(0, 10))
+        # Position line number and name
+        column_line_number.grid(
+            row=0, column=0, 
+            padx=Spacing.TABLE_CELL_X, pady=Spacing.TABLE_CELL_Y
+        )
+        column_name.grid(
+            row=0, column=1, 
+            padx=Spacing.TABLE_CELL_X, pady=Spacing.TABLE_CELL_Y
+        )
 
-        for i, column_text in enumerate([quantity, f"€ {price}", 
-            f"€ {subtotal}"], start=2
+        # Create quantity, price, and subtotal labels
+        for i, column_text in enumerate(
+            [quantity, f"€ {price}", f"€ {subtotal}"], start=2
         ):
             label_column = ctk.CTkLabel(
                 frame_line,
-                text=column_text,
+                text=str(column_text),
                 text_color=Colours.TEXT_MAIN,
                 font=Fonts.TEXT_LABEL,
                 width=100,
                 wraplength=100
             
             )
-            label_column.grid(row=0, column=i, padx=(0, 10))
+            label_column.grid(
+                row=0, column=i,
+                padx=Spacing.TABLE_CELL_X, pady=Spacing.TABLE_CELL_Y
+            )
 
+        # Create remove button
         button_remove = ctk.CTkButton(
             frame_line,
             text="X",
@@ -148,72 +188,86 @@ class AddLineTable(ctk.CTkFrame):
             cursor="hand2",
             command=lambda: self.remove_line(frame_line, subtotal)
         )
-
-        button_remove.grid(row=0, column=6, sticky="e", padx=(0, 20))
-        frame_line.pack(pady=(0, 10))
+        button_remove.grid(
+            row=0, column=6, sticky="e", 
+            padx=Spacing.BUTTON_X, pady=Spacing.BUTTON_Y
+        )
+        
+        # Pack line frame
+        frame_line.pack(padx=Spacing.TABLE_CELL_X, pady=Spacing.TABLE_CELL_Y)
 
         # Update total value
         self.update_total_value(subtotal)
     
-    def remove_line(self, parent_frame: ctk.CTkFrame, subtotal: Decimal):
+    def remove_line(self, parent_frame: ctk.CTkFrame, subtotal: Decimal) -> None:
         """
-        Removes the line where the button that triggered the event was clicked.
-        Inputs:
-            - parent_frame: Frame that contains enum, name, quantity, price and 
-            subtotal.
-            - subtotal: Result of doing quantity x price.
+        Remove a transaction line from the table.
+        
+        Updates line numbers for remaining lines, adjusts total, and triggers 
+        callback if provided.
+        
+        Parameters:
+            parent_frame: Frame containing the line to remove
+            subtotal: Subtotal amount to subtract from total
         """
+        # Extract wine name and quantity from line
         wine_name = parent_frame.winfo_children()[1].cget("text").strip() 
         quantity = parent_frame.winfo_children()[2].cget("text")
         
+        # Get line index (convert "1." to 0-based index)
         line_table_index = parent_frame.winfo_children()[0].cget("text")
         line_table_index = int(line_table_index.replace(".","")) - 1
-        current_index = line_table_index
         
-        # Refresh total value
-        self.update_total_value(subtotal, substract=True)
+        # Update total value
+        self.update_total_value(subtotal, subtract=True)
 
-        # Update rest of the lines indices (first 2 indices are headers and total)
-        # As children are 0-based, and enum 1based, I don't need to add + 1
+        # Update line numbers for subsequent lines
+        # Skip first 2 children (headers and total label)
+        current_index = line_table_index
         for line in self.winfo_children()[line_table_index + 2:]:
             label_line_number = line.winfo_children()[0]
             if isinstance(label_line_number, ctk.CTkLabel):
-                label_line_number.configure(
-                    text=f"{current_index}."
-                )
+                label_line_number.configure(text=f"{current_index}.")
                 current_index += 1
 
-        # Remove line
+        # Remove line from UI and data
         parent_frame.destroy()
         del self.line_list[line_table_index]
         self.line_counter -= 1
         
-        # Callback disable save button if there are no more lines and reduce 
-        # temp stock 
+        # Trigger callback with updated state
         if self.on_lines_change:
             self.on_lines_change(len(self.line_list), wine_name, int(quantity))
 
-    def update_total_value(self, subtotal: Decimal, substract: bool = False):
+    def update_total_value(
+        self, subtotal: Decimal, subtract: bool = False
+    ) -> None:
         """
-        Updates the tk variable "total_var" which updates the value of the 
-        "total" label.
-        Inputs:
-            - subtotal: Result of doing quantity x price.
-            - substract: Bool that indicates if subtotal should sum or substract
+        Update the total amount by adding or subtracting a subtotal.
+        
+        Parameters:
+            subtotal: Amount to add or subtract from total
+            subtract: If True, subtract subtotal; otherwise add it
         """
-        # Update total value
+        # Parse total value
         current_total = Decimal(self.total_var.get().replace("€ ", ""))
         
-        if not substract:
-            new_total = current_total + subtotal
-        else:
+        # Calculate new total
+        if subtract:
             new_total = current_total - subtotal
+        else:
+            new_total = current_total + subtotal
         
+        # Update total variable
         self.total_var.set(f"€ {new_total}")
     
     def get_line_list(self) -> list[dict]:
         """
-        Returns the list of transactions (lines) added in the table
+        Get list of all transaction lines.
+        
+        Returns:
+            List of dictionaries, each containing wine, transaction_type,
+            quantity, and price for a line
         """
         return self.line_list
     

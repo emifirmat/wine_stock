@@ -10,7 +10,7 @@ from decimal import Decimal
 from ui.components import (IntInput, DropdownInput, DoubleLabel, AutocompleteInput,
     ClearSaveButtons, DateInput)
 from ui.forms.filters import TransactionFiltersForm
-from ui.style import Colours, Fonts
+from ui.style import Colours, Fonts, Spacing
 from ui.tables.transactions_table import TransactionsTable
 from db.models import Wine, StockMovement
 
@@ -63,7 +63,10 @@ class ManageTransactionForm(ctk.CTkFrame):
             ],
             lines=StockMovement.all_ordered_by_datetime(self.session)
         )
-        self.transactions_table.grid(row=1, column=0, pady=(10, 0), sticky="nsew")
+        self.transactions_table.grid(
+            row=1, column=0, 
+            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="nsew"
+        )
 
         # ==Filters section==
         self.filters_form = TransactionFiltersForm(
