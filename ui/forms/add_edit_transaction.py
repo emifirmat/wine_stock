@@ -234,6 +234,10 @@ class AddTransactionForm(BaseTransactionForm):
             "quantity": textbox_quantity, 
         }
 
+        # Increase entry widths
+        autocomplete_wine.set_entry_width(220)
+        textbox_quantity.set_entry_width(110)
+
         # Create transaction lines table
         headers = [" ", "Name", "Quantity", "Price", "Subtotal", " "]
         self.table_lines = AddLineTable(
@@ -571,6 +575,8 @@ class EditTransactionForm(BaseTransactionForm):
             frame_background,
             label_text="Quantity",
             textvariable=self.quantity_var,
+            from_=0,
+            to=999,
         )
 
         self.label_price = DoubleLabel(
@@ -605,18 +611,26 @@ class EditTransactionForm(BaseTransactionForm):
             elif input_name == "datetime":
                 input_widget.configure_label_value(text=str(value))
         
-        # Position components
+        # Set columns and position components
         for index, input_widget in enumerate(inputs_dict.values()):
             if isinstance(input_widget, DoubleLabel):
                 # Fixed width for value labels with dynamic content
-                input_widget.set_columns_layout(title_width=90, value_width=100)
+                input_widget.set_columns_layout(title_width=90, value_width=180)
+            elif isinstance(input_widget, AutocompleteInput):
+                input_widget.set_entry_width(280)
+            elif isinstance(input_widget, DropdownInput):
+                input_widget.configure_dropdown(width=170)
+            else:
+                input_widget.set_entry_width(170)
+            
             input_widget.set_total_width(450)
+            
             input_widget.grid(
                 row=index, column=0, 
                 padx=Spacing.LABEL_X, 
                 pady=Spacing.LABEL_Y
             )
-                   
+        
         # Error message label
         self.label_error = ctk.CTkLabel(
             frame_background,
@@ -769,3 +783,4 @@ class EditTransactionForm(BaseTransactionForm):
     
         # Close window
         self.winfo_toplevel().destroy()
+    

@@ -1,31 +1,38 @@
 """
-Form that contain the inputs and methods to add a new sale
+Transaction management form with filtering and table display.
+
+This module provides a form for viewing, filtering, editing, and deleting
+stock movement transactions. Combines a filterable table with a collapsible
+filter panel.
 """
 import customtkinter as ctk
-from datetime import datetime, timedelta
-import tkinter as tk
-import tkinter.messagebox as messagebox
-from decimal import Decimal
+from sqlalchemy.orm import Session
 
-from ui.components import (IntInput, DropdownInput, DoubleLabel, AutocompleteInput,
-    ClearSaveButtons, DateInput)
 from ui.forms.filters import TransactionFiltersForm
 from ui.style import Colours, Fonts, Spacing
 from ui.tables.transactions_table import TransactionsTable
-from db.models import Wine, StockMovement
+from db.models import StockMovement
 
 class ManageTransactionForm(ctk.CTkFrame):
     """
-    Contains all the components and logic related to remove a transaction.
+     Transaction management form with filtering capabilities.
+    
+    Displays a table of all stock movements (sales and purchases) with
+    collapsible filters for narrowing down the displayed transactions.
     """
-    def __init__(
-            self, root: ctk.CTkFrame, session, **kwargs
-        ):
-        # Set up form frame
+    def __init__(self, root: ctk.CTkFrame, session: Session, **kwargs):
+        """
+        Initialize transaction management form.
+        
+        Parameters:
+            root: Parent frame container
+            session: SQLAlchemy database session
+            **kwargs: Additional CTkFrame keyword arguments
+        """
         super().__init__(root, **kwargs)
         self.configure(fg_color=Colours.BG_SECONDARY, height=500)
         
-        # Include db instances
+        # DB instances
         self.session = session
 
         # Add components
@@ -33,27 +40,15 @@ class ManageTransactionForm(ctk.CTkFrame):
         self.filters_form = None
         self.create_components()
 
-    def get_wine_names_dict(self) -> dict[str:int]:
+    def create_components(self) -> None:
         """
-        Get a list of wine names with their instances.
-        Returns:
-            A dict of wine names with their instance as value.
+        Create and position filters form and transactions table.
         """
-        wines = Wine.all_ordered(self.session)
-        return {
-            f"{wine.name.title()}": wine for wine in wines
-        }
-
-    def create_components(self) -> list:
-        """
-        Create the filters and table.
-
-        Returns:
-            A list containing all the created filters in the form.
-        """
+        # Configure grid responsiveness
         self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=1)
     
-        # ==Table section==
+        # Create transactions table
         self.transactions_table = TransactionsTable(
             self,
             self.session,
@@ -68,10 +63,13 @@ class ManageTransactionForm(ctk.CTkFrame):
             padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="nsew"
         )
 
-        # ==Filters section==
+        # Create filters form
         self.filters_form = TransactionFiltersForm(
             self,
             self.session,
             filtered_table=self.transactions_table
         )
-        self.filters_form.grid(row=0, column=0, pady=(10, 20), sticky="we")
+        self.filters_form.grid(
+            row=0, column=0, 
+            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="we"
+        )

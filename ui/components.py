@@ -1080,7 +1080,6 @@ class DropdownInput(BaseInput):
         else:
             self.set_to_first_value()
         
-
     def configure_dropdown(self, **kwargs) -> None:
         """
         Configure dropdown attributes.

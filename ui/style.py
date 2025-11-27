@@ -178,6 +178,7 @@ class Spacing:
 
     # Base layout spacing values
     BASE = 8
+    XSMALL = BASE / 2
     SMALL = BASE
     MEDIUM = BASE * 2
     LARGE = BASE * 3

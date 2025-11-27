@@ -5,6 +5,7 @@ This module provides secondary functions used throughout the program,
 including resource path handling, database utilities, image processing,
 and UI helper functions.
 """
+import platform
 import shutil
 import sys
 import customtkinter as ctk
@@ -238,3 +239,15 @@ def get_coords_center(widget: ctk.CTkBaseClass) -> tuple[int, int]:
     x = widget.winfo_screenwidth() // 2
     y = widget.winfo_screenheight() // 2
     return (x, y)
+
+def running_in_wsl() -> bool:
+    """
+    Check whether the application is running inside Windows Subsystem for Linux (WSL).
+    
+    In WSL environments, the Linux kernel usually contains "microsoft" in its release name,
+    which allows us to detect it reliably via platform information.
+    
+    Returns:
+        True if running under WSL, False otherwise
+    """
+    return "microsoft" in platform.uname().release.lower()

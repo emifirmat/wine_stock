@@ -11,7 +11,7 @@ from datetime import datetime, date
 from sqlalchemy.orm import Session
 from typing import Callable
 
-from helpers import get_coords_center
+from helpers import running_in_wsl
 from ui.components import ActionMenuButton
 from ui.forms.add_edit_transaction import EditTransactionForm
 from ui.style import Colours, Fonts, Spacing
@@ -224,48 +224,146 @@ class TransactionsTable(DataTable, SortMixin):
         )
         edit_window.title("Edit Transaction")
         
-        # Center window on screen
-        center_x, center_y = get_coords_center(edit_window)
-        w_width, w_height = 700, min(int(self.winfo_screenheight() * 0.8), 1000)
-        edit_window.geometry(f"{w_width}x{w_height}+{center_x - w_width}+{center_y}")
-        edit_window.update_idletasks() # Required before grab_set
-        edit_window.grab_set()
-        edit_window.focus_set()
-        
-        # Create scrollable container
-        frame_scroll = ctk.CTkScrollableFrame(
-            edit_window,
-            fg_color="transparent"
-        )
-        frame_scroll.pack(expand=True, fill="both")
+        # Remove window decorations (title bar)
+        # Note: WSL becomes unstable if this is removed
+        if running_in_wsl():
+            edit_window.overrideredirect(False)
+            print(
+                "Warning: This app is running under Windows Subsystem for Linux (WSL). "
+                "Standard window borders have been enabled to improve stability."
+            )
+        else:
+            edit_window.overrideredirect(True)
+            
 
-        # Add and place title
-        title = ctk.CTkLabel(
-            frame_scroll,
-            text="Edit Transaction",
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.SUBTITLE,
-        )     
-        title.grid(
-            row=0, column=0, 
-            padx=Spacing.TITLE_X, pady=Spacing.TITLE_Y, sticky="n"
+        # Define window dimensions
+        w_width= 700
+
+        # Get parent window info
+        parent = self.winfo_toplevel()
+        parent.update_idletasks() # Get parent's last dimensions
+        
+        parent_x = parent.winfo_x()
+        parent_y = parent.winfo_y()
+        parent_width = parent.winfo_width()
+        screen_height = edit_window.winfo_screenheight()
+
+        # Calculate max height
+        max_height = int(screen_height * 0.8)
+
+        # Temporarily set geometry  
+        center_x = parent_x + (parent_width - w_width) // 2
+        edit_window.geometry(f"{w_width}x{max_height}+{center_x}+{parent_y}")
+        edit_window.update_idletasks()
+        
+        # Create main container with border
+        main_container = ctk.CTkFrame(
+            edit_window,
+            fg_color=Colours.BG_MAIN,
+            border_width=2,
+            border_color=Colours.BORDERS
         )
+        main_container.pack(expand=True, fill="both")
+
+        # Create custom title bar
+        title_bar = ctk.CTkFrame(
+            main_container,
+            fg_color=Colours.BG_HOVER_NAV,
+            height=40
+        )
+        title_bar.pack(fill="x", side="top", padx=Spacing.XSMALL, pady=Spacing.XSMALL)
+        title_bar.pack_propagate(False)  # Maintain fixed height
+        
+        # Create close button
+        close_button = ctk.CTkButton(
+            title_bar,
+            text="✕",
+            text_color=Colours.TEXT_MAIN,
+            width=30,
+            height=30,
+            fg_color="transparent",
+            hover_color=Colours.BG_SECONDARY,
+            command=lambda: self._close_edit_window(edit_window),
+            font=Fonts.SUBTITLE,
+        )
+        close_button.pack(side="right", padx=Spacing.SMALL, pady=Spacing.SMALL)
+
+        # Create title label
+        title_label = ctk.CTkLabel(
+            title_bar,
+            text="Edit Transaction",
+            text_color=Colours.TEXT_MAIN,
+            font=Fonts.SUBTITLE,
+        )
+        title_left_padding = Spacing.SMALL + 30 # Close button width
+        title_label.pack(
+            side="left", expand=True, fill="both",
+            padx=(title_left_padding, Spacing.SMALL), pady=Spacing.SMALL
+        )
+        
+        # Make title bar draggable
+        self._make_draggable(title_bar, edit_window)
+        self._make_draggable(title_label, edit_window)
 
         # Add edit form
         form = EditTransactionForm(
-            frame_scroll,
+            main_container,
             session=self.session,
             fg_color="transparent",
             movement=transaction,
             on_save=self.refresh_edited_rows,
         )
-        form.grid(
-            row=1, column=0, 
-            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="nsew"
+        form.pack(
+            fill="both", expand=True, 
+            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y
         )
 
-        # Configure responsiveness
-        frame_scroll.grid_columnconfigure(0, weight=1)
+        # Force update to get actual widget sizes
+        edit_window.update_idletasks()
+        
+        # Calculate required height
+        title_bar_height = 40
+        form_height = form.winfo_reqheight()
+        total_padding = (Spacing.XSMALL * 2) + (Spacing.SECTION_Y * 2)
+        w_height = min(title_bar_height * 2 + form_height + total_padding, max_height)
+
+        # Set final geometry
+        edit_window.geometry(f"{w_width}x{w_height}")
+        
+        edit_window.grab_set() # Modal window
+        edit_window.focus_set()
+
+    def _close_edit_window(self, window: ctk.CTkToplevel) -> None:
+        """
+        Close the edit window and release grab.
+
+        Parameters:
+            window: Edit window Toplevel
+        """
+        window.grab_release()
+        window.destroy()
+
+    def _make_draggable(self, title_bar:ctk.CTkFrame, window: ctk.CTkToplevel) -> None:
+        """
+        Make window draggable by clicking and dragging the title bar.
+
+        Parameters:
+            title_bar: Frame with the title and close button
+            window: Edit window Toplevel
+        """
+        def start_move(event):
+            window.x = event.x
+            window.y = event.y
+
+        def do_move(event):
+            deltax = event.x - window.x
+            deltay = event.y - window.y
+            x = window.winfo_x() + deltax
+            y = window.winfo_y() + deltay
+            window.geometry(f"+{x}+{y}")
+
+        title_bar.bind("<Button-1>", start_move)
+        title_bar.bind("<B1-Motion>", do_move)
 
     def refresh_edited_rows(self, movement: StockMovement) -> None:
         """
