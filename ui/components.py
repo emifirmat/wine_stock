@@ -1166,7 +1166,7 @@ class IntInput(BaseInput, EntryInputMixin):
     """
     def __init__(
         self, root, placeholder: str | None = None, from_: int | None = None,
-        to: int | None = None, textvariable: tk.Variable | None = None, **kwargs
+        to: int = 9999999999, textvariable: tk.Variable | None = None, **kwargs
     ):
         """
         Initialize integer input.
@@ -1186,7 +1186,7 @@ class IntInput(BaseInput, EntryInputMixin):
             fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN, 
             font=Fonts.TEXT_MAIN,
-            width=150,
+            width=130,
             from_=from_,
             to=to,
             textvariable=textvariable,
@@ -1204,7 +1204,8 @@ class DecimalInput(BaseInput, EntryInputMixin):
     """
     def __init__(
         self, root, placeholder: str | None = None, from_: Decimal | None = None,
-        to: Decimal | None = None, textvariable: tk.Variable | None = None, **kwargs
+        to: Decimal = Decimal(9999999999.99), 
+        textvariable: tk.Variable | None = None, **kwargs
     ):
         """
         Initialize decimal input.
@@ -1224,7 +1225,7 @@ class DecimalInput(BaseInput, EntryInputMixin):
             fg_color=Colours.BG_SECONDARY,
             text_color=Colours.TEXT_MAIN, 
             font=Fonts.TEXT_MAIN,
-            width=150,
+            width=130,
             from_=from_,
             to=to,
             textvariable=textvariable,
@@ -1346,6 +1347,8 @@ class DropdownInput(BaseInput):
             dropdown_hover_color=Colours.BG_HOVER_NAV,
             dropdown_text_color=Colours.TEXT_MAIN,
             button_hover_color=Colours.DROPDOWN_HOVER,
+            dynamic_resizing=False,
+            width=150, # Same as inputs
             command=command
         )
         
@@ -1741,7 +1744,6 @@ class ImageInput(BaseInput):
         self.current_image = load_ctk_image(self.temp_file_path) if self.temp_file_path else self.no_image
         self.label_preview.configure(image=self.current_image)
         
-
     def get_new_path(self) -> str | None:
         """
         Get the selected file path.
@@ -1749,7 +1751,7 @@ class ImageInput(BaseInput):
         Returns:
             File path selected by user, or None if no file selected
         """
-        return self.temp_file_path
+        return self.temp_file_path or None
 
     def clear(self) -> None:
         """
@@ -2079,6 +2081,10 @@ class ButtonGoBack(ctk.CTkButton):
 class ActionMenuButton(ctk.CTkFrame):
     """
     Button displaying contextual menu with Show, Edit, and Delete actions.
+
+    Provides a three-dot menu button that opens a contextual menu with
+    configurable actions. Menu automatically positions itself above or below
+    the button depending on available space.
     """
     def __init__(
         self, root, btn_name: str, on_show: Callable | None = None, 
@@ -2108,10 +2114,12 @@ class ActionMenuButton(ctk.CTkFrame):
         self.on_show = on_show
         self.on_edit = on_edit
         self.on_delete = on_delete
+        
+        # Menu state
         self.menu_visible = False
         self.menu_frame = None
 
-        # Menu trigger button
+        # Create menu trigger button
         self.menu_button = ctk.CTkButton(
             self,
             text="",
@@ -2120,7 +2128,7 @@ class ActionMenuButton(ctk.CTkFrame):
             width=25,
             height=25,
             fg_color="transparent",
-            hover_color="#EEE5E5",
+            hover_color=Colours.BG_HOVER_ACTION_MENU_BUTTON,
             command=self.toggle_menu
         )
         self.menu_button.pack(expand=True)
@@ -2136,7 +2144,7 @@ class ActionMenuButton(ctk.CTkFrame):
 
     def show_menu(self) -> None:
         """
-        Create and display the contextual action menu.
+        Create and display the contextual action menu with smart positioning.
         """
         self.menu_visible = True
 
@@ -2189,19 +2197,60 @@ class ActionMenuButton(ctk.CTkFrame):
                 command=lambda: self._handle_action(self.on_delete)
             ).pack(fill="x", padx=Spacing.BUTTON_X, pady=(0, Spacing.BUTTON_Y))
 
-        # Position menu below button
+        # Calculate menu position
         x = self.menu_button.winfo_rootx() - self.winfo_toplevel().winfo_rootx() - self.menu_button.winfo_width()
-        y = self.menu_button.winfo_rooty() - self.winfo_toplevel().winfo_rooty() + 30
+        y = self._calculate_menu_y_position()
         
+        # Position and display menu
         self.menu_frame.place(x=x, y=y)
         self.menu_frame.lift()
 
         # Bind click outside handler
         self.winfo_toplevel().bind("<Button-1>", self._check_click_outside, add="+")
 
+    def _calculate_menu_y_position(self) -> int:
+        """
+        Calculate optimal vertical position for menu.
+        
+        Positions menu below button if space available, otherwise above button.
+        
+        Returns:
+            Y coordinate relative to toplevel window
+        """
+        # Update widget dimensions
+        window = self.winfo_toplevel()
+        window.update_idletasks()
+        self.menu_frame.update_idletasks()
+
+        # Get window boundaries
+        window_top = window.winfo_rooty()
+        window_bottom = window_top + window.winfo_height()
+        
+        # Get button boundaries
+        button_height = self.menu_button.winfo_height()
+        button_top = self.menu_button.winfo_rooty()
+        button_bottom = button_top + button_height
+
+        # Get required menu height
+        menu_height = self.menu_frame.winfo_reqheight()
+
+        # Calculate relative positions
+        button_bottom_rel = button_bottom - window_top
+        button_top_rel = button_top - window_top - menu_height
+        
+        # Calculate available space below button
+        space_below = window_bottom - button_bottom
+
+        # Position below if space available, otherwise above
+        if space_below >= menu_height:
+            return button_bottom_rel
+
+        return button_top_rel
+
+
     def hide_menu(self) -> None:
         """
-        Destroy the menu if it exists.
+        Destroy menu and reset state.
         """
         if self.menu_frame:
             self.menu_frame.destroy()

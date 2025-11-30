@@ -439,6 +439,7 @@ class WineFiltersForm(BaseFiltersForm):
             optional=True
         )
 
+        # Position components
         autocomplete_wine.grid(
             row=0, column=0, 
             padx=Spacing.LABEL_X, pady=(0, Spacing.LABEL_Y), sticky="w"

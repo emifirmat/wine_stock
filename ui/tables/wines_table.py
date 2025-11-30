@@ -47,7 +47,7 @@ class WinesTable(DataTable, SortMixin):
         self.opened_toplevels = {}
 
         # onfigure table layout
-        self.column_widths = [100, 120, 100, 90, 95, 95, 90, 90, 90, 80]
+        self.column_widths = [110, 120, 100, 90, 95, 80, 90, 90, 90, 80]
         
         # Build table
         self.create_components()

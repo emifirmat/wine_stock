@@ -68,7 +68,7 @@ class ManageWineForm(ctk.CTkFrame):
             self,
             self.session,
             headers=[
-                "code", "picture", "name", "vintage year", "origin", "quantity",
+                "code", "picture", "name", "vintage year", "origin", "qty.",
                 "min. stock", "purchase price", "selling price", "actions"
             ],
             lines=Wine.all_ordered(self.session, order_by="code")

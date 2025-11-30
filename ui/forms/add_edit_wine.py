@@ -162,10 +162,13 @@ class AddWineForm(ctk.CTkFrame):
             "selling_price": selling_price
         }
 
-        # Position all inputs
-        for index, input in enumerate(inputs_dict.values()):
-            input.set_total_width(450)
-            input.grid(
+        # Align and position all inputs
+        for index, input_widget in enumerate(inputs_dict.values()):
+            # Disable autosize in dropdowns
+            if hasattr(input_widget, "configure_dropdown"):
+                input_widget.configure_dropdown(width=200)
+            input_widget.set_total_width(450)
+            input_widget.grid(
                 row=index, column=0, 
                 padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y
             )
