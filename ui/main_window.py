@@ -84,19 +84,21 @@ class MainWindow:
             self.root, 
             height=100,
             fg_color="transparent",
-            corner_radius=Rounding.STRONG
+            corner_radius=Rounding.FRAME
         )
         self.frame_side = ctk.CTkFrame(
             self.root, 
             fg_color=Colours.BG_SECONDARY,
-            corner_radius=Rounding.STRONG,
+            corner_radius=Rounding.FRAME,
             border_width=1,
             border_color=Colours.BORDERS
         )
         self.frame_body = ctk.CTkFrame(
             self.root, 
             fg_color=Colours.BG_SECONDARY,
-            corner_radius=Rounding.STRONG,
+            corner_radius=Rounding.FRAME,
+            border_width=1,
+            border_color=Colours.BORDERS
         )
 
         # Configure grid expansion (only second row and column grow)
@@ -228,15 +230,15 @@ class MainWindow:
             self.frame_body, 
             self.session,
             fg_color=Colours.BG_SECONDARY,
-            corner_radius=Rounding.FRAME,
-            border_color=Colours.BORDERS,
-            border_width=1,
             **kwargs
         )
 
-        frame.grid(row=0, column=0, sticky="nsew")
-  
-
+        # This padding is the best solution to have an autoscroll frame with 
+        # rounded borders
+        frame.grid(
+            row=0, column=0, sticky="nsew",
+            padx=Spacing.XSMALL + 2, pady=Spacing.XSMALL + 2
+        )
 
     def show_home_section(self) -> None:
         """

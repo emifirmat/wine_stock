@@ -97,9 +97,15 @@ class BaseTransactionForm(ctk.CTkFrame):
             return
         
         for input_widget in self.inputs_dict.values():         
-            # Dropdowns and DoubleLabels don't have meaningful empty states
-            if not isinstance(input_widget, (DropdownInput, DoubleLabel)):
+            # DoubleLabels doesn't have meaningful empty state
+            if isinstance(input_widget, DoubleLabel):
+                pass
+            # Clear inputs
+            elif isinstance(input_widget, DropdownInput):
+                input_widget.set_to_first_value()
+            else:
                 input_widget.clear()
+
 
 
 class AddTransactionForm(BaseTransactionForm):

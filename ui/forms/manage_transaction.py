@@ -30,7 +30,7 @@ class ManageTransactionForm(ctk.CTkFrame):
             **kwargs: Additional CTkFrame keyword arguments
         """
         super().__init__(root, **kwargs)
-        self.configure(fg_color=Colours.BG_SECONDARY, height=500)
+        self.configure(fg_color=Colours.BG_SECONDARY)
         
         # DB instances
         self.session = session

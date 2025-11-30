@@ -1,49 +1,68 @@
 """
-Table that contains the list of added wines with their stock
+Wines table with sorting, filtering, and CRUD operations.
+
+This module provides a table for displaying and managing the wine catalog
+with capabilities for sorting, filtering, viewing details, editing, and
+deleting wine records.
 """
 import customtkinter as ctk
 import tkinter.messagebox as messagebox
 from sqlalchemy.exc import IntegrityError
-from typing import Callable, Dict, List
+from sqlalchemy.orm import Session
+from typing import Callable
 
 from db.models import Wine
-from helpers import load_ctk_image, get_coords_center
-from ui.components import DoubleLabel, ActionMenuButton
+from helpers import load_ctk_image
+from ui.components import DoubleLabel, ActionMenuButton, ToplevelCustomised
 from ui.forms.add_edit_wine import AddWineForm
-from ui.style import Colours, Fonts
+from ui.style import Colours, Fonts, Spacing
 from ui.tables.mixins import SortMixin
 from ui.tables.data_table import DataTable
 
 
 class WinesTable(DataTable, SortMixin):
     """
-    Contains the components of the table with the wine purchases and sellings.
+    Wine catalog table with CRUD operations and low stock alerts.
+    
+    Extends DataTable and SortMixin to provide a sortable, filterable table
+    of wines with view, edit, and delete capabilities. Tracks opened detail
+    windows to prevent duplicates.
     """
     INITIAL_ROWS = 40 
     LOAD_MORE_ROWS = 30
 
-    def __init__(self, root: ctk.CTkFrame, *args, **kwargs):
-        # Set up form frame
-        super().__init__(root, *args, **kwargs)
+    def __init__(self, root: ctk.CTkFrame, session: Session, *args, **kwargs):
+        """
+        Initialize wines table with sorting and filtering.
         
-        # Track opened toplevels
+        Parameters:
+            root: Parent frame container
+            session: SQLAlchemy database session
+            *args: Additional positional arguments for DataTable
+            **kwargs: Additional keyword arguments for DataTable
+        """
+        super().__init__(root, session, *args, **kwargs)
+        
+        # Track opened detail windows to prevent duplicates
         self.opened_toplevels = {}
 
-        # Create table
+        # onfigure table layout
         self.column_widths = [100, 120, 100, 90, 95, 95, 90, 90, 90, 80]
-        self.remove_lines = True
+        
+        # Build table
         self.create_components()
         self.setup_sorting()
         self.refresh_visible_rows()
 
-    def get_line_columns(self, line) -> List:
+    def get_line_columns(self, line: Wine) -> list[str]:
         """
-        Returns a list with the values of the instance stored in "line".
+        Get formatted column values for a wine row.
+        
         Parameters:
-            - line: DB instance of an imported table
+            line: Wine instance
+            
         Returns:
-            - A list with the values of the instance formatted to be used as
-            the text of a label.
+            List of formatted strings for each column
         """
         return [
             line.code, line.picture_path_display, line.name, str(line.vintage_year), 
@@ -51,135 +70,160 @@ class WinesTable(DataTable, SortMixin):
             f"€ {line.purchase_price}", f"€ {line.selling_price}"
         ]
 
-    def on_header_click(self, event, col_index: int):
+    def on_header_click(self, event, col_index: int) -> None:
         """
-        After clicking a header, add an arrow on its name and sort it.
+        Handle header click to sort table.
+        
+        Parameters:
+            event: Click event from header label
+            col_index: Index of clicked column
         """
-        # Sort and refresh rows
         self.sort_table(event, col_index)
         self.refresh_visible_rows()    
 
-    def get_sorting_keys(self) -> Dict[int, Callable]:
+    def get_sorting_keys(self) -> dict[int, Callable | None]:
         """
-        Get a dict of callables used as sorting keys.
+        Get sorting key functions for each column.
+        
+        Returns:
+            Dictionary mapping column indices to sorting functions, with None 
+            for non-sortable columns (picture, actions)
         """
         return {
             0: lambda l: l.code.upper(),
-            1: None,
+            1: None, # Picture column not sortable
             2: lambda l: l.name.lower(),
             3: lambda l: l.vintage_year,
-            4: lambda l: l.origin.lower(),
+            4: lambda l: l.origin.lower() if l.origin else "", # Optional attribute
             5: lambda l: l.quantity,
             6: lambda l: l.min_stock_sort,
             7: lambda l: l.purchase_price,
             8: lambda l: l.selling_price,
-            9: None
+            9: None # Actions column not sortable
         }
  
     def apply_filters(
-            self, filtered_names, filtered_codes, filtered_wineries, wine_colour, 
-            wine_style, wine_varietal, wine_year, filtered_origin
-        ):
+        self, filtered_names: list[str], filtered_codes: list[str],
+        filtered_wineries: list[str], wine_colour: str, wine_style: str, 
+        wine_varietal: str, wine_year: str, filtered_origin: list[str]
+    ) -> None:
         """
-        Update the table by filters. 
+        Filter wines by various criteria.
+        
+        Parameters:
+            filtered_names: List of wine names to include (lowercase)
+            filtered_codes: List of wine codes to include (lowercase)
+            filtered_wineries: List of winery names to include (lowercase)
+            wine_colour: Colour filter (capitalized), empty for all
+            wine_style: Style filter (capitalized), empty for all
+            wine_varietal: Varietal filter (capitalized), empty for all
+            wine_year: Year filter as string, empty for all
+            filtered_origin: List of origins to include (lowercase) 
         """
-        # Update filtered lines
+        # Apply filters
         self.filtered_lines = []
 
         for line in self.lines:
             if (                
-                line.name.lower() in filtered_names
-                and line.code.lower() in filtered_codes
-                and line.winery.lower() in filtered_wineries
-                and (line.colour.name.capitalize() == wine_colour or not wine_colour)
-                and (line.style.name.capitalize() == wine_style or not wine_style)
-                and (line.varietal_display.capitalize() == wine_varietal or not wine_varietal)
-                and (str(line.vintage_year) == wine_year or not wine_year)
-                and line.origin.lower() in filtered_origin
-
+                line.name.lower() in filtered_names and 
+                line.code.lower() in filtered_codes and 
+                line.winery.lower() in filtered_wineries and 
+                (line.colour.name.capitalize() == wine_colour or not wine_colour) and 
+                (line.style.name.capitalize() == wine_style or not wine_style) and 
+                (line.varietal_display.capitalize() == wine_varietal or not wine_varietal) and 
+                (str(line.vintage_year) == wine_year or not wine_year) and 
+                line.origin.lower() in filtered_origin
             ):
                 self.filtered_lines.append(line)
 
-        # Sort rows
-        if self.last_sort:
+        # Re-apply last sort if any
+        if self.last_sort is not None:
             self.sort_by(self.last_sort, new_sort=False)
 
-        # restart index and rows
+        # Reset pagination and refresh
         self.visible_rows_count = self.INITIAL_ROWS
         self.refresh_visible_rows()
 
-    def customize_row(self, line: Wine, frame_row: ctk.CTkFrame):
+    def customize_row(self, line: Wine, frame_row: ctk.CTkFrame) -> None:
         """
-        Creates additional components for the row line called by refresh visible rows.
+        Add action menu button to wine row.
+        
         Parameters:
-            line: Instance of the Wine class 
-        Returns:
-            row_frame: A ctkframe containing the labels of the line (row)
+            line: Wine instance for the row
+            frame_row: Frame containing the row
         """
         column_index = len(self.headers)
+        
+        # Create placeholder label for actions column
         label = ctk.CTkLabel(
             frame_row,
             width= self.column_widths[-1],
             text=""
         )
-        label.grid(row=0, column=column_index, padx=5, sticky="ew")
+        label.grid(
+            row=0, column=column_index, 
+            padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y, sticky="ew"
+        )
 
+        # Add action menu button
         ActionMenuButton(
             label,
             btn_name="Wine",
             on_show=lambda w=line: self.show_details(w),
             on_edit=lambda w=line: self.edit_wine(w),
             on_delete=lambda w=line: self.delete_wine(w),
-        ).grid(row=0, column=0, padx=5)
+        ).grid(
+            row=0, column=0, 
+            padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y
+        )
 
         frame_row.grid_columnconfigure(column_index, weight=1)
 
-    def show_details(self, line: Wine):
+    def show_details(self, line: Wine) -> None:
         """
-        Creates a toplevel that shows the details of the click wine.
+        Open window displaying wine details.
+        
+        Prevents opening multiple detail windows for the same wine.
+        
+        Parameters:
+            line: Wine instance to display
         """
-        # Check the clicked wine is not opened
+        # Prevent duplicate windows
         if line in self.opened_toplevels and self.opened_toplevels[line]:
             return
 
-        # Create top level
-        tl_width = 350
-        tl_height = 550
-        toplevel = ctk.CTkToplevel(
-            self,
-            fg_color=Colours.BG_MAIN,
+        # Create detail window
+        toplevel = ToplevelCustomised(
+            self, width=450, title="Wine Details", 
+            on_close=lambda: self.toplevel_on_close(toplevel, line)
         )
-        toplevel.title("Wine Details")
-        toplevel.resizable(False, False)
-        toplevel.protocol(
-            "WM_DELETE_WINDOW", lambda tl=toplevel, l=line: self.toplevel_on_close(tl, l)
-        )
+    
         self.opened_toplevels[line] = True
-        
-        # Locate TopLevel
-        screen_width = toplevel.winfo_screenwidth()
-        screen_height = toplevel.winfo_screenheight()
-        x = (screen_width // 2) - (tl_width // 3)
-        y = (screen_height // 2) + (tl_height // 3)
-        toplevel.geometry(f"{tl_width}x{tl_height}+{x}+{y}")
 
-        # Fill toplevel with widgets and details
-        self.build_wine_details(toplevel, line)
+        # Build detail view
+        self.build_wine_details(toplevel.content_frame, line)
+
+        # Apply geometry and show
+        toplevel.refresh_geometry()
         
-    def build_wine_details(self, top_level: ctk.CTkToplevel, line: Wine):
+    def build_wine_details(
+            self, widgets_container: ctk.CTkFrame, line: Wine
+        ) -> None:
         """
-        It creates the image and details of the wine instance inside the toplevel.
+        Build wine detail view with image and attributes.
+        
         Parameters:
-            - top_level: Container of the labels (images and details)
-            - line: Instance of the DB class Wine
+            widgets_container: Container frame for detail widgets
+            line: Wine instance to display
         """
+        # Display wine image
         ctk.CTkLabel(
-            top_level, 
+            widgets_container, 
             image=load_ctk_image(line.picture_path_display, size=(120, 120)),
             text="",  
-        ).pack(padx=5, pady=(15, 0))
+        ).pack(padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y)
 
-        # Set up double labels with wine details
+        # Define detail labels and values
         text_labels = [
             "name", "code", "winery", "colour", "style", "varietal", "vintage year",
             "origin", "stock", "min. stock", "purchase price", "selling price"
@@ -187,85 +231,77 @@ class WinesTable(DataTable, SortMixin):
 
         text_values = [
             line.name, line.code, line.winery, line.colour.name.title(), 
-            line.style.name.title(), line.varietal_display.title(), line.vintage_year, 
-            line.origin_display, str(line.quantity), line.min_stock_display,
-            f"€ {line.purchase_price}", f"€ {line.selling_price}"
+            line.style.name.title(), line.varietal_display.title(), 
+            str(line.vintage_year), line.origin_display, str(line.quantity), 
+            line.min_stock_display, f"€ {line.purchase_price}", 
+            f"€ {line.selling_price}"
         ]
         
+        # Create detail labels
         for text_label, text_value in zip(text_labels, text_values):
             label = DoubleLabel(
-                top_level,
+                widgets_container,
                 label_title_text=text_label.capitalize(),
                 label_value_text=text_value
             )
             label.set_columns_layout(120, 200, anchor="w")
-            label.pack(anchor="w", padx=20, pady=(5, 0))
+            label.pack(
+                expand=True, fill="y",
+                padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y
+            )
 
-    def toplevel_on_close(self, toplevel: ctk.CTkToplevel, line: Wine):
+    def toplevel_on_close(self, toplevel: ctk.CTkToplevel, line: Wine) -> None:
         """
-        When the toplevel is closed, it updates the dict opened_toplevels
+        Handle detail window close event.
+        
+        Updates tracking dictionary and destroys window.
+        
         Parameters:
-            -line: Instance of the DB class Wine
+            toplevel: Window to close
+            line: Wine instance associated with the window
         """
         self.opened_toplevels[line] = False
         toplevel.destroy()
 
-    def edit_wine(self, wine):
+    def edit_wine(self, wine: Wine) -> None:
         """
-        Open a new modal window to edit an existing wine.
+        Open modal window to edit a wine.
+        
         Parameters:
-            - wine: Wine instance of the clicked row.
+            wine: Wine instance to edit
         """
-        # Create a modal top level
-        edit_window = ctk.CTkToplevel(
-            self.winfo_toplevel(),
-            fg_color=Colours.BG_MAIN,
+        # Create modal window
+        edit_window = ToplevelCustomised(
+            self, width=700, title="Edit Wine", modal=True
         )
-        edit_window.title("Edit Wine")
         
-        center_x, center_y = get_coords_center(edit_window)
-        w_width, w_height = 700, min(int(self.winfo_screenheight() * 0.8), 1000)
-        edit_window.geometry(f"{w_width}x{w_height}+{center_x - w_width}+{center_y}")
-        edit_window.update_idletasks() # Necessary to then use grab_set
-        edit_window.grab_set()
-        edit_window.focus_set()
-        
-        # Add scroll
-        frame_scroll = ctk.CTkScrollableFrame(
-            edit_window,
-            fg_color="transparent"
-        )
-        frame_scroll.pack(expand=True, fill="both")
-
-        # Add title
-        title = ctk.CTkLabel(
-            frame_scroll,
-            text="Edit Wine",
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.SUBTITLE,
-        )
-
-        # Place title       
-        title.grid(row=0, column=0, pady=(20, 0), sticky="n")
-
-        # Add form
+        # Create edit form
         form = AddWineForm(
-            frame_scroll,
+            edit_window.content_frame,
             self.session,
             fg_color="transparent",
             wine=wine,
             on_save=self.refresh_edited_rows,
         )
-        form.grid(row=1, column=0, pady=(10, 0), sticky="nsew")
+        form.pack(
+            expand=True, fill="both",
+            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y
+        )
 
-        # Make everything responsive
-        frame_scroll.grid_columnconfigure(0, weight=1)
+        # Apply geometry and show
+        edit_window.refresh_geometry()
 
-    def delete_wine(self, wine):
+
+    def delete_wine(self, wine: Wine) -> None:
         """
-        Removes the wine from the DB and table.
+        Delete a wine after validation and user confirmation.
+        
+        Prevents deletion if wine has associated stock movements.
+        
+        Parameters:
+            wine: Wine instance to delete
         """   
-        # Ask for confirmation
+        # Confirm deletion
         confirm_dialog = messagebox.askyesno(
             "Confirm Removal",
             f"Do you want to remove the wine '{wine.name}'?"
@@ -274,53 +310,63 @@ class WinesTable(DataTable, SortMixin):
         if not confirm_dialog:
             return
         
-        # Remove it from the DB    
+        # Attempt deletion    
         try: 
             self.session.delete(wine)
             self.session.commit()
         except IntegrityError:
-            # Don't delete if there are transactions involved
+            # Rollback if wine has stock movements
             self.session.rollback() 
+
             mov_count = len(wine.movements) 
-            words = ["is", "movement"] if mov_count == 1 else ["are", "movements"]
+            verb, noun, pronoun = (
+                ["is", "movement", "it"] 
+                if mov_count == 1 else ["are", "movements", "them"]
+            )
             error_message = (
-                f"There {words[0]} {mov_count} stock {words[1]} related with this wine. "
-                "Please, remove them before continuing."
+                f"There {verb} {mov_count} stock {noun} related with this wine. "
+                f"Please, remove {pronoun} before continuing."
             )
-            messagebox.showinfo(
-                "Couln't Remove The Wine ",
-                error_message
-            )
-            # End function
+            messagebox.showinfo("Couldn't Remove The Wine ", error_message)
+
             return
         
-        # Remove it from the lists (data)
+        # Remove from data list
         self.lines.remove(wine)
         self.filtered_lines.remove(wine)
       
-        # Remove it from the UI table
+        # Remove from UI
         self.line_widget_map[wine].destroy()
         del self.line_widget_map[wine]
 
-        # Update load more button
+        # Update pagination button
         self.create_load_more_button()
 
-        # Show a message
+        # Show success message
         messagebox.showinfo(
             "Wine Removed",
             "The wine has been successfully removed."
         )
 
-    def refresh_edited_rows(self, wine):
+    def refresh_edited_rows(self, wine: Wine) -> None:
         """
-        After a wine is edited, it refreshes the table.
+        Refresh table and related views after wine is edited.
+        
+        Parameters:
+            wine: Updated Wine instance
         """
-        # Delete old wine address from wine_widget_map
-        del self.line_widget_map[wine]
-        # Refresh alert message
-        self.master.update_alert_label()
-        # Refresh list
+        # Remove old widget from cache (address may have changed)
+        if wine in self.line_widget_map:
+            del self.line_widget_map[wine]
+        
+        # Refresh alert message in parent form
+        if hasattr(self.master, 'update_alert_label'):
+            self.master.update_alert_label()
+        
+        # Refresh visible rows
         self.refresh_visible_rows()
-        # Refresh lists in filters form
-        self.master.filters_form.update_lists()
+
+        # Refresh filter options in parent form
+        if hasattr(self.master, 'filters_form'):
+            self.master.filters_form.update_lists()
         

@@ -12,11 +12,11 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from helpers import deep_getattr
-from ui.components import Card, ToggleInput
+from ui.components import Card, ToggleInput, AutoScrollFrame
 from ui.style import Colours, Fonts, Spacing, Rounding
 from db.models import StockMovement, Wine
 
-class ReportFrame(ctk.CTkScrollableFrame):
+class ReportFrame(AutoScrollFrame):
     """
     Report section frame with export functionality.
     
@@ -35,6 +35,8 @@ class ReportFrame(ctk.CTkScrollableFrame):
             **kwargs: Additional keyword arguments for CTkScrollableFrame
         """
         super().__init__(root, **kwargs)
+        self.inner.configure(**kwargs)
+        self.canvas.configure(bg=kwargs["fg_color"])
         
         # DB instances
         self.session = session
@@ -51,7 +53,7 @@ class ReportFrame(ctk.CTkScrollableFrame):
         """
         # Create title
         title = ctk.CTkLabel(
-            self,
+            self.inner,
             text="REPORTS",
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TITLE
@@ -64,7 +66,7 @@ class ReportFrame(ctk.CTkScrollableFrame):
             "You can export data in CSV or Excel format."
         )
         introduction = ctk.CTkLabel(
-            self,
+            self.inner,
             text=text,
             text_color=Colours.TEXT_SECONDARY,
             justify="center",
@@ -74,7 +76,7 @@ class ReportFrame(ctk.CTkScrollableFrame):
 
         # Create export format toggle
         toggle_export = ToggleInput(
-            self,
+            self.inner,
             label_text="Export Format",
             variable=self.export_format,
             item_list=[("CSV", "csv"), ("Excel", "xlsx")],
@@ -84,10 +86,9 @@ class ReportFrame(ctk.CTkScrollableFrame):
         toggle_export.pack(padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y)
         toggle_export.set_label_layout(60)
 
-        # ==Cards==
         # Create cards container
         frame_cards = ctk.CTkFrame(
-            self,
+            self.inner,
             fg_color="transparent",
             corner_radius=Rounding.CARD,
         )

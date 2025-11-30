@@ -13,7 +13,7 @@ import re
 from decimal import Decimal
 from typing import Callable
 
-from helpers import load_ctk_image
+from helpers import load_ctk_image, running_in_wsl
 from ui.style import Colours, Fonts, Icons, Spacing, Rounding
 
 
@@ -110,7 +110,7 @@ class LabelWithBorder(ctk.CTkFrame):
         self, root, text: str, text_color: str, font: tuple, **kwargs
     ):
         """
-        Initialize labeled frame with border.
+        Initialise labeled frame with border.
         
         Parameters:
             root: Parent widget
@@ -139,6 +139,315 @@ class LabelWithBorder(ctk.CTkFrame):
             **kwargs: Keyword arguments passed to label.configure()
         """
         self.label.configure(**kwargs)
+
+
+class AutoScrollFrame(ctk.CTkFrame):
+    """
+    Scrollable container with automatic scrollbar management.
+    
+    Provides a scrollable inner frame that automatically shows/hides the
+    scrollbar based on content height. Exposes inner frame for widget placement
+    and prevents horizontal scrolling.
+    """
+
+    def __init__(self, root, **kwargs):
+        """
+        Initialize auto-scrolling frame.
+        
+        Parameters:
+            master: Parent widget
+            **kwargs: Additional CTkFrame keyword arguments
+        """
+        super().__init__(root, **kwargs)
+
+        # Create canvas for scrolling
+        self.canvas = tk.Canvas(
+            self,
+            highlightthickness=0,
+            bd=0,
+            bg=Colours.BG_MAIN
+        )
+        self.canvas.pack(side="left", fill="both", expand=True)
+
+        # Create vertical scrollbar
+        self.scrollbar = ctk.CTkScrollbar(
+            self,
+            orientation="vertical",
+            command=self.canvas.yview,
+        )
+
+        # Link canvas with scrollbar
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        # Create inner frame for content
+        self.inner = ctk.CTkFrame(self.canvas, fg_color="transparent")
+        self._window_id = self.canvas.create_window(
+            (0, 0),
+            window=self.inner,
+            anchor="nw",
+        )
+
+        # Bind resize events
+        self.inner.bind("<Configure>", self._on_inner_configure)
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+
+        # Calculate initial scrollbar visibility
+        self.after(0, self._update_scrollbar_visibility)
+
+    def _on_inner_configure(self, event: tk.Event) -> None:
+        """
+        Update scroll region and scrollbar visibility when content changes.
+        
+        Parameters:
+            event: Configure event (unused but required by bind)
+        """
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        # Keep inner width same as canvas to prevent horizontal scrollbar
+        self.canvas.itemconfigure(self._window_id, width=self.canvas.winfo_width())
+        self._update_scrollbar_visibility()
+
+    def _on_canvas_configure(self, event: tk.Event) -> None:
+        """
+        Keep inner frame width synchronized with canvas width.
+        
+        Parameters:
+            event: Configure event containing new canvas dimensions
+        """
+        self.canvas.itemconfigure(self._window_id, width=event.width)
+        self._update_scrollbar_visibility()
+
+    def _update_scrollbar_visibility(self) -> None:
+        """
+        Show scrollbar only when content height exceeds visible area.
+        """
+        self.update_idletasks()
+        content_h = self.inner.winfo_reqheight()
+        view_h = self.canvas.winfo_height()
+
+        needs_scroll = content_h > view_h and view_h > 0
+
+        if needs_scroll:
+            if not self.scrollbar.winfo_ismapped():
+                self.scrollbar.pack(side="right", fill="y")
+            self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        else:
+            if self.scrollbar.winfo_ismapped():
+                self.scrollbar.pack_forget()
+            self.canvas.configure(yscrollcommand=None)    
+
+
+class ToplevelCustomised(ctk.CTkToplevel):
+    """
+    Custom toplevel window with draggable title bar and optional modal behavior.
+    
+    Provides a customized window without default decorations, featuring a
+    custom title bar with close button, automatic sizing based on content,
+    and modal support.
+    """
+    def __init__(
+        self, root, width: int, title: str, modal: bool = False, 
+        on_close: Callable | None = None, **kwargs
+    ):
+        """
+        Initialize customized toplevel window.
+        
+        Parameters:
+            root: Parent window
+            width: Fixed window width in pixels
+            title: Window title text
+            modal: If True, window blocks interaction with parent
+            on_close: Callback executed when window closes
+            **kwargs: Additional CTkToplevel keyword arguments
+        """
+        super().__init__(root, **kwargs)
+        self.configure(fg_color=Colours.BG_MAIN)            
+        
+        # Window properties
+        self.parent_tl = root.winfo_toplevel()
+        self.width = width
+        self.topbar_title = title
+        self.modal = modal
+        self.on_close = on_close
+
+        # Component references
+        self.content_frame = None
+        self.scroll_container = None
+
+        # Build window
+        self.customise_toplevel()
+
+    def customise_toplevel(self) -> None:
+        """
+        Configure window style, title bar, and scrollable content container.
+        """
+        # Hide window during setup
+        self.withdraw()
+        
+        # Configure window decorations
+        if running_in_wsl():
+            # Keep standard title bar in WSL for stability
+            self.overrideredirect(False)
+            self.title(self.topbar_title)
+            self.protocol("WM_DELETE_WINDOW", self._handle_close)
+            
+            print(
+                "Warning: This app is running under Windows Subsystem for Linux (WSL). "
+                "Standard window borders have been enabled to improve stability."
+            )
+        else:
+            # Remove standard decorations for custom title bar
+            self.overrideredirect(True)
+
+        # Create main container with border
+        main_container = ctk.CTkFrame(
+            self,
+            fg_color=Colours.BG_MAIN,
+            border_width=2,
+            border_color=Colours.BORDERS
+        )
+        main_container.pack(expand=True, fill="both")
+
+        # Create custom title bar
+        title_bar = ctk.CTkFrame(
+            main_container,
+            fg_color=Colours.BG_HOVER_NAV,
+            height=40
+        )
+        title_bar.pack(fill="x", side="top", padx=Spacing.XSMALL, pady=Spacing.XSMALL)
+        title_bar.pack_propagate(False)  # Maintain fixed height
+        
+        # Create close button
+        close_button = ctk.CTkButton(
+            title_bar,
+            text="✕",
+            text_color=Colours.TEXT_MAIN,
+            width=30,
+            height=30,
+            fg_color="transparent",
+            hover_color=Colours.BG_SECONDARY,
+            command=self._handle_close,
+            font=Fonts.SUBTITLE,
+        )
+        close_button.pack(side="right", padx=Spacing.SMALL, pady=Spacing.SMALL)
+
+        # Create title label
+        title_label = ctk.CTkLabel(
+            title_bar,
+            text=self.topbar_title,
+            text_color=Colours.TEXT_MAIN,
+            font=Fonts.SUBTITLE,
+        )
+        title_left_padding = Spacing.SMALL + 30 # Close button width
+        title_label.pack(
+            side="left", expand=True, fill="both",
+            padx=(title_left_padding, Spacing.SMALL), pady=Spacing.SMALL
+        )
+        
+        # Make title bar draggable
+        self._make_draggable(title_bar, self)
+        self._make_draggable(title_label, self)
+
+        # Create scrollable content container
+        self.scroll_container = AutoScrollFrame(
+            main_container,
+            fg_color="transparent"
+        )
+        self.scroll_container.pack(
+            fill="both", expand=True, 
+            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y
+        )
+
+        # Expose inner frame for widget placement
+        self.content_frame = self.scroll_container.inner
+
+    
+    def refresh_geometry(self) -> None:
+        """
+        Recalculate and apply window geometry based on current content.
+        
+        Forces multiple updates to ensure accurate dimension calculations
+        before applying final geometry.
+        """
+        # Force multiple updates
+        self.update_idletasks()
+        self.content_frame.update_idletasks()
+        self.parent_tl.update_idletasks()
+        
+        self._apply_geometry()
+
+    def _apply_geometry(self) -> None:
+        """
+        Calculate and apply window position and size.
+        """
+        # Get parent toplevel properties
+        parent = self.parent_tl
+        parent_x = parent.winfo_rootx()
+        parent_y = parent.winfo_rooty()
+        parent_w = parent.winfo_width()
+        parent_h = parent.winfo_height()
+
+        # Calculate required height
+        content_height = self.content_frame.winfo_reqheight()
+        topbar_height = 40
+        paddings_height = Spacing.XSMALL * 2 + Spacing.SECTION_Y * 2
+
+        total_height = int(content_height + topbar_height + paddings_height)
+        max_height = int(parent_h * 0.9)
+        current_height = min(total_height, max_height)
+
+        # Center window horizontally on parent
+        center_x = parent_x + (parent_w - self.width) // 2
+        
+        # Apply geometry
+        self.geometry(f"{self.width}x{current_height}+{center_x}+{parent_y}")
+
+        # Show window and set focus
+        self.deiconify()
+
+        if self.modal:
+            self.grab_set()
+        
+        self.focus_set()
+
+    def _handle_close(self) -> None:
+        """
+        Handle window close event from system or custom close button.
+        """
+        # Release grab if modal
+        try:
+            self.grab_release()
+        except Exception:
+            pass
+        
+        # Execute callback or destroy
+        if self.on_close is not None:
+            self.on_close()
+        else:
+            self.destroy()     
+
+    def _make_draggable(
+            self, title_bar:ctk.CTkFrame, window: ctk.CTkToplevel
+    ) -> None:
+        """
+        Enable window dragging by clicking and dragging title bar.
+        
+        Parameters:
+            title_bar: Frame to bind drag events to
+            window: Window to move
+        """
+        def start_move(event):
+            window.x = event.x
+            window.y = event.y
+
+        def do_move(event):
+            deltax = event.x - window.x
+            deltay = event.y - window.y
+            x = window.winfo_x() + deltax
+            y = window.winfo_y() + deltay
+            window.geometry(f"+{x}+{y}")
+
+        title_bar.bind("<Button-1>", start_move)
+        title_bar.bind("<B1-Motion>", do_move)
 
 
 class TextEntry(ctk.CTkEntry):

@@ -8,14 +8,14 @@ to transaction operations.
 import customtkinter as ctk
 from sqlalchemy.orm import Session
 
-from ui.components import Card, ButtonGoBack
+from ui.components import Card, ButtonGoBack, AutoScrollFrame
 from ui.forms.add_edit_transaction import AddTransactionForm
 from ui.forms.manage_transaction import ManageTransactionForm
 from ui.style import Colours, Fonts, Spacing, Rounding
 
 from db.models import Wine
 
-class HomeFrame(ctk.CTkScrollableFrame):
+class HomeFrame(AutoScrollFrame):
     """
     Home section frame with transaction management interface.
     
@@ -35,6 +35,8 @@ class HomeFrame(ctk.CTkScrollableFrame):
             **kwargs: Additional keyword arguments for CTkScrollableFrame
         """
         super().__init__(root, **kwargs)
+        self.inner.configure(**kwargs)
+        self.canvas.configure(bg=kwargs["fg_color"])
         
         # DB instances
         self.session = session
@@ -53,7 +55,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         """
         # Create title
         title = ctk.CTkLabel(
-            self,
+            self.inner,
             text="HOME",
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TITLE
@@ -65,7 +67,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
             text = "Add at least one wine to enable and view this section."
             
             no_wine_text = ctk.CTkLabel(
-                self,
+                self.inner,
                 text=text,
                 text_color=Colours.TEXT_MAIN,
                 justify="center",
@@ -84,7 +86,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
             "your winery's activity."
         )
         introduction = ctk.CTkLabel(
-            self,
+            self.inner,
             text=text,
             text_color=Colours.TEXT_SECONDARY,
             justify="center",
@@ -95,7 +97,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         # ==Frame cards==
         # Create cards container
         frame_cards = ctk.CTkFrame(
-            self,
+            self.inner,
             fg_color="transparent",
             corner_radius=Rounding.CARD,
         )
@@ -149,8 +151,8 @@ class HomeFrame(ctk.CTkScrollableFrame):
         self.clear_content()
 
         # Configure grid expansion
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
+        self.inner.grid_rowconfigure(1, weight=1)
+        self.inner.grid_columnconfigure(0, weight=1)
 
         # Create and position go back button
         self.button_go_back = ButtonGoBack(
@@ -160,7 +162,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
 
         # Create title
         title = ctk.CTkLabel(
-            self,
+            self.inner,
             text=text_title,
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.SUBTITLE,
@@ -178,7 +180,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
 
         # Create and position form
         form = form_class(
-            self,
+            self.inner,
             session=self.session,
             **kwargs
         )
@@ -220,7 +222,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         """
         Remove all widgets from the home frame.
         """
-        for component in self.winfo_children():
+        for component in self.inner.winfo_children():
             component.destroy()
 
     def destroy(self) -> None:

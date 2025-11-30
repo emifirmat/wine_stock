@@ -1,48 +1,57 @@
 """
-Form that contain the inputs and methods to add a new sale
+Wine management form with filtering and table display.
+
+This module provides a form for viewing, filtering, editing, and managing
+wines in the catalog. Includes low stock alerts, filterable table, and
+collapsible filter panel.
 """
 import customtkinter as ctk
-from datetime import datetime, timedelta
-import tkinter as tk
-import tkinter.messagebox as messagebox
-from decimal import Decimal
+from sqlalchemy.orm import Session
 
-from ui.components import (IntInput, DropdownInput, DoubleLabel, AutocompleteInput,
-    ClearSaveButtons, DateInput, LabelWithBorder)
+from ui.components import LabelWithBorder
 from ui.forms.filters import WineFiltersForm
-from ui.style import Colours, Fonts
+from ui.style import Colours, Fonts, Spacing
 from ui.tables.wines_table import WinesTable
-from db.models import Wine, Colour, Style, Varietal
+from db.models import Wine
+
 
 class ManageWineForm(ctk.CTkFrame):
     """
-    Contains all the components and logic related to show wines details.
+    Wine management form with filtering and alerts.
+    
+    Displays a table of all wines with collapsible filters and a low stock
+    alert banner that shows when wines fall below minimum stock levels.
     """
-    def __init__(
-            self, root: ctk.CTkFrame, session, **kwargs
-        ):
-        # Set up form frame
-        super().__init__(root, **kwargs)
-        self.configure(fg_color=Colours.BG_SECONDARY, height=500)
+    def __init__(self, root: ctk.CTkFrame, session: Session, **kwargs):
+        """
+        Initialize wine management form.
         
-        # Include db instances
+        Parameters:
+            root: Parent frame container
+            session: SQLAlchemy database session
+            **kwargs: Additional CTkFrame keyword arguments
+        """
+        super().__init__(root, **kwargs)
+        self.configure(fg_color=Colours.BG_SECONDARY)
+        
+        # DB instances
         self.session = session
 
-        # Add components
+        # Components
+        self.alert_label = None
         self.wines_table = None
         self.filters_form = None
         self.create_components()
 
-    def create_components(self) -> list:
+    def create_components(self) -> None:
         """
-        Create the filters and table.
-
-        Returns:
-            A list containing all the created filters in the form.
+        Create and position alert label, filters form, and wines table.
         """
+        # Configure grid responsiveness
         self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(2, weight=1)
 
-        # ==Alert Label==
+        # Create low stock alert label (initially hidden)
         self.alert_label = LabelWithBorder(
             self,
             text="",
@@ -54,7 +63,7 @@ class ManageWineForm(ctk.CTkFrame):
         )
         self.update_alert_label()
 
-        # ==Table section==
+        # Create wines table
         self.wines_table = WinesTable(
             self,
             self.session,
@@ -64,21 +73,30 @@ class ManageWineForm(ctk.CTkFrame):
             ],
             lines=Wine.all_ordered(self.session, order_by="code")
         )
-        self.wines_table.grid(row=2, column=0, pady=(10, 20), sticky="nsew")
+        self.wines_table.grid(
+            row=2, column=0, 
+            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="nsew"
+        )
 
-        # ==Filters section==
+        # Create filters form
         # Should be after wines table as the filter needs its reference.
         self.filters_form = WineFiltersForm(
             self,
             self.session,
             filtered_table=self.wines_table
         )
+        self.filters_form.grid(
+            row=0, column=0, 
+            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="we"
+        )
 
-        self.filters_form.grid(row=0, column=0, pady=(10, 20), sticky="we")
-
-    def update_alert_label(self):
+    def update_alert_label(self) -> None:
         """
-        Checks how many wines are under stock and updates the message.
+        Update low stock alert banner with current count.
+        
+        Shows alert when wines are below minimum stock, hides when all
+        wines have adequate stock. Updates message to use proper grammar
+        for singular/plural counts.
         """
         # Get wines below min stock
         low_stock_wines = [
@@ -87,17 +105,21 @@ class ManageWineForm(ctk.CTkFrame):
         ]
         low_stock_count = len(low_stock_wines)
         
-        # If no low stock, hide alert_label
+        # Hide alert if no low stock wines
         if low_stock_count == 0:
             self.alert_label.grid_forget()
-        # Update message of alert
-        else:
-            if low_stock_count == 1:
-                words = ["is", "wine"]
-            else:
-                words = ["are", "wines"]
+            return
         
-            self.alert_label.configure_label(
-                text=f"There {words[0]} {low_stock_count} {words[1]} under the minimum stock.",
-            )
-            self.alert_label.grid(row=1, column=0, pady=(10, 20), sticky="nsew")
+        # Update alert message with proper grammar
+        if low_stock_count == 1:
+            verb, noun = ["is", "wine"]
+        else:
+            verb, noun = ["are", "wines"]
+    
+        self.alert_label.configure_label(
+            text=f"There {verb} {low_stock_count} {noun} under the minimum stock.",
+        )
+        self.alert_label.grid(
+            row=1, column=0, 
+            padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y, sticky="nsew"
+        )

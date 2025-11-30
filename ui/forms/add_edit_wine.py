@@ -1,111 +1,141 @@
 """
-Form that contain the inputs and methods to add a new wine
+Wine form for adding and editing wine records.
+
+This module provides a comprehensive form for creating new wines or editing
+existing wine records, including validation, image upload, and database
+persistence with proper error handling.
 """
 import customtkinter as ctk
 import tkinter.messagebox as messagebox
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+from typing import Callable, Any
 
 from db.models import Wine, Colour, Style, Varietal
 from helpers import deep_getattr
 from ui.components import (TextInput, IntInput, DropdownInput, ImageInput,
     DecimalInput, ClearSaveButtons)
-from ui.style import Colours, Fonts
-from validators import (validate_string, validate_dropdown, validate_year,
-    validate_int, validate_decimal)
+from ui.style import Colours, Fonts, Spacing
+from validators import (
+    validate_string, validate_dropdown, validate_year, validate_int, 
+    validate_decimal
+)
 
 
 class AddWineForm(ctk.CTkFrame):
     """
-    Contains all the components and logic related to ADD Wine.
+    Form for adding or editing wine records.
+    
+    Provides inputs for all wine attributes including name, winery,
+    characteristics, pricing, and stock levels. Supports both creation
+    and editing modes with full validation.
     """
     def __init__(
-        self, root: ctk.CTkFrame, session, wine: Wine | None = None, 
-        on_save=None, **kwargs
+        self, root: ctk.CTkFrame, session: Session, wine: Wine | None = None, 
+        on_save: Callable | None = None, **kwargs
     ):
+        """
+        Initialise wine form in add or edit mode.
+        
+        Parameters:
+            root: Parent frame container
+            session: SQLAlchemy database session
+            wine: Existing Wine instance for edit mode, None for add mode
+            on_save: Callback executed after saving with Wine instance
+            **kwargs: Additional CTkFrame keyword arguments
+        """
         super().__init__(root, **kwargs)
         
+        # DB instances
         self.session = session
         self.wine = wine
         self.on_save = on_save
+
+        # Lookup dictionaries
         self.wine_colours_dict = self.get_wine_colours_dict()
         self.wine_styles_dict = self.get_wine_style_dict()
+        
+        # Components
         self.label_error = None
-
         self.inputs_dict = self.create_components()
 
-    def create_components(self) -> list:
+    def create_components(self) -> dict[str, ctk.CTkBaseClass]:
         """
-        Create Inputs and buttons.
-
+        Create and position all form inputs and buttons.
+        
         Returns:
-            A list containing all the created inputs the form.
+            Dictionary of input widgets keyed by field name
         """
+        # Configure grid
         self.grid_columnconfigure(0, weight=1)
 
-        frame_background = ctk.CTkFrame(
-            self,
-            fg_color = Colours.BG_FORM,
+        # Create background frame
+        frame_background = ctk.CTkFrame(self, fg_color = Colours.BG_FORM)
+        frame_background.grid(
+            row=1, column=0, 
+            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y
         )
-        frame_background.grid(row=1, column=0, pady=15)
         frame_background.grid_columnconfigure(0, weight=1)
 
-        # Add inputs
-        name = TextInput(
-            frame_background,
-            label_text="Name"
-        )
-        winery = TextInput(
-            frame_background,
-            label_text="Winery",
-        )
+        # Create input components
+        name = TextInput(frame_background, label_text="Name")
+        
+        winery = TextInput(frame_background, label_text="Winery")
+        
         colour = DropdownInput(
             frame_background,
             label_text="Colour",
             values=[""] + list(self.wine_colours_dict.keys())
         )
+        
         style = DropdownInput(
             frame_background,
             label_text="Style",
             values=[""] + list(self.wine_styles_dict.keys())
         )
+        
         varietal = DropdownInput(
             frame_background,
             label_text="Varietal",
             values=[""] + [v.name.title() for v in self.session.query(Varietal).all()],
             optional=True
         )
+        
         vintage_year = IntInput(
             frame_background,
             label_text="Vintage Year",
             from_=0,
             to=datetime.now().year
         )
+        
         origin = TextInput(
             frame_background,
             label_text="Origin",
             optional=True
         )
-        code = TextInput(
-            frame_background,
-            label_text="Code",
-        )
+        
+        code = TextInput(frame_background, label_text="Code")
+        
         wine_picture = ImageInput(
             frame_background,
             label_text="Wine Picture",
             optional=True
         )
+        
         quantity = IntInput(
             frame_background,
             label_text="Stock" if self.wine else "Initial Stock",
             placeholder="In bottles",
         )
+        
         min_stock = IntInput(
             frame_background,
             label_text="Min. Stock",
             placeholder="In bottles",
             optional=True
         )
+        
         purchase_price = DecimalInput(
             frame_background,
             label_text="Purchase Price",
@@ -132,11 +162,15 @@ class AddWineForm(ctk.CTkFrame):
             "selling_price": selling_price
         }
 
+        # Position all inputs
         for index, input in enumerate(inputs_dict.values()):
             input.set_total_width(450)
-            input.grid(row=index, column=0, padx=(25, 0), pady=15)
+            input.grid(
+                row=index, column=0, 
+                padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y
+            )
                    
-        # Error message
+        # Create error message label
         self.label_error = ctk.CTkLabel(
             frame_background,
             fg_color="transparent",
@@ -145,50 +179,51 @@ class AddWineForm(ctk.CTkFrame):
             font=Fonts.TEXT_ERROR,
             width=450,
         )
-        self.label_error.grid(row=len(inputs_dict), column=0, pady=5)
+        self.label_error.grid(
+            row=len(inputs_dict), column=0, 
+            padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y)
 
-        # Buttons
+        # Create action buttons
         frame_buttons = ClearSaveButtons(
             frame_background,
             btn_clear_function=self.on_click_clear,
             btn_save_function=self.save_values
         )
         frame_buttons.enable_save_button()
-        
-        frame_buttons.grid(row=len(inputs_dict) + 1, column=0, pady=20)
+        frame_buttons.grid(
+            row=len(inputs_dict) + 1, column=0, 
+            padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y
+        )
 
-        # Edition mode
+        # Load existing data if in edit mode
         if self.wine:
             self.set_edition_mode(inputs_dict)
         
         return inputs_dict
     
-    def get_wine_colours_dict(self) -> dict[str:int]:
+    def get_wine_colours_dict(self) -> dict[str, Colour]:
         """
-        Get a list of wine colours with their instances.
+        Get dictionary of wine colours mapped to Colour instances.
+        
         Returns:
-            A dict of wine colours with their instance as value.
+            Dictionary with colour names (title case) as keys and Colour instances as values
         """
-        wine_colours = self.session.query(Colour)
-        return {
-            f"{colour.name.title()}": colour for colour in wine_colours
-        }
+        wine_colours = self.session.query(Colour).all()
+        return {colour.name.title(): colour for colour in wine_colours}
 
-    def get_wine_style_dict(self) -> dict[str:int]:
+    def get_wine_style_dict(self) -> dict[str, Style]:
         """
-        Get a list of wine colours with their instances.
+        Get dictionary of wine styles mapped to Style instances.
+        
         Returns:
-            A dict of wine colours with their instance as value.
+            Dictionary with style names (title case) as keys and Style instances as values
         """
-        wine_styles = self.session.query(Style)
-        return {
-            f"{style.name.title()}": style for style in wine_styles
-        }
+        wine_styles = self.session.query(Style).all()
+        return {style.name.title(): style for style in wine_styles}
 
     def on_click_clear(self) -> None:
         """
-        Asks for a clear confirmation and if accept, it clears all the inputs but
-        the dropdowns.
+        Ask for confirmation before clearing all inputs.
         """
         confirm_dialog = messagebox.askyesno(
                 "Confirm",
@@ -199,43 +234,43 @@ class AddWineForm(ctk.CTkFrame):
 
     def clear_inputs(self) -> None: 
         """
-        Clear the text typed or selected image by the user on the inputs.
-        It doesn't clear dropdowns.
+        Clear all input fields, resetting dropdowns to first value.
         """
-        for input in self.inputs_dict.values():         
-            if type(input) is DropdownInput:
-                input.set_to_first_value()
+        for input_widget in self.inputs_dict.values():         
+            if isinstance(input_widget, DropdownInput):
+                input_widget.set_to_first_value()
             else:    
-                input.clear()
+                input_widget.clear()
 
     def save_values(self) -> None:
         """
-        Save typed values into the db.
+        Validate and save wine to database.
+        
+        Handles both creation and update modes, with validation, confirmation 
+        dialogs, and proper error handling for database constraints.
         """
-        # Validate inputs
+        # Validate all inputs
         wine_attributes = self.validate_inputs()
         if not wine_attributes:
             return
-        else:
-            self.label_error.configure(text="")
+        
+        self.label_error.configure(text="")
 
-        # Confirm saving
+        # Warn if purchase price exceeds selling price
         if wine_attributes["purchase_price"] > wine_attributes["selling_price"]:
             save_message = (
-                f"The Purchase Price is higher than the Selling Price. " 
-                f"Do you want to save this wine?"
+                "The Purchase Price is higher than the Selling Price. " 
+                "Do you want to save this wine?"
             )
         else:
             save_message = "Do you want to save this wine?"
         
-        confirm_dialog = messagebox.askyesno(
-            "Confirm",
-            save_message
-        )
+        # Confirm save
+        confirm_dialog = messagebox.askyesno("Confirm", save_message)
         if not confirm_dialog:
             return
 
-        # Add wine in db
+        # Convert dropdown values to model instances
         wine_attributes["colour"] = Colour.get_name(
             self.session, name=wine_attributes["colour"]
         )
@@ -247,77 +282,73 @@ class AddWineForm(ctk.CTkFrame):
         ) if wine_attributes["varietal"] else None
         
         try:
-            # Edit wine
             if self.wine:
+                # Update existing wine
                 for attr, val in wine_attributes.items():
                     setattr(self.wine, attr, val)
-            # Create new wine
             else:
+                # Create new wine
                 new_wine = Wine(**wine_attributes)
                 self.session.add(new_wine)
         except TypeError as e:
-            messagebox.showinfo(
+            messagebox.showerror(
                 "Error Saving",
-                "Couldn't save the wine, please contact the admin. (code=1)"
+                "Couldn't save the wine. Please contact the administrator. (code=1)"
             )
-            print(str(e.orig))
+            print(f"TypeError: {e}")
             return
 
-        # Save it in the DB
+        # Commit to database
         try:
             self.session.commit()
         except IntegrityError as e:
-            # Rollback session
+            # Rollback failed transaction
             self.session.rollback()
 
-            # Get error message and display it to the user
+            # Handle constraint violations
             error_msg = str(e.orig)
             if "UNIQUE constraint failed" in error_msg:
                 self.label_error.configure(
                     text="The code already exists. Please choose another one."
                 )
             else:
-                messagebox.showinfo(
+                messagebox.showerror(
                     "Error Saving",
-                    "Couldn't save the wine, please contact the admin. (code=2)"
+                    "Couldn't save the wine. Please contact the administrator. (code=2)"
                 )
-                print(error_msg)
-            # Stop function            
+                print(f"IntegrityError: {error_msg}")     
             return
 
-        # Show a success message
+        # Show success message
         messagebox.showinfo(
             "Wine Saved",
             "The wine has been successfully saved."
         )
 
-        # Edit mode
+        # Handle post-save actions
         if self.wine:
-            # Refresh table
-            self.on_save(self.wine)
-            # Close top level
+            # Edit mode: refresh parent view and close
+            if self.on_save:
+                self.on_save(self.wine)
             self.winfo_toplevel().destroy()
-        # Save mode
         else:
-            # Clear all lines
+            # Add mode: clear form for next entry
             self.clear_inputs()
-
     
-    def validate_inputs(self) -> dict | None:
+    def validate_inputs(self) -> dict[str, Any] | None:
         """
-        Check every input and returns True if they are all validated.
+        Validate all input fields.
+        
         Returns:
-            - True: All inputs passed the validations.
-            - False: There is an input that couldn't pass the validations.
+            Dictionary of validated field values, or None if validation fails
         """
-        # Validate inputs
         try:
             return {
                 "name": validate_string("name", self.inputs_dict["name"].get()),
                 "winery": validate_string("winery", self.inputs_dict["winery"].get()),
                 "colour": validate_dropdown("colour", self.inputs_dict["colour.name"].get()),
                 "style": validate_dropdown("style", self.inputs_dict["style.name"].get()),
-                "varietal": self.inputs_dict["varietal.name"].get().lower(), # It's optional           
+                "varietal": self.inputs_dict["varietal.name"].get().lower(), # Optional           
                 "vintage_year": validate_year("vintage year", self.inputs_dict["vintage_year"].get()),
                 "origin": self.inputs_dict["origin"].get().strip(), # Optional
                 "code": validate_string("code", self.inputs_dict["code"].get()),
@@ -335,26 +366,29 @@ class AddWineForm(ctk.CTkFrame):
                 )
             }
         
-        # Return error message if there is no validation
         except ValueError as ve:
+            # Display validation error
             self.label_error.configure(text=str(ve))
             return None
         
-    def set_edition_mode(self, inputs_dict):
+    def set_edition_mode(self, inputs_dict: dict[str, ctk.CTkBaseClass]) -> None:
         """
-        Set the inputs; initial value to the wine instance.
+        Populate form inputs with existing wine data for editing.
+        
+        Parameters:
+            inputs_dict: Dictionary of input widgets to populate
         """
-        for input_name, input in inputs_dict.items():
-            # Get value
+        for input_name, input_widget in inputs_dict.items():
+            # Get value from wine instance
             value = deep_getattr(self.wine, input_name)
             
-            # Populate inputs
-            if isinstance(input, DropdownInput):
-                input.set_to_value(value)
-            elif isinstance(input, ImageInput):
-                input.set_file_path(value)
+            # Populate based on input type
+            if isinstance(input_widget, DropdownInput):
+                input_widget.set_to_value(value)
+            elif isinstance(input_widget, ImageInput):
+                input_widget.set_file_path(value)
             else:
-                # Text inputs
-                input.update_text_value(
+                # Text and numeric inputs
+                input_widget.update_text_value(
                     new_text=value if value is not None else ""
                 )

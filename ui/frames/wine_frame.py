@@ -9,13 +9,13 @@ import customtkinter as ctk
 from sqlalchemy.orm import Session
 
 from db.models import Wine
-from ui.components import Card, ButtonGoBack
+from ui.components import Card, ButtonGoBack, AutoScrollFrame
 from ui.forms.add_edit_wine import AddWineForm
 from ui.forms.manage_wine import ManageWineForm
 from ui.style import Colours, Fonts, Rounding, Spacing
 
 
-class WineFrame(ctk.CTkScrollableFrame):
+class WineFrame(AutoScrollFrame):
     """
     Wine section frame with CRUD interface.
     
@@ -35,6 +35,8 @@ class WineFrame(ctk.CTkScrollableFrame):
             **kwargs: Additional keyword arguments for CTkScrollableFrame
         """
         super().__init__(root, **kwargs)
+        self.inner.configure(**kwargs)
+        self.canvas.configure(bg=kwargs["fg_color"])
 
         # DB instances
         self.session = session
@@ -53,7 +55,7 @@ class WineFrame(ctk.CTkScrollableFrame):
         """
         # Create title
         title = ctk.CTkLabel(
-            self,
+            self.inner,
             text="WINES",
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TITLE
@@ -66,7 +68,7 @@ class WineFrame(ctk.CTkScrollableFrame):
             "your selection up to date."
         )
         introduction = ctk.CTkLabel(
-            self,
+            self.inner,
             text=text_intro,
             text_color=Colours.TEXT_SECONDARY,
             justify="center",
@@ -74,10 +76,9 @@ class WineFrame(ctk.CTkScrollableFrame):
         )
         introduction.pack(padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y)
         
-        # ==Cards==
         # Create cards container
         frame_cards = ctk.CTkFrame(
-            self,
+            self.inner,
             fg_color="transparent",
             corner_radius=Rounding.CARD,
         )
@@ -119,8 +120,8 @@ class WineFrame(ctk.CTkScrollableFrame):
         self.clear_content()
 
         # Configure grid expansion
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_columnconfigure(0, weight=1)
+        self.inner.grid_rowconfigure(1, weight=1)
+        self.inner.grid_columnconfigure(0, weight=1)
 
         # Create and position go back button
         self.button_go_back = ButtonGoBack(
@@ -134,7 +135,7 @@ class WineFrame(ctk.CTkScrollableFrame):
 
         # Create and position title
         title = ctk.CTkLabel(
-            self,
+            self.inner,
             text=text_title,
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.SUBTITLE,
@@ -146,7 +147,7 @@ class WineFrame(ctk.CTkScrollableFrame):
 
         # Create and position subsection form
         form = form_class(
-            self,
+            self.inner,
             self.session,
             fg_color=Colours.BG_SECONDARY,
             **kwargs
@@ -155,7 +156,6 @@ class WineFrame(ctk.CTkScrollableFrame):
             row=1, column=0, 
             padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="nsew"
         ) 
-
 
     def show_add_wine_section(self) -> None:
         """
@@ -179,7 +179,7 @@ class WineFrame(ctk.CTkScrollableFrame):
         """
         Remove all widgets from the wine frame.
         """
-        for component in self.winfo_children():
+        for component in self.inner.winfo_children():
             component.destroy()
 
     def destroy(self) -> None:

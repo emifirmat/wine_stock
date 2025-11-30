@@ -8,11 +8,12 @@ import customtkinter as ctk
 from sqlalchemy.orm import Session
 from typing import Callable
 
+from ui.components import AutoScrollFrame
 from ui.forms.settings import SettingsForm
-from ui.style import Colours, Fonts, Spacing, Rounding
+from ui.style import Colours, Fonts, Spacing
 
 
-class SettingsFrame(ctk.CTkFrame):
+class SettingsFrame(AutoScrollFrame):
     """
     Settings section frame with shop configuration form.
     
@@ -32,6 +33,8 @@ class SettingsFrame(ctk.CTkFrame):
             **kwargs: Additional keyword arguments for CTkFrame
         """
         super().__init__(root, **kwargs)
+        self.inner.configure(**kwargs)
+        self.canvas.configure(bg=kwargs["fg_color"])
         
         # DB instances
         self.session = session
@@ -48,7 +51,7 @@ class SettingsFrame(ctk.CTkFrame):
         """
         # Create title
         title = ctk.CTkLabel(
-            self,
+            self.inner,
             text="SETTINGS",
             text_color=Colours.PRIMARY_WINE,
             font=Fonts.TITLE
@@ -57,7 +60,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         # Create introduction text
         introduction = ctk.CTkLabel(
-            self,
+            self.inner,
             text="Set the name and logo that represent your winery within the app.",
             text_color=Colours.TEXT_SECONDARY,
             justify="center",
@@ -67,7 +70,7 @@ class SettingsFrame(ctk.CTkFrame):
 
         # Create settings form
         settings_form = SettingsForm(
-            self,
+            self.inner,
             self.session,
             on_save=self.on_save
         )
