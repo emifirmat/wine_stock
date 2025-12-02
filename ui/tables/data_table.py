@@ -5,9 +5,9 @@ This module provides an abstract base class for data tables with features
 like lazy loading, sorting, filtering, and customizable row rendering.
 """
 import customtkinter as ctk
+import tkinter as tk
 from abc import ABC, abstractmethod
 from sqlalchemy.orm import Session
-from typing import Callable
 
 from helpers import load_ctk_image
 from ui.style import Colours, Fonts, Spacing
@@ -282,7 +282,7 @@ class DataTable(ctk.CTkFrame, ABC):
         self.visible_rows_count += self.LOAD_MORE_ROWS
         self.refresh_visible_rows()
 
-    def on_header_click(self, event, col_index: int) -> None:
+    def on_header_click(self, event: tk.Event, col_index: int) -> None:
         """
         Handle header click event for sorting.
         

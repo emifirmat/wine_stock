@@ -155,7 +155,7 @@ class AutoScrollFrame(ctk.CTkFrame):
         Initialize auto-scrolling frame.
         
         Parameters:
-            master: Parent widget
+            root: Parent widget
             **kwargs: Additional CTkFrame keyword arguments
         """
         super().__init__(root, **kwargs)
@@ -1403,11 +1403,16 @@ class DropdownInput(BaseInput):
 
     def set_total_width(self, total_width: int) -> None:
         """
-        Update the available dropdown options.
+        Set total width of the input container for alignment.
+        
+        Creates an empty label to fill remaining width, ensuring
+        consistent alignment across multiple input fields.
         
         Parameters:
-            values: New list of dropdown options
-   
+            total_width: Total width of the input container in pixels
+            
+        Raises:
+            ValueError: If total width is smaller than sum of components
         """
         # Wait for widgets to render
         self.update_idletasks()

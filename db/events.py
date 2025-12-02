@@ -4,14 +4,15 @@ Database event handlers and triggers.
 This module defines SQLAlchemy event listeners that automatically update
 wine quantities when stock movements are inserted, updated, or deleted.
 """
-from sqlalchemy import event, inspect
-from sqlalchemy.orm import Session
+from sqlalchemy import event
 
 from db.models import Wine, StockMovement
 
 
 @event.listens_for(StockMovement, "after_insert")
-def update_wine_quantity_after_insert(mapper, connection, target) -> None:
+def update_wine_quantity_after_insert(
+    mapper, connection, target: StockMovement
+) -> None:
     """
     Update wine quantity after a new stock movement is inserted.
     
@@ -40,7 +41,9 @@ def update_wine_quantity_after_insert(mapper, connection, target) -> None:
 
 
 @event.listens_for(StockMovement, "after_delete")
-def update_wine_quantity_after_delete(mapper, connection, target) -> None:
+def update_wine_quantity_after_delete(
+    mapper, connection, target: StockMovement
+) -> None:
     """
     Update wine quantity after a stock movement is deleted.
     
@@ -58,7 +61,7 @@ def update_wine_quantity_after_delete(mapper, connection, target) -> None:
     elif target.transaction_type == "sale":
         new_quantity = Wine.quantity + target.quantity
     else:
-        # Edge case: invalid trnasaction type
+        # Edge case: invalid transaction type
         return
     
     # Update wine table
@@ -69,7 +72,9 @@ def update_wine_quantity_after_delete(mapper, connection, target) -> None:
     )
 
 @event.listens_for(StockMovement, "before_update")
-def update_wine_quantity_before_update(mapper, connection, target) -> None:
+def update_wine_quantity_before_update(
+    mapper, connection, target: StockMovement
+) -> None:
     """
     Update wine quantity before a stock movement is updated.
     

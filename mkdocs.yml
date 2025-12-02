@@ -1,0 +1,24 @@
+site_name: WineStock Documentation
+site_description: Technical documentation for the WineStock application
+theme:
+  name: material
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_signature: true
+            show_root_heading: true
+
+nav:
+  - Home: index.md
+  - API Reference:
+      - Main application: api/main.md
+      - Database models: api/db.md
+      - UI components: api/ui.md
+      - Helpers: api/helpers.md
+      - Validators: api/validators.md

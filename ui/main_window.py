@@ -335,6 +335,19 @@ class MainWindow:
         label_welcome.grid(
             row=1, column=0, padx=2, pady=Spacing.LARGE, sticky="nwe"
         ) 
+
+        contact_text=(
+            "If you need a similar system for your business, "
+            "you can reach me at emiliano.dev.contact@gmail.com"
+        )
+        label_contact = ctk.CTkLabel(
+            frame_welcome,
+            text=contact_text,
+            text_color=Colours.TEXT_SECONDARY,
+            font=Fonts.TEXT_SECONDARY,
+            pady=Spacing.MEDIUM,
+        )
+        label_contact.grid(row=2, column=0, pady=Spacing.XSMALL, sticky="n")
         
         # Configure grid expansion
         frame_welcome.rowconfigure(0, weight=2)

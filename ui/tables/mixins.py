@@ -5,6 +5,7 @@ This module provides reusable mixins that can be added to table classes
 to extend their functionality with sorting, filtering, and other features.
 """
 import customtkinter as ctk
+import tkinter as tk
 from abc import ABC, abstractmethod
 from typing import Callable
 
@@ -53,7 +54,7 @@ class SortMixin(ABC):
         """        
         raise NotImplementedError("Subclasses must implement get_sorting_keys()")
     
-    def sort_table(self, event, col_index: int) -> None:
+    def sort_table(self, event: tk.Event, col_index: int) -> None:
         """
         Sort table by column when header is clicked.
         

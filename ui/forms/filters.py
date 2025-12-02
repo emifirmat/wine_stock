@@ -8,6 +8,7 @@ and automatic table updates on filter changes.
 import customtkinter as ctk
 import tkinter as tk
 import tkinter.messagebox as messagebox
+from datetime import datetime
 from sqlalchemy.orm import Session
 
 from db.models import Wine, Colour, Style, Varietal
@@ -427,6 +428,8 @@ class WineFiltersForm(BaseFiltersForm):
         input_year = IntInput(
             self.fields_container,
             label_text="Year",
+            from_=0,
+            to=datetime.now().year,
             textvariable=self.vars_dict["year"],
             optional=True
         )

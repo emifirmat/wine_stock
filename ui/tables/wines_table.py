@@ -6,6 +6,7 @@ with capabilities for sorting, filtering, viewing details, editing, and
 deleting wine records.
 """
 import customtkinter as ctk
+import tkinter as tk
 import tkinter.messagebox as messagebox
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -70,7 +71,7 @@ class WinesTable(DataTable, SortMixin):
             f"€ {line.purchase_price}", f"€ {line.selling_price}"
         ]
 
-    def on_header_click(self, event, col_index: int) -> None:
+    def on_header_click(self, event: tk.Event, col_index: int) -> None:
         """
         Handle header click to sort table.
         

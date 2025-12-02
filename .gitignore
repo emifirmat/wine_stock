@@ -1,8 +1,26 @@
+# virtual environment
 .venv
+
+# Python
 .pytest_cache
 __pycache__
 *.sqlite3
+
+# Local DB
 *.db
+
+# Visual Studio
 *.vs
+
+# MkDocs
+site
+.cache
+
+# PyInstaller
+dist/
+build/
+*.spec
+
+# Unnecesary testing files
 tests/reports
 tests/img

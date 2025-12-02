@@ -6,6 +6,7 @@ This module provides a table for displaying stock movement transactions
 and deleting individual transactions.
 """
 import customtkinter as ctk
+import tkinter as tk
 import tkinter.messagebox as messagebox
 from datetime import datetime, date
 from sqlalchemy.orm import Session
@@ -136,7 +137,7 @@ class TransactionsTable(DataTable, SortMixin):
             f"€ {line.quantity * line.price}"
         ]
 
-    def on_header_click(self, event, col_index: int) -> None:
+    def on_header_click(self, event: tk.Event, col_index: int) -> None:
         """
         Handle header click to sort table.
         

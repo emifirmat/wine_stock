@@ -7,8 +7,9 @@ Also configures the database engine and session.
 """
 from sqlalchemy import (event, create_engine, Column, ForeignKey, Integer, 
     String, DateTime, Numeric, Enum, text, func)
-from sqlalchemy.orm import sessionmaker, relationship, declarative_base, validates
+from sqlalchemy.orm import sessionmaker, relationship, declarative_base, validates, Session
 from datetime import datetime
+from typing import Self
 
 
 # == Global variables ==
@@ -44,7 +45,7 @@ class NamedModelMixin:
     including ordered retrieval and lookup by name.
     """
     @classmethod
-    def all_ordered(cls, session) -> list:
+    def all_ordered(cls, session: Session) -> list:
         """
         Get all instances sorted by name (case-insensitive, ascending).
         
@@ -59,7 +60,7 @@ class NamedModelMixin:
       
     
     @classmethod
-    def get_name(cls, session, **filters):
+    def get_name(cls, session: Session, **filters) -> Self | None:
         """
         Get an instance by name or other filters.
         
@@ -94,7 +95,7 @@ class Shop(Base):
     logo_path = Column(String)
 
     @classmethod
-    def get_singleton(cls, session) -> "Shop":
+    def get_singleton(cls, session: Session) -> "Shop":
         """
         Get or create the single shop instance.
         
@@ -147,7 +148,7 @@ class Wine(Base):
     # Ordered list
     @classmethod
     def all_ordered(
-        cls, session, order_by: str = "name", distinct: str | None = None
+        cls, session: Session, order_by: str = "name", distinct: str | None = None
     ) -> list["Wine"]:
         """
         Get all wines sorted by specified field (case-insensitive).
@@ -180,7 +181,7 @@ class Wine(Base):
 
     @classmethod
     def column_ordered(
-        cls, session, column: str, order_by: str = "name", 
+        cls, session: Session, column: str, order_by: str = "name", 
         distinct: str | None = None
     ) -> list:
         """
@@ -220,7 +221,7 @@ class Wine(Base):
         return value.title() if value else value
     
     @validates("min_stock")
-    def convert_none(self, key: str, value) -> int | None:
+    def convert_none(self, key: str, value: int | str) -> int | None:
         """
         Convert min_stock to integer or None.
         
@@ -356,7 +357,7 @@ class StockMovement(Base):
     # Ordered list
     @classmethod
     def all_ordered_by_datetime(
-        cls, session, filter: str | None = None
+        cls, session: Session, filter: str | None = None
     ) -> list["StockMovement"]:
         """
         Get all stock movements sorted by datetime (descending).
@@ -383,6 +384,7 @@ class StockMovement(Base):
         return value.lower() if value else value
 
 # Note: Base.metadata.create_all() is not used - database migrations are handled by Alembic
+# Note 2: For exe files it will require to be used
 
 # == Session ==
 # Create session factory for database operations
