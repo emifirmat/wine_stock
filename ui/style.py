@@ -30,6 +30,7 @@ class Colours:
     BTN_ACTIVE = COMPANY_NAME
     BTN_CLEAR = PRIMARY_WINE
     BTN_SAVE = COMPANY_NAME
+    DISABLED = BORDERS
     DROPDOWN_HOVER = "#D8C4C4"
     ERROR = "#C52323"
     ICONS = "#D4AF37"
@@ -112,6 +113,13 @@ class Icons:
     
     GO_BACK = ctk.CTkImage(
         light_image=generate_colored_icon(f"{root_path}/go_back.png", Colours.ICONS),
+        size=large_icon_size,
+    )
+
+    GO_BACK_DISABLED = ctk.CTkImage(
+        light_image=generate_colored_icon(
+            f"{root_path}/go_back.png", Colours.DISABLED
+        ),
         size=large_icon_size,
     )
 

@@ -7,7 +7,9 @@ to transaction operations.
 """
 import customtkinter as ctk
 from sqlalchemy.orm import Session
+from typing import Callable
 
+from helpers import get_system_scale
 from ui.components import Card, ButtonGoBack, AutoScrollFrame
 from ui.forms.add_edit_transaction import AddTransactionForm
 from ui.forms.manage_transaction import ManageTransactionForm
@@ -15,24 +17,25 @@ from ui.style import Colours, Fonts, Spacing, Rounding
 
 from db.models import Wine
 
+
 class HomeFrame(AutoScrollFrame):
     """
     Home section frame with transaction management interface.
     
     Displays cards for adding sales, purchases, and managing transactions.
-    If no wines exist in the database, shows a prompt to add wines first.
+    Shows a prompt to add wines first if the database is empty.
     """
     def __init__(
-        self, root: ctk.CTkFrame, session: Session, main_window, **kwargs
+        self, root: ctk.CTkFrame, session: Session, on_header_update: Callable, **kwargs
     ):
         """
-        Initialize the home frame with transaction cards.
+        Initialise the home frame with transaction cards.
         
         Parameters:
             root: Parent frame container
             session: SQLAlchemy database session
-            main_window: Reference to MainWindow for navigation
-            **kwargs: Additional keyword arguments for CTkScrollableFrame
+            on_header_update: Callback to update the main window header
+            **kwargs: Additional keyword arguments for AutoScrollFrame
         """
         super().__init__(root, **kwargs)
         self.inner.configure(**kwargs)
@@ -42,26 +45,19 @@ class HomeFrame(AutoScrollFrame):
         self.session = session
         self.wine_list = self.session.query(Wine).all()
         
-        # Widget references
-        self.main_window = main_window
-        self.button_go_back = None
+        # Callbacks
+        self.on_header_update = on_header_update
         
         # Components
         self.create_components()
 
     def create_components(self) -> None:
         """
-        Create and display home section components (title, cards, or empty state).
-        """
-        # Create title
-        title = ctk.CTkLabel(
-            self.inner,
-            text="HOME",
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.TITLE
-        )
-        title.pack(padx=Spacing.TITLE_X, pady=Spacing.TITLE_Y)
+        Create and display home section components.
         
+        Shows either an empty state message if no wines exist, or the
+        transaction management cards if wines are available.
+        """
         # Show empty state if no wines exist
         if not self.wine_list:
             text = "Add at least one wine to enable and view this section."
@@ -77,24 +73,8 @@ class HomeFrame(AutoScrollFrame):
                 padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y,
             )
             
-            # Stop generating components
             return
         
-        # Create introduction text
-        text = (
-            "Add, track, and manage wine sales and purchases to stay on top of "
-            "your winery's activity."
-        )
-        introduction = ctk.CTkLabel(
-            self.inner,
-            text=text,
-            text_color=Colours.TEXT_SECONDARY,
-            justify="center",
-            font=Fonts.TEXT_SECONDARY
-        )
-        introduction.pack(padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y)
-
-        # ==Frame cards==
         # Create cards container
         frame_cards = ctk.CTkFrame(
             self.inner,
@@ -138,7 +118,9 @@ class HomeFrame(AutoScrollFrame):
         # Horizontal expansion for cards doesn't look aesthetically pleasing.
 
     
-    def show_subsection(self, text_title: str, form_class: type, **kwargs) -> None:
+    def show_subsection(
+        self, text_title: str, form_class: ctk.CTkFrame, **kwargs
+    ) -> None:
         """
         Clear content and display a transaction form subsection.
         
@@ -149,34 +131,13 @@ class HomeFrame(AutoScrollFrame):
         """
         # Clear current content
         self.clear_content()
+        
+        # Update header frame
+        self.on_header_update(title=text_title, introduction="", back_to="home")
 
         # Configure grid expansion
         self.inner.grid_rowconfigure(1, weight=1)
         self.inner.grid_columnconfigure(0, weight=1)
-
-        # Create and position go back button
-        self.button_go_back = ButtonGoBack(
-            self.main_window.root,
-            command=self.main_window.show_home_section
-        )
-
-        # Create title
-        title = ctk.CTkLabel(
-            self.inner,
-            text=text_title,
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.SUBTITLE,
-        )
-
-        # Position button and title
-        x = self.winfo_rootx() - self.main_window.root.winfo_rootx()
-        y = self.winfo_rooty() - self.main_window.root.winfo_rooty()
-        
-        self.button_go_back.place(x=x, y=y)
-        title.grid(
-            row=0, column=0, 
-            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="nsew"
-        ) 
 
         # Create and position form
         form = form_class(
@@ -224,12 +185,3 @@ class HomeFrame(AutoScrollFrame):
         """
         for component in self.inner.winfo_children():
             component.destroy()
-
-    def destroy(self) -> None:
-        """
-        Destroy the frame and its go back button.
-        """
-        if self.button_go_back:
-            self.button_go_back.destroy()
-        super().destroy()
-

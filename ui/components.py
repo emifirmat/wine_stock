@@ -13,7 +13,7 @@ import re
 from decimal import Decimal
 from typing import Callable
 
-from helpers import load_ctk_image, running_in_wsl
+from helpers import load_ctk_image, running_in_wsl, get_system_scale
 from ui.style import Colours, Fonts, Icons, Spacing, Rounding
 
 
@@ -21,8 +21,12 @@ class EntryInputMixin:
     """
     Mixin providing utility methods for entry widget management.
     
-    Provides methods for setting width, clearing content, getting values,
-    and updating text in entry widgets.
+    Provides reusable methods for common entry operations including setting width,
+    clearing content, retrieving values, and managing alignment across multiple inputs.
+    
+    Requirements:
+        - Must be used with a class that inherits from CTkFrame
+        - Host class must define: self.entry, self.label, self.label_optional
     """
     def set_entry_width(self, entry_width: int) -> None:
         """
@@ -50,38 +54,45 @@ class EntryInputMixin:
 
     def set_total_width(self, total_width: int) -> None:
         """
-        Set total width of the input container for alignment.
+        Set total width of the input container for consistent alignment.
         
-        Creates an empty label to fill remaining width, ensuring
-        consistent alignment across multiple input fields.
+        Creates an invisible spacer label to ensure all input rows have the same
+        total width, providing visual alignment when multiple inputs are stacked.
+        Automatically accounts for system DPI scaling.
         
         Parameters:
-            total_width: Total width of the input container in pixels
+            total_width: Target total width of the container in pixels (before scaling)
             
         Raises:
-            ValueError: If total width is smaller than sum of components
+            ValueError: If total_width is smaller than the combined width of components
             
-        Requirements:
-            - Class must inherit from CTkFrame
-            - Class must define self.label, self.label_optional, and self.entry
+        Note:
+            Call this after the widget is rendered (e.g., after pack/grid and update_idletasks)
         """
+        # Adjust for system DPI scaling
+        scaled_width = int(total_width * get_system_scale())
+        
         # Ensure widgets are rendered before measuring
         self.update_idletasks()
         
-        # Calculate widths
+        # Calculate component widths including padding
         label_width = self.label.winfo_width() + Spacing.LABEL_X * 2
         label_asterisk_width = self.label_optional.winfo_width() + Spacing.LABEL_X
         entry_width = self.entry.winfo_width() + Spacing.LABEL_X
-        empty_label_width = total_width - (
+        
+        # Calculate remaining space for alignment
+        empty_label_width = scaled_width - (
             label_width + entry_width + label_asterisk_width
         )
 
         if empty_label_width < 0:
             raise ValueError(
-                "total_width must be greater than label widths + entry width."
+                f"total_width ({total_width}) is too small for components. "
+                f"Required minimum: {label_width + entry_width + label_asterisk_width} "
+                f"(after scaling: {scaled_width})."
             )
 
-        # Create empty label for alignment
+        # Create invisible spacer label for alignment
         ctk.CTkLabel(
             self, # frame that contains all ctk components
             text="",
@@ -1403,31 +1414,40 @@ class DropdownInput(BaseInput):
 
     def set_total_width(self, total_width: int) -> None:
         """
-        Set total width of the input container for alignment.
-        
-        Creates an empty label to fill remaining width, ensuring
-        consistent alignment across multiple input fields.
-        
+        Set total width of the input container for consistent alignment.
+
+        Creates an invisible spacer label to ensure all input rows have the same
+        total width, providing visual alignment when multiple inputs are stacked.
+        Automatically accounts for system DPI scaling.
+
         Parameters:
-            total_width: Total width of the input container in pixels
+            total_width: Target total width of the container in pixels (before scaling)
             
         Raises:
-            ValueError: If total width is smaller than sum of components
+            ValueError: If total_width is smaller than the combined width of components
+            
+        Note:
+            Call this after the widget is rendered (e.g., after pack/grid and update_idletasks)
         """
+        # Adjust for system DPI scaling
+        scaled_width = int(total_width * get_system_scale())
+
         # Wait for widgets to render
         self.update_idletasks()
-        
+
         # Calculate widths
         label_width = self.label.winfo_width() + Spacing.LABEL_X * 2
         label_asterisk_width = self.label_optional.winfo_width() + Spacing.LABEL_X
         dropdown_width = self.dropdown.winfo_width() + Spacing.LABEL_X
-        empty_label_width = total_width - (
+        empty_label_width = scaled_width - (
             label_width + dropdown_width + label_asterisk_width
         )
 
         if empty_label_width < 0:
             raise ValueError(
-                "total_width must be greater than label widths + dropdown width."
+                f"total_width ({total_width}) is too small for components. "
+                f"Required minimum: {label_width + dropdown_width + label_asterisk_width} "
+                f"(after scaling: {scaled_width})."
             )
 
         # Create empty label for alignment
@@ -1634,27 +1654,37 @@ class DoubleLabel(ctk.CTkFrame):
 
     def set_total_width(self, total_width: int) -> None:
         """
-        Set total width of double label for alignment.
-        
-        Creates an empty label to fill remaining width.
-        
+        Set total width of the input container for consistent alignment.
+
+        Creates an invisible spacer label to ensure all input rows have the same
+        total width, providing visual alignment when multiple inputs are stacked.
+        Automatically accounts for system DPI scaling.
+
         Parameters:
-            total_width: Total width in pixels
+            total_width: Target total width of the container in pixels (before scaling)
             
         Raises:
-            ValueError: If total width is smaller than sum of components
+            ValueError: If total_width is smaller than the combined width of components
+            
+        Note:
+            Call this after the widget is rendered (e.g., after pack/grid and update_idletasks)
         """
+        # Adjust for system DPI scaling
+        scaled_width = int(total_width * get_system_scale())
+
         # Ensure widgets are rendered
         self.update_idletasks()
-        
+
         # Calculate widths
         title_width = self.label_title.winfo_width() + Spacing.LABEL_X * 2
         value_width = self.label_value.winfo_width() + Spacing.LABEL_X * 2
-        empty_label_width = total_width - (title_width + value_width)
+        empty_label_width = scaled_width - (title_width + value_width)
 
         if empty_label_width < 0:
             raise ValueError(
-                "total_width must be greater than title width + value width."
+                f"total_width ({total_width}) is too small for components. "
+                f"Required minimum: {title_width + value_width} "
+                f"(after scaling: {scaled_width})."
             )
 
         # Create empty label for aligment
@@ -1766,31 +1796,43 @@ class ImageInput(BaseInput):
 
     def set_total_width(self, total_width: int) -> None:
         """
-        Set total width of image input for alignment.
-        
-        Creates an empty label to fill remaining width.
-        
+        Set total width of the input container for consistent alignment.
+
+        Creates an invisible spacer label to ensure all input rows have the same
+        total width, providing visual alignment when multiple inputs are stacked.
+        Automatically accounts for system DPI scaling.
+
         Parameters:
-            total_width: Total width in pixels
+            total_width: Target total width of the container in pixels (before scaling)
             
         Raises:
-            ValueError: If total width is smaller than sum of components
+            ValueError: If total_width is smaller than the combined width of components
+            
+        Note:
+            Call this after the widget is rendered (e.g., after pack/grid and update_idletasks)
         """
+        # Adjust for system DPI scaling
+        scaled_width = int(total_width * get_system_scale())
+
         # Wait for widgets to render
         self.update_idletasks()
-        
+
         # Calculate widths
         label_width = self.label.winfo_width() + Spacing.LABEL_X * 2
         label_asterisk_width = self.label_optional.winfo_width() + Spacing.LABEL_X
         button_width = self.button.winfo_width() + Spacing.BUTTON_X
         label_preview_width = self.label_preview.winfo_width() + Spacing.LABEL_X * 2
-        empty_label_width = total_width - (
+        empty_label_width = scaled_width - (
             label_width + label_preview_width + label_asterisk_width + button_width
         )
 
         if empty_label_width < 0:
             raise ValueError(
-                "total_width must be greater than sum of component widths."
+                f"total_width ({total_width}) is too small for components. "
+                f"Required minimum: {
+                    label_width + label_preview_width + label_asterisk_width + button_width 
+                }"
+                f"(after scaling: {scaled_width})."
             )
 
         # Create empty label for alignment
@@ -2054,33 +2096,100 @@ class NavLink(ctk.CTkButton):
 
 class ButtonGoBack(ctk.CTkButton):
     """
-    Button for navigating back to previous section.
+    Navigation button for returning to the previous section.
+    
+    Features dynamic state management with visual feedback: enabled state shows
+    standard and hover icons, disabled state shows a grayed-out icon with no interaction.
     """
-    def __init__(self, root, command: Callable, **kwargs):
+    def __init__(self, root, command: Callable | None = None, **kwargs):
         """
-        Initialize go back button.
+        Initialise go back button with optional command.
         
         Parameters:
             root: Parent widget
-            command: Callback executed when clicked
+            command: Callback function executed when clicked (None to disable)
             **kwargs: Additional CTkButton keyword arguments
         """
         super().__init__(root, **kwargs)
-       
         self.configure(
-            image=Icons.GO_BACK,
-            fg_color=Colours.BG_SECONDARY, # I can't use transparent here
+            image=Icons.GO_BACK_DISABLED,
+            fg_color=Colours.BG_SECONDARY, # Cannot use transparent here
             text="",
             hover_color=Colours.BG_SECONDARY,
             anchor="w",
-            cursor="hand2",
-            width=20,
-            height=30,
-            command=command
         )
 
-        self.bind("<Enter>", lambda e: self.configure(image=Icons.GO_BACK_HOVER))
-        self.bind("<Leave>", lambda e: self.configure(image=Icons.GO_BACK))
+        # Store bind IDs to manage hover effects
+        self._enter_bind_id = None
+        self._leave_bind_id = None
+
+        self.set_command(command)
+
+    def set_command(self, command: Callable | None) -> None:
+        """
+        Set or clear the button command and update visual state.
+        
+        When a command is provided, enables the button with hover effects.
+        When None is provided, disables the button and removes interaction.
+        
+        Parameters:
+            command: Callback function to execute on click (None to disable).
+        """
+        # Update command 
+        self.configure(command=command if command else None)
+
+        if command:
+            # Enable button with interaction
+            self.configure(cursor="hand2", image=Icons.GO_BACK)
+            self._enable_hover()
+        else:
+            # Disable button without interaction
+            self.configure(cursor="arrow", image=Icons.GO_BACK_DISABLED)
+            self._disable_hover()
+
+    def _enable_hover(self) -> None:
+        """
+        Enable hover effects by binding mouse enter/leave events.
+        
+        Does nothing if hover effects are already enabled to avoid duplicate bindings.
+        """
+        # Skip if already enabled
+        if self._enter_bind_id is not None and self._leave_bind_id is not None:
+            return
+
+        # Bind hover events
+        self._enter_bind_id = self.bind(
+            "<Enter>",
+            lambda e: self.configure(image=Icons.GO_BACK_HOVER),
+        )
+        self._leave_bind_id = self.bind(
+            "<Leave>",
+            lambda e: self.configure(image=Icons.GO_BACK),
+        )
+
+    def _disable_hover(self) -> None:
+        """
+        Disable hover effects and restore disabled icon.
+        
+        Unbinds mouse events and resets the icon to the disabled state.
+        Does nothing if hover effects are already disabled.
+        """
+        # Skip if already disabled
+        if self._enter_bind_id is None and self._leave_bind_id is None:
+            return
+        
+        # Unbind enter bind
+        if self._enter_bind_id is not None:
+            self.unbind("<Enter>", self._enter_bind_id)
+            self._enter_bind_id = None
+
+        # Unbind leave bind
+        if self._leave_bind_id is not None:
+            self.unbind("<Leave>", self._leave_bind_id)
+            self._leave_bind_id = None
+
+        # Restore disabled icon
+        self.configure(image=Icons.GO_BACK_DISABLED)
         
 
 class ActionMenuButton(ctk.CTkFrame):

@@ -276,7 +276,7 @@ class TransactionFiltersForm(BaseFiltersForm):
 
         # Configure input widths
         for input_name, input_widget in self.inputs_dict.items():
-            label_width = 100 if input_name == "transaction" else 60
+            label_width = 90 if input_name == "transaction" else 60
             input_widget.set_label_layout(label_width)
             input_widget.set_total_width(300)
 
@@ -296,6 +296,10 @@ class TransactionFiltersForm(BaseFiltersForm):
             row=1, column=2, 
             padx=Spacing.BUTTON_X, pady=(0, Spacing.BUTTON_Y)
         )
+
+        # Configure grid responsiveness
+        for i in range(3):
+            self.fields_container.grid_columnconfigure(i, weight=1)
 
     def trigger_filters(self, *args) -> None:
         """

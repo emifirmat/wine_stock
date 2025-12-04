@@ -116,7 +116,7 @@ pytest tests
 ```
 
 Database logic and helper utilities are covered by automated tests.  
-UI testing is done manually due to CustomTkinter constraints.
+UI testing is done manually due to CustomTkinter constraints, and these tests were performed on both WSL (Ubuntu) and Windows 11 environments.
 
 ---
 

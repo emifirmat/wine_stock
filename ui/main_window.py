@@ -8,20 +8,20 @@ import platform
 import customtkinter as ctk
 from sqlalchemy.orm import Session
 
-from ui.components import NavLink
+from ui.components import NavLink, ButtonGoBack
 from ui.style import Colours, Fonts, Icons, Spacing, Rounding
 from ui.frames.home_frame import HomeFrame
 from ui.frames.wine_frame import WineFrame
 from ui.frames.report_frame import ReportFrame
 from ui.frames.settings_frame import SettingsFrame
-from helpers import load_ctk_image, resource_path
+from helpers import load_ctk_image, resource_path, get_system_scale
 from db.models import Shop
 
 class MainWindow:
     """
     Main application window and layout management.
 
-    This module defines the main window structure, including the top bar with shop info,
+    Manages the overall application structure including the top bar with shop information,
     sidebar navigation menu, and main content area where different sections are displayed.
     """
 
@@ -39,45 +39,54 @@ class MainWindow:
         # Main window
         self.root = root
         self.setup_main_window()
+        
         # DB
         self.session = session
+        
         # Layout frames
         self.frame_top = None
         self.frame_side = None
         self.frame_body = None
         self.create_layout_containers()
+        
         # Topframe components
         self.shop = None
         self.label_logo = None
         self.label_shop_name = None
         self.create_topframe_components()
+        
         # Sidebar components
         self.button_home = None
         self.button_wine = None
         self.button_report = None
         self.button_settings = None
         self.create_sidebar_components()
+        
+        # Body frame components
+        self.button_go_back = None
+        self.title = None
+        self.introduction = None
+        
         # Initial welcome message
         self.create_welcome_message()
-
+        
     def setup_main_window(self) -> None:
         """
-        Configure main window properties (title, size, icon, colours).
+        Configure main window properties including title, size, icon, and colors.
         """
         self.root.title("Wine Stock App")
         self.root.geometry(f"{self.SCREEN_WIDTH}x{self.SCREEN_HEIGHT}")
         
-        # Set icon for Windows systems
+        # Set icon for Windows systems only
         if platform.system() == "Windows":
             self.root.iconbitmap(resource_path("assets/favicon.ico"))    
+        
         # Configure background colour
-        self.root.configure(
-            fg_color=Colours.BG_MAIN
-        )
+        self.root.configure(fg_color=Colours.BG_MAIN)
 
     def create_layout_containers(self) -> None:
         """
-        Create and position the main layout frames (top, sidebar, body).
+        Create and position the main layout frames: top bar, sidebar, and body.
         """
         # Create frames
         self.frame_top = ctk.CTkFrame(
@@ -111,8 +120,7 @@ class MainWindow:
             column=0, 
             columnspan=2, 
             sticky="nsew", 
-            padx=(Spacing.SMALL, Spacing.LARGE),
-            pady=Spacing.MEDIUM
+            padx=(Spacing.SMALL, Spacing.LARGE), pady=Spacing.MEDIUM
         )
         self.frame_side.grid(
             row=1, column=0, sticky="nsew", 
@@ -126,6 +134,8 @@ class MainWindow:
     def create_topframe_components(self) -> None:
         """
         Create and position shop logo and name in the top frame.
+        
+        Retrieves shop information from the database and displays it in the top bar.
         """
         # Get shop data from database
         self.shop = self.session.query(Shop).first()
@@ -213,56 +223,169 @@ class MainWindow:
             self.button_settings
         ]:
             btn.pack(
-                fill="x", expand=True, padx=Spacing.NAVLINK_X, pady=Spacing.NAVLINK_Y
+                fill="x", expand=True,
+                padx=Spacing.NAVLINK_X, pady=Spacing.NAVLINK_Y
             )
 
-    def show_section(self, frame_class: type, **kwargs) -> None:
+    def show_section(
+        self, title_text: str, introduction_text: str, frame_class: ctk.CTkFrame, 
+        **kwargs
+    ) -> None:
         """
         Clear body frame and display a new section.
         
         Parameters:
-            frame_class: Frame class to be instantiated and displayed
+            title_text: Title to display at the top of the section
+            introduction_text: Introduction text describing the section's purpose
+            frame_class: Frame class to instantiate and display as main content
             **kwargs: Additional keyword arguments passed to the frame constructor
         """
         self.clear_body()
 
-        frame = frame_class(
+        # Create and position header frame
+        header_frame = ctk.CTkFrame(self.frame_body, fg_color="transparent")
+        header_frame.grid(
+            row=0, column=0, sticky="ew", 
+            padx=Spacing.XSMALL + 2, pady=Spacing.XSMALL + 2
+        )
+        header_frame.grid_columnconfigure(1, weight=1)
+
+        # Configure columns layout (columns 0 and 2 mantain button width)
+        header_frame.columnconfigure(0, weight=0)
+        header_frame.columnconfigure(1, weight=1)    
+        header_frame.columnconfigure(2, weight=0)
+        
+        # Create and position go back button
+        self.button_go_back = ButtonGoBack(
+            header_frame,
+            width=30,
+            height=30,
+        )
+        self.button_go_back.grid(row=0, column=0, sticky="w")
+        
+        # Create and position title
+        self.title = ctk.CTkLabel(
+            header_frame,
+            text=title_text,
+            text_color=Colours.PRIMARY_WINE,
+            font=Fonts.TITLE,
+        ) 
+        self.title.grid(
+            row=0, column=1, sticky="we", padx=0, pady=Spacing.TITLE_Y, 
+        ) 
+
+        # Create alignment_frame to keep title centered
+        alignment_frame = ctk.CTkFrame(
+            header_frame,
+            fg_color="transparent",
+            width=30,
+            height=30,
+        )
+        alignment_frame.grid(row=0, column=2, sticky="e")
+
+        # Create introduction text
+        self.introduction = ctk.CTkLabel(
+            header_frame,
+            text=introduction_text,
+            text_color=Colours.TEXT_SECONDARY,
+            justify="center",
+            font=Fonts.TEXT_SECONDARY
+        )
+        self.introduction.grid(
+            row=1, column=0, columnspan=3,
+            padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y
+        )
+
+        # Create content frame
+        content_frame = frame_class(
             self.frame_body, 
             self.session,
             fg_color=Colours.BG_SECONDARY,
             **kwargs
         )
 
-        # This padding is the best solution to have an autoscroll frame with 
-        # rounded borders
-        frame.grid(
-            row=0, column=0, sticky="nsew",
+        # Padding solution for autoscroll frame with rounded borders
+        content_frame.grid(
+            row=1, column=0, sticky="nsew",
             padx=Spacing.XSMALL + 2, pady=Spacing.XSMALL + 2
         )
 
+    def update_header(
+        self, title: str | None = None, introduction: str | None = None, 
+        back_to: str | None = None
+    ) -> None:
+        """
+        Update header components dynamically.
+        
+        Parameters:
+            title: New title text to display (None to keep current)
+            introduction: New introduction text (empty string to hide, None to keep current)
+            back_to: Navigation target for back button ("home" or "wines", None to keep current)
+        """
+        # Update title
+        if title is not None:
+            self.title.configure(text=title)
+        
+        # Update introduction
+        if introduction is not None:
+            if introduction == "":
+                # Remove from grid to give more space to content_frame
+                self.introduction.grid_remove()
+            else:
+                self.introduction.grid()
+                self.introduction.configure(text=introduction)
+        
+        # Update back button command
+        if back_to is not None:
+            command_map = {
+                "home": self.show_home_section,
+                "wines": self.show_wine_section
+            }
+            command = command_map.get(back_to)
+
+            if command:
+                self.button_go_back.set_command(command)
+
     def show_home_section(self) -> None:
         """
-        Display the home section with sales and purchases.
+        Display the home section with sales and purchases management.
         """        
-        self.show_section(HomeFrame, main_window=self)
+        introduction_text = (
+            "Add, track, and manage wine sales and purchases to stay on top of "
+            "your winery's activity."
+        )
+        self.show_section(
+            "HOME", introduction_text, HomeFrame, on_header_update=self.update_header
+        )
             
     def show_wine_section(self) -> None:
         """
         Display the wine inventory management section.
-        """     
-        self.show_section(WineFrame, main_window=self)
+        """    
+        introduction_text = (
+            "Add, edit, or remove wines from your winery's catalog to keep "
+            "your selection up to date."
+        )
+        self.show_section("WINES", introduction_text, WineFrame, on_header_update=self.update_header)
 
     def show_report_section(self) -> None:
         """
-        Display the wine inventory management section.
+        Display the reports section with sales, purchases, and stock analytics.
         """
-        self.show_section(ReportFrame)     
+        introduction_text = (
+            "Generate and review reports of your sales, purchases and stock. "
+            "You can export data in CSV or Excel format."
+        )
+        self.show_section("REPORTS", introduction_text, ReportFrame)     
 
     def show_settings_section(self) -> None:
         """
         Display the settings section with shop configuration.
         """
-        self.show_section(SettingsFrame, on_save=self.refresh_shop_labels)
+        introduction_text = "Set the name and logo that represent your winery within the app."
+        self.show_section(
+            "SETTINGS", introduction_text, SettingsFrame, on_save=self.refresh_shop_labels
+        )
 
     def clear_body(self) -> None:
         """
@@ -291,9 +414,9 @@ class MainWindow:
         Display welcome message in the body frame on application startup.
         """
         # Configure grid expansion for body frame
-        self.frame_body.rowconfigure(0, weight=1)
+        self.frame_body.rowconfigure(1, weight=1)
         self.frame_body.columnconfigure(0, weight=1)
-
+        
         # Create welcome frame
         frame_welcome = ctk.CTkFrame(
             self.frame_body,
@@ -302,7 +425,7 @@ class MainWindow:
             border_color=Colours.BORDERS,
             border_width=1
         )
-        frame_welcome.grid(row=0, column=0, sticky="wsen") 
+        frame_welcome.grid(row=1, column=0, sticky="wsen") 
         
         # Create title
         title = ctk.CTkLabel(
@@ -315,7 +438,7 @@ class MainWindow:
             row=0, column=0, padx=Spacing.TITLE_X, pady=Spacing.TITLE_Y, sticky="n"
         )
 
-        # Create weoolvome text
+       # Create welcome text
         welcome_text = (
             "Manage your wine inventory effortlessly: add sales, record "
             "purchases, track stock levels, receive low-stock alerts, and "
@@ -336,6 +459,7 @@ class MainWindow:
             row=1, column=0, padx=2, pady=Spacing.LARGE, sticky="nwe"
         ) 
 
+        # Create contact text
         contact_text=(
             "If you need a similar system for your business, "
             "you can reach me at emiliano.dev.contact@gmail.com"
@@ -353,5 +477,3 @@ class MainWindow:
         frame_welcome.rowconfigure(0, weight=2)
         frame_welcome.rowconfigure(1, weight=8)
         frame_welcome.columnconfigure(0, weight=1)
-        
-        

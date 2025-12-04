@@ -251,3 +251,43 @@ def running_in_wsl() -> bool:
         True if running under WSL, False otherwise
     """
     return "microsoft" in platform.uname().release.lower()
+
+def get_system_scale() -> float:
+    """
+    Return system UI scale factor relative to 100 percent.
+    
+    Retrieves the DPI scaling factor from the operating system. This is used
+    to ensure UI elements scale appropriately on high-DPI displays.
+    
+    Returns:
+        Scale factor as a float (1.0 = 100%, 1.25 = 125%, 1.5 = 150%, etc.)
+        Returns 1.0 on non-Windows systems or if DPI detection fails
+        
+    Examples:
+        - 96 DPI (standard): 1.0
+        - 120 DPI (125% scaling): 1.25
+        - 144 DPI (150% scaling): 1.5
+        - 192 DPI (200% scaling): 2.0
+    """
+    if not sys.platform.startswith("win"):
+        return 1.0
+
+    try:
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        gdi32 = ctypes.windll.gdi32
+
+        # Get device context and DPI
+        hdc = user32.GetDC(0)
+        LOGPIXELSX = 88
+        dpi = gdi32.GetDeviceCaps(hdc, LOGPIXELSX)
+        user32.ReleaseDC(0, hdc)
+
+        # Standard Windows DPI is 96, calculate scale factor
+        return dpi / 96.0
+
+    except Exception as e:
+        print(f"Error reading Windows DPI: {e}")
+        print("Defaulting to scale factor 1.0")
+        return 1.0

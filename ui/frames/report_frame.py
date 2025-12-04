@@ -16,6 +16,7 @@ from ui.components import Card, ToggleInput, AutoScrollFrame
 from ui.style import Colours, Fonts, Spacing, Rounding
 from db.models import StockMovement, Wine
 
+
 class ReportFrame(AutoScrollFrame):
     """
     Report section frame with export functionality.
@@ -32,7 +33,7 @@ class ReportFrame(AutoScrollFrame):
         Parameters:
             root: Parent frame container
             session: SQLAlchemy database session
-            **kwargs: Additional keyword arguments for CTkScrollableFrame
+            **kwargs: Additional keyword arguments for AutoScrollFrame
         """
         super().__init__(root, **kwargs)
         self.inner.configure(**kwargs)
@@ -50,30 +51,9 @@ class ReportFrame(AutoScrollFrame):
     def create_components(self) -> None:
         """
         Create and display all UI components for the report section.
+        
+        Creates an export format toggle and cards for different report types.
         """
-        # Create title
-        title = ctk.CTkLabel(
-            self.inner,
-            text="REPORTS",
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.TITLE
-        )
-        title.pack(padx=Spacing.TITLE_X, pady=Spacing.TITLE_Y)
-
-        # Create introduction text
-        text = (
-            "Generate and review reports of your sales, purchases and stock. "
-            "You can export data in CSV or Excel format."
-        )
-        introduction = ctk.CTkLabel(
-            self.inner,
-            text=text,
-            text_color=Colours.TEXT_SECONDARY,
-            justify="center",
-            font=Fonts.TEXT_SECONDARY
-        )
-        introduction.pack(padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y)
-
         # Create export format toggle
         toggle_export = ToggleInput(
             self.inner,
@@ -114,30 +94,42 @@ class ReportFrame(AutoScrollFrame):
 
     def generate_report(self, filter_type: str | None = None) -> None:
         """
-        Generate and export a CSV or Excel report.
+        Generate and export a report in the selected format.
         
-        Opens a file dialog for the user to choose the save location,
-        then generates the report with the selected data and format.
+        Opens a file dialog for the user to choose the save location, then generates
+        the report with the selected data and format.
         
         Parameters:
-            filter_type: Type of report - "wine", "sale", "purchase", or None for full report   
+            filter_type: Type of report to generate:
+                - "wine": Wine catalog report
+                - "sale": Sales transactions only
+                - "purchase": Purchase transactions only
+                - None: Full report with all transactions
         """
         file_ext = self.export_format.get()
         file_type = "CSV" if file_ext == "csv" else "Excel"
+
+        # Determine report title for dialog
+        report_title = (
+            f"{filter_type.title()}s" if filter_type else "Full"
+        )
 
         # Choose file destination
         file_path = ctk.filedialog.asksaveasfilename(
             defaultextension=f".{file_ext}",
             filetypes=[(f"{file_type} files", f"*.{file_ext}"), ("All files", "*.*")],
-            title=f"Save {(filter_type.title() + "s") if filter_type else "Full"} Report"
+            title=f"Save {report_title} Report"
         )
+
         if not file_path:
             return
         
-        # Get data
-        ws_title, field_names, attribute_names, data_list = self._get_data_config(filter_type)
+        # Get report configuration
+        ws_title, field_names, attribute_names, data_list = self._get_data_config(
+            filter_type
+        )
       
-        # Write on a new file
+        # Write to file based on format
         if file_ext == "csv":
             self._write_csv(file_path, field_names, attribute_names, data_list)
         elif file_ext == "xlsx":
@@ -181,19 +173,20 @@ class ReportFrame(AutoScrollFrame):
                 ),
                 Wine.all_ordered(self.session, order_by="code")
             )
-        else: # StockMovements (sale, purchase, or all)
-            return (
-                "Movements",
-                (
-                    "datetime", "wine_name", "wine_code", "transaction_type",
-                    "quantity", "price", "subtotal"
-                ),
-                (
-                    "datetime", "wine.name", "wine.code", "transaction_type",
-                    "quantity", "price", "subtotal"
-                ),
-                StockMovement.all_ordered_by_datetime(self.session, filter=filter_type)
-            )
+        
+        # StockMovements (sale, purchase, or all)
+        return (
+            "Movements",
+            (
+                "datetime", "wine_name", "wine_code", "transaction_type",
+                "quantity", "price", "subtotal"
+            ),
+            (
+                "datetime", "wine.name", "wine.code", "transaction_type",
+                "quantity", "price", "subtotal"
+            ),
+            StockMovement.all_ordered_by_datetime(self.session, filter=filter_type)
+        )
 
     def _write_csv(
         self, file_path: str, 
@@ -238,6 +231,9 @@ class ReportFrame(AutoScrollFrame):
         """
         Write report data to an Excel file with formatting.
         
+        Creates a formatted Excel spreadsheet with headers, automatic column
+        sizing, and appropriate formatting for dates and monetary values.
+
         Parameters:
             file_path: Destination path for the Excel file
             ws_title: Title for the Excel worksheet
@@ -253,7 +249,7 @@ class ReportFrame(AutoScrollFrame):
         date_fmt = workbook.add_format({"num_format": "yyyy-mm-dd hh:mm:ss"})
         money_fmt = workbook.add_format({"num_format": "€ 0.00"})
 
-        # Write headers
+        # Write headers and track column widths
         col_widths = []
         for col, title in enumerate(field_names):
             worksheet.write(0, col, title, header_fmt)
@@ -262,12 +258,14 @@ class ReportFrame(AutoScrollFrame):
         # Write data rows
         for row_idx, data_row in enumerate(data_list, start=1):
             for col_idx, (field, attr_name) in enumerate(zip(field_names, attribute_names)):
+                # Extract value
                 value = (
                     deep_getattr(data_row, attr_name) 
                     if field != "subtotal" 
                     else data_row.quantity * data_row.price
                 )
 
+                # Write with appropriate format
                 if field == "datetime":
                     worksheet.write_datetime(row_idx, col_idx, value, date_fmt)
                     display_value = value.strftime("%Y-%m-%d %H:%M:%S")

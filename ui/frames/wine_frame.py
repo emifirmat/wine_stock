@@ -7,6 +7,7 @@ to wine management operations.
 """
 import customtkinter as ctk
 from sqlalchemy.orm import Session
+from typing import Callable
 
 from db.models import Wine
 from ui.components import Card, ButtonGoBack, AutoScrollFrame
@@ -23,16 +24,17 @@ class WineFrame(AutoScrollFrame):
     Provides subsection navigation for detailed wine operations.
     """
     def __init__(
-        self, root: ctk.CTkFrame, session: Session, main_window, **kwargs
+        self, root: ctk.CTkFrame, session: Session, on_header_update: Callable,
+        **kwargs
     ):
         """
-        Initialize the wine frame with management cards.
+        Initialise the wine frame with management cards.
         
         Parameters:
             root: Parent frame container
             session: SQLAlchemy database session
-            main_window: Reference to MainWindow for navigation
-            **kwargs: Additional keyword arguments for CTkScrollableFrame
+            on_header_change: Callback to update the main window header
+            **kwargs: Additional keyword arguments for AutoScrollFrame
         """
         super().__init__(root, **kwargs)
         self.inner.configure(**kwargs)
@@ -40,42 +42,19 @@ class WineFrame(AutoScrollFrame):
 
         # DB instances
         self.session = session
-        self.wine = session.query(Wine)
         
-        # Widget references
-        self.main_window = main_window
-        self.button_go_back = None
+        # Callbacks
+        self.on_header_update = on_header_update
         
         # Components
         self.create_components()
         
     def create_components(self) -> None:
         """
-        Create and display wine section components (title, intro, cards).
-        """
-        # Create title
-        title = ctk.CTkLabel(
-            self.inner,
-            text="WINES",
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.TITLE
-        )
-        title.pack(padx=Spacing.TITLE_X, pady=Spacing.TITLE_Y)
-
-        # Create introduction text
-        text_intro = (
-            "Add, edit, or remove wines from your winery's catalog to keep "
-            "your selection up to date."
-        )
-        introduction = ctk.CTkLabel(
-            self.inner,
-            text=text_intro,
-            text_color=Colours.TEXT_SECONDARY,
-            justify="center",
-            font=Fonts.TEXT_SECONDARY
-        )
-        introduction.pack(padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y)
+        Create and display wine section components.
         
+        Creates a card-based interface for wine management operations.
+        """
         # Create cards container
         frame_cards = ctk.CTkFrame(
             self.inner,
@@ -105,9 +84,10 @@ class WineFrame(AutoScrollFrame):
         card_add_wine.grid(
             row=0, column=1, padx=Spacing.CARD_X, pady=Spacing.CARD_Y
         )
-        
     
-    def show_subsection(self, text_title: str, form_class: type, **kwargs) -> None:
+    def show_subsection(
+        self, text_title: str, form_class: ctk.CTkFrame, **kwargs
+    ) -> None:
         """
         Clear content and display a wine form subsection.
         
@@ -116,34 +96,15 @@ class WineFrame(AutoScrollFrame):
             form_class: Form class to instantiate and display
             **kwargs: Additional keyword arguments passed to the form constructor
         """
-        # Clean current content
+        # Clear current content
         self.clear_content()
+
+        # Update header frame
+        self.on_header_update(title=text_title, introduction="", back_to="wines")
 
         # Configure grid expansion
         self.inner.grid_rowconfigure(1, weight=1)
         self.inner.grid_columnconfigure(0, weight=1)
-
-        # Create and position go back button
-        self.button_go_back = ButtonGoBack(
-            self.main_window.root,
-            command=self.main_window.show_wine_section
-        )
-        
-        x = self.winfo_rootx() - self.main_window.root.winfo_rootx()
-        y = self.winfo_rooty() - self.main_window.root.winfo_rooty()
-        self.button_go_back.place(x=x, y=y)
-
-        # Create and position title
-        title = ctk.CTkLabel(
-            self.inner,
-            text=text_title,
-            text_color=Colours.PRIMARY_WINE,
-            font=Fonts.SUBTITLE,
-        )
-        title.grid(
-            row=0, column=0, 
-            padx=Spacing.SECTION_X, pady=Spacing.SECTION_Y, sticky="n"
-        )
 
         # Create and position subsection form
         form = form_class(
@@ -159,21 +120,15 @@ class WineFrame(AutoScrollFrame):
 
     def show_add_wine_section(self) -> None:
         """
-        Display the form for adding a new wine.
+        Display the form for adding a new wine to the catalog.
         """
-        self.show_subsection(
-            "ADD WINE",
-            AddWineForm
-        )
+        self.show_subsection("ADD WINE", AddWineForm)
     
     def manage_wine_section(self) -> None:
         """
         Display the form for managing existing wines (view, edit, delete).
         """
-        self.show_subsection(
-            "WINE LIST",
-            ManageWineForm,
-        )
+        self.show_subsection("WINE LIST", ManageWineForm)
     
     def clear_content(self) -> None:
         """
@@ -181,14 +136,3 @@ class WineFrame(AutoScrollFrame):
         """
         for component in self.inner.winfo_children():
             component.destroy()
-
-    def destroy(self) -> None:
-        """
-        Destroy the frame and its go back button.
-        """
-        if self.button_go_back:
-            self.button_go_back.destroy()
-        super().destroy()
-
-        
-        
