@@ -237,11 +237,11 @@ class Wine(Base):
     @property
     def picture_path_display(self) -> str:
         """
-        Get wine picture path or default image if none exists.
+        Get wine picture path or 'default.png' if none exists.
         """
         if self.picture_path:
             return self.picture_path
-        return "assets/user_images/wines/default_wine.png"
+        return "default.png"
     
     
     @property

@@ -14,7 +14,7 @@ from decimal import Decimal
 from typing import Callable
 
 from helpers import load_ctk_image, running_in_wsl, get_system_scale
-from ui.style import Colours, Fonts, Icons, Spacing, Rounding
+from ui.style import Colours, Fonts, Icons, Spacing, Rounding, Placeholders
 
 
 class EntryInputMixin:
@@ -1776,7 +1776,14 @@ class ImageInput(BaseInput):
         """
         Load and display the selected image in preview label.
         """
-        self.current_image = load_ctk_image(self.temp_file_path) if self.temp_file_path else self.no_image
+        try:
+            if self.temp_file_path:
+                self.current_image = load_ctk_image(self.temp_file_path)
+            else: 
+                self.current_image = self.no_image
+        except FileNotFoundError:
+            self.current_image = Placeholders.WINE_WARNING
+        
         self.label_preview.configure(image=self.current_image)
         
     def get_new_path(self) -> str | None:

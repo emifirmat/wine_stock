@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from sqlalchemy.orm import Session
 
 from helpers import load_ctk_image
-from ui.style import Colours, Fonts, Spacing
+from ui.style import Colours, Fonts, Spacing, Placeholders
 
 
 class DataTable(ctk.CTkFrame, ABC):
@@ -19,7 +19,7 @@ class DataTable(ctk.CTkFrame, ABC):
     
     Provides core functionality for displaying large datasets with pagination,
     sorting capabilities, and customizable row rendering. Subclasses must
-    implement get_line_columns() for specific data formatting..
+    implement get_line_columns() for specific data formatting.
     """
     INITIAL_ROWS = 40 
     LOAD_MORE_ROWS = 30
@@ -39,7 +39,7 @@ class DataTable(ctk.CTkFrame, ABC):
             **kwargs: Additional CTkFrame keyword arguments
         """
         super().__init__(root, **kwargs)
-        self.configure(fg_color=Colours.BG_MAIN, height=500)
+        self.configure(fg_color=Colours.BG_MAIN)
         
         # DB instances
         self.session = session
@@ -50,6 +50,7 @@ class DataTable(ctk.CTkFrame, ABC):
         self.filtered_lines = lines.copy()
         self.visible_rows_count = self.INITIAL_ROWS
         self.line_widget_map = {}
+        self.missing_image_paths = []
         
         # Table UI components
         self.header_labels = []
@@ -154,6 +155,10 @@ class DataTable(ctk.CTkFrame, ABC):
         # Add "load more" button if needed
         self.create_load_more_button()
 
+        # Show missing images warning
+        if self.missing_image_paths:
+            self.show_missing_images_warning(len(self.missing_image_paths))
+
     def create_row_widget(self, line) -> ctk.CTkFrame:
         """
         Create a widget for a single data row.
@@ -175,10 +180,10 @@ class DataTable(ctk.CTkFrame, ABC):
         )
         
         # Create row frame
-        # Note: row_frame is placed by refresh_visible_rows
+        # Note: Positioning is handled by refresh_visible_rows()
         row_frame = ctk.CTkFrame(self.rows_container, fg_color=row_bg)
 
-        # Create label for each row
+        # Create label for each column
         line_values = self.get_line_columns(line)
         for i, line_value in enumerate(line_values):
             # Detect if value is an image path
@@ -194,10 +199,21 @@ class DataTable(ctk.CTkFrame, ABC):
                     "text_color": Colours.TEXT_MAIN,
                     "font": Fonts.TEXT_LABEL,   
                 }
-            # Image labels
             else:
+                # Handle image loading with fallback
+                try:
+                    if line_value == "default.png":
+                        image = Placeholders.WINE_DEFAULT
+                    else:
+                        image = load_ctk_image(line_value)
+                except FileNotFoundError:
+                    # Record missing image and use warning placeholder
+                    self.missing_image_paths.append(line_value)
+                    print(f"[WARN] Image not found: {line_value}")
+                    image = Placeholders.WINE_WARNING
+
                 label_config = {
-                    "image": load_ctk_image(line_value),
+                    "image": image,
                     "text": "",   
                     "fg_color": "transparent"
                 }
@@ -218,7 +234,7 @@ class DataTable(ctk.CTkFrame, ABC):
             # Configure column responsiveness
             row_frame.grid_columnconfigure(i, weight=1)
 
-        # Allow subclasses to add custom widgets
+        # Allow subclasses to add custom widgets (e.g., action buttons)
         self.customize_row(line, row_frame)
 
         return row_frame
@@ -243,6 +259,9 @@ class DataTable(ctk.CTkFrame, ABC):
     def create_load_more_button(self) -> None:
         """
         Create or update the 'Load More' button based on remaining rows.
+
+        Displays a button showing how many more rows can be loaded. Removes
+        the button if all rows are already visible.
         """
         # Remove existing button
         if self.load_more_btn:
@@ -254,10 +273,9 @@ class DataTable(ctk.CTkFrame, ABC):
 
         # Only show button if more rows available                
         if remaining_rows > 0:
-            text_content = (
-                f"Load {min(remaining_rows, self.LOAD_MORE_ROWS)} More Rows "
-                f"({remaining_rows} left)"
-            )
+            rows_to_load = min(remaining_rows, self.LOAD_MORE_ROWS)
+            text_content = f"Load {rows_to_load} More Rows {remaining_rows} left)"
+            
             self.load_more_btn = ctk.CTkButton(
                 self.rows_container,
                 text=text_content,
@@ -286,7 +304,7 @@ class DataTable(ctk.CTkFrame, ABC):
         """
         Handle header click event for sorting.
         
-        Override this method to implement sorting functionality.
+        Override this method in subclasses to implement sorting functionality.
         
         Parameters:
             event: Click event from header label
@@ -298,11 +316,23 @@ class DataTable(ctk.CTkFrame, ABC):
         """
         Add custom widgets to a row.
         
-        Override this method to add action buttons or other custom
-        widgets to specific rows.
+        Override this method in subclasses to add action buttons or other custom
+        widgets to specific rows (e.g., edit, delete, view details).
         
         Parameters:
             line: Data instance for the row
             widget: Row frame to customize
+        """
+        pass
+
+    def show_missing_images_warning(self, count: int) -> None:
+        """
+        Display warning about missing images.
+        
+        Override this method in subclasses to show appropriate warnings
+        when image files cannot be loaded.
+        
+        Parameters:
+            count: Number of missing images
         """
         pass

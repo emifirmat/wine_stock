@@ -514,6 +514,10 @@ class WineFiltersForm(BaseFiltersForm):
             padx=Spacing.LABEL_X, pady=(0, Spacing.LABEL_Y)
         )
 
+        # Configure grid responsiveness
+        for i in range(3):
+            self.fields_container.grid_columnconfigure(i, weight=1)
+
     def trigger_filters(self, *args) -> None:
         """
         Apply wine filters to table.

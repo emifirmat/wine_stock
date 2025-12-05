@@ -16,7 +16,7 @@ from db.models import Wine
 from helpers import load_ctk_image
 from ui.components import DoubleLabel, ActionMenuButton, ToplevelCustomised
 from ui.forms.add_edit_wine import AddWineForm
-from ui.style import Colours, Fonts, Spacing
+from ui.style import Spacing, Placeholders
 from ui.tables.mixins import SortMixin
 from ui.tables.data_table import DataTable
 
@@ -26,8 +26,8 @@ class WinesTable(DataTable, SortMixin):
     Wine catalog table with CRUD operations and low stock alerts.
     
     Extends DataTable and SortMixin to provide a sortable, filterable table
-    of wines with view, edit, and delete capabilities. Tracks opened detail
-    windows to prevent duplicates.
+    of wines with view, edit, and delete capabilities. Highlights wines below
+    minimum stock and tracks opened detail windows to prevent duplicates.
     """
     INITIAL_ROWS = 40 
     LOAD_MORE_ROWS = 30
@@ -47,7 +47,7 @@ class WinesTable(DataTable, SortMixin):
         # Track opened detail windows to prevent duplicates
         self.opened_toplevels = {}
 
-        # onfigure table layout
+        # Configure table layout
         self.column_widths = [110, 120, 100, 90, 95, 80, 90, 90, 90, 80]
         
         # Build table
@@ -73,7 +73,7 @@ class WinesTable(DataTable, SortMixin):
 
     def on_header_click(self, event: tk.Event, col_index: int) -> None:
         """
-        Handle header click to sort table.
+        Handle header click to sort table by column.
         
         Parameters:
             event: Click event from header label
@@ -95,7 +95,7 @@ class WinesTable(DataTable, SortMixin):
             1: None, # Picture column not sortable
             2: lambda l: l.name.lower(),
             3: lambda l: l.vintage_year,
-            4: lambda l: l.origin.lower() if l.origin else "", # Optional attribute
+            4: lambda l: l.origin.lower() if l.origin else "", # Handle optional field
             5: lambda l: l.quantity,
             6: lambda l: l.min_stock_sort,
             7: lambda l: l.purchase_price,
@@ -109,7 +109,7 @@ class WinesTable(DataTable, SortMixin):
         wine_varietal: str, wine_year: str, filtered_origin: list[str]
     ) -> None:
         """
-        Filter wines by various criteria.
+        Filter wines by various criteria and refresh display.
         
         Parameters:
             filtered_names: List of wine names to include (lowercase)
@@ -141,7 +141,7 @@ class WinesTable(DataTable, SortMixin):
         if self.last_sort is not None:
             self.sort_by(self.last_sort, new_sort=False)
 
-        # Reset pagination and refresh
+        # Reset pagination and refresh display
         self.visible_rows_count = self.INITIAL_ROWS
         self.refresh_visible_rows()
 
@@ -149,6 +149,8 @@ class WinesTable(DataTable, SortMixin):
         """
         Add action menu button to wine row.
         
+        Creates an action menu with options to view details, edit, or delete the wine.
+
         Parameters:
             line: Wine instance for the row
             frame_row: Frame containing the row
@@ -184,7 +186,8 @@ class WinesTable(DataTable, SortMixin):
         """
         Open window displaying wine details.
         
-        Prevents opening multiple detail windows for the same wine.
+        Prevents opening multiple detail windows for the same wine by tracking
+        open windows in self.opened_toplevels.
         
         Parameters:
             line: Wine instance to display
@@ -218,9 +221,17 @@ class WinesTable(DataTable, SortMixin):
             line: Wine instance to display
         """
         # Display wine image
+        try:
+            if line.picture_path_display == "default.png":
+                image = Placeholders.WINE_DEFAULT_BIG
+            else:
+                image = load_ctk_image(line.picture_path_display, Placeholders.big_size)
+        except FileNotFoundError:
+            image = Placeholders.WINE_WARNING_BIG
+
         ctk.CTkLabel(
             widgets_container, 
-            image=load_ctk_image(line.picture_path_display, size=(120, 120)),
+            image=image,
             text="",  
         ).pack(padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y)
 
@@ -352,6 +363,9 @@ class WinesTable(DataTable, SortMixin):
     def refresh_edited_rows(self, wine: Wine) -> None:
         """
         Refresh table and related views after wine is edited.
+
+        Clears the widget cache for the edited wine and updates all
+        dependent UI components.
         
         Parameters:
             wine: Updated Wine instance
@@ -370,4 +384,19 @@ class WinesTable(DataTable, SortMixin):
         # Refresh filter options in parent form
         if hasattr(self.master, 'filters_form'):
             self.master.filters_form.update_lists()
+      
+    def show_missing_images_warning(self, count: int) -> None:
+        """
+        Display warning dialog about wines with invalid image paths.
         
+        Parameters:
+            count: Number of wines with missing images
+        """
+        
+        plural, verb = ["", "has"] if count < 2 else ["s", "have"]
+
+        message = (
+            f"{count} wine{plural} {verb} invalid image paths and couldn't be loaded.\n"
+            f"Please edit the affected wine{plural} to correct or clear the image path."
+        )
+        messagebox.showwarning(f"Invalid Image Path{plural}", message)
