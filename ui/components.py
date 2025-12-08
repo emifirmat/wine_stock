@@ -10,10 +10,11 @@ import customtkinter as ctk
 import datetime
 import tkinter as tk
 import re
+import platform
 from decimal import Decimal
 from typing import Callable
 
-from helpers import load_ctk_image, running_in_wsl, get_system_scale
+from helpers import load_ctk_image, get_system_scale, resource_path, running_in_wsl
 from ui.style import Colours, Fonts, Icons, Spacing, Rounding, Placeholders
 
 
@@ -249,18 +250,18 @@ class AutoScrollFrame(ctk.CTkFrame):
 
 class ToplevelCustomised(ctk.CTkToplevel):
     """
-    Custom toplevel window with draggable title bar and optional modal behavior.
+    Custom toplevel window with automatic sizing and modal support.
     
-    Provides a customized window without default decorations, featuring a
-    custom title bar with close button, automatic sizing based on content,
-    and modal support.
+    Provides a window with scrollable content that automatically adjusts its
+    size based on content dimensions. Supports modal behavior to block parent
+    interaction and executes optional callbacks on close.
     """
     def __init__(
         self, root, width: int, title: str, modal: bool = False, 
         on_close: Callable | None = None, **kwargs
     ):
         """
-        Initialize customized toplevel window.
+        Initialise customised toplevel window.
         
         Parameters:
             root: Parent window
@@ -270,13 +271,12 @@ class ToplevelCustomised(ctk.CTkToplevel):
             on_close: Callback executed when window closes
             **kwargs: Additional CTkToplevel keyword arguments
         """
-        super().__init__(root, **kwargs)
-        self.configure(fg_color=Colours.BG_MAIN)            
+        super().__init__(root, fg_color=Colours.BG_MAIN, **kwargs)
         
         # Window properties
         self.parent_tl = root.winfo_toplevel()
         self.width = width
-        self.topbar_title = title
+        self.window_title = title
         self.modal = modal
         self.on_close = on_close
 
@@ -285,78 +285,27 @@ class ToplevelCustomised(ctk.CTkToplevel):
         self.scroll_container = None
 
         # Build window
-        self.customise_toplevel()
+        self._build_window()
 
-    def customise_toplevel(self) -> None:
+
+    def _build_window(self) -> None:
         """
-        Configure window style, title bar, and scrollable content container.
+        Configure window properties and create scrollable content container.
+        
+        Creates a scrollable frame that automatically adjusts to content size
+        while respecting maximum height constraints.
         """
-        # Hide window during setup
+        # Hide window during setup to prevent visual artifacts
         self.withdraw()
         
-        # Configure window decorations
-        if running_in_wsl():
-            # Keep standard title bar in WSL for stability
-            self.overrideredirect(False)
-            self.title(self.topbar_title)
-            self.protocol("WM_DELETE_WINDOW", self._handle_close)
-            
-            print(
-                "Warning: This app is running under Windows Subsystem for Linux (WSL). "
-                "Standard window borders have been enabled to improve stability."
-            )
-        else:
-            # Remove standard decorations for custom title bar
-            self.overrideredirect(True)
+        # Configure window properties
+        self.title(self.window_title)
+        self.resizable(False, False)    
+        self.protocol("WM_DELETE_WINDOW", self._handle_close)            
 
-        # Create main container with border
-        main_container = ctk.CTkFrame(
-            self,
-            fg_color=Colours.BG_MAIN,
-            border_width=2,
-            border_color=Colours.BORDERS
-        )
+        # Create main container
+        main_container = ctk.CTkFrame(self, fg_color=Colours.BG_MAIN)
         main_container.pack(expand=True, fill="both")
-
-        # Create custom title bar
-        title_bar = ctk.CTkFrame(
-            main_container,
-            fg_color=Colours.BG_HOVER_NAV,
-            height=40
-        )
-        title_bar.pack(fill="x", side="top", padx=Spacing.XSMALL, pady=Spacing.XSMALL)
-        title_bar.pack_propagate(False)  # Maintain fixed height
-        
-        # Create close button
-        close_button = ctk.CTkButton(
-            title_bar,
-            text="✕",
-            text_color=Colours.TEXT_MAIN,
-            width=30,
-            height=30,
-            fg_color="transparent",
-            hover_color=Colours.BG_SECONDARY,
-            command=self._handle_close,
-            font=Fonts.SUBTITLE,
-        )
-        close_button.pack(side="right", padx=Spacing.SMALL, pady=Spacing.SMALL)
-
-        # Create title label
-        title_label = ctk.CTkLabel(
-            title_bar,
-            text=self.topbar_title,
-            text_color=Colours.TEXT_MAIN,
-            font=Fonts.SUBTITLE,
-        )
-        title_left_padding = Spacing.SMALL + 30 # Close button width
-        title_label.pack(
-            side="left", expand=True, fill="both",
-            padx=(title_left_padding, Spacing.SMALL), pady=Spacing.SMALL
-        )
-        
-        # Make title bar draggable
-        self._make_draggable(title_bar, self)
-        self._make_draggable(title_label, self)
 
         # Create scrollable content container
         self.scroll_container = AutoScrollFrame(
@@ -371,94 +320,106 @@ class ToplevelCustomised(ctk.CTkToplevel):
         # Expose inner frame for widget placement
         self.content_frame = self.scroll_container.inner
 
-    
     def refresh_geometry(self) -> None:
         """
         Recalculate and apply window geometry based on current content.
         
-        Forces multiple updates to ensure accurate dimension calculations
-        before applying final geometry.
+        Forces multiple UI updates to ensure accurate dimension calculations
+        before applying final window size and position. Call this after adding
+        all widgets to the content_frame.
         """
         # Force multiple updates
         self.update_idletasks()
-        self.content_frame.update_idletasks()
         self.parent_tl.update_idletasks()
+        self.content_frame.update_idletasks()
         
         self._apply_geometry()
 
     def _apply_geometry(self) -> None:
         """
-        Calculate and apply window position and size.
-        """
-        # Get parent toplevel properties
+        Calculate and apply window position and size based on content and parent.
+        
+        Centers the window horizontally over the parent and calculates height
+        based on content, respecting a maximum of 90% of parent height.
+        """        
+        # Get parent window properties
         parent = self.parent_tl
         parent_x = parent.winfo_rootx()
         parent_y = parent.winfo_rooty()
         parent_w = parent.winfo_width()
         parent_h = parent.winfo_height()
 
-        # Calculate required height
-        content_height = self.content_frame.winfo_reqheight()
-        topbar_height = 40
-        paddings_height = Spacing.XSMALL * 2 + Spacing.SECTION_Y * 2
+        # Calculate required height based on content
+        content_height = (
+            self.content_frame.winfo_height() or 
+            self.content_frame.winfo_reqheight()
+        )
+        paddings_height = Spacing.SECTION_Y * 2
 
-        total_height = int(content_height + topbar_height + paddings_height)
-        max_height = int(parent_h * 0.9)
+        # Account for DPI scaling and apply height constraints
+        dpi_scale = get_system_scale()
+        total_height = int(content_height + paddings_height)
+        max_height = int((parent_h / dpi_scale) * 0.9)
         current_height = min(total_height, max_height)
 
-        # Center window horizontally on parent
+        # Center window horizontally over parent
         center_x = parent_x + (parent_w - self.width) // 2
         
         # Apply geometry
         self.geometry(f"{self.width}x{current_height}+{center_x}+{parent_y}")
+        
+        # Platform-specific display handling
+        if running_in_wsl():
+            # WSL doesn't have flicker issues but has problems with after()
+            self._additional_configuration()
+        else:
+            # Windows has flicker issues, use after() to prevent visual artifacts
+            # Note: Values below 600ms may still show some flicker
+            self.after(600, self._additional_configuration)
+    
+    def _additional_configuration(self) -> None:
+        """
+        Apply final configuration after geometry is set.
+        
+        Sets window icon (Windows only), displays the window, and configures
+        modal behavior if requested.
+        """
+        # Set icon for Windows systems only
+        if platform.system() == "Windows":
+            try:
+                self.iconbitmap(resource_path("assets/favicon.ico"))
+            except Exception:
+                # Silently fall back to default icon if loading fails
+                pass
 
         # Show window and set focus
         self.deiconify()
-
-        if self.modal:
-            self.grab_set()
-        
+        self.lift()
         self.focus_set()
+
+        # Enable modal behavior if requested
+        if self.modal:
+            self.grab_set()        
 
     def _handle_close(self) -> None:
         """
-        Handle window close event from system or custom close button.
+        Handle window close event from system close button or protocol.
+        
+        Releases modal grab if active, executes optional close callback,
+        or destroys the window if no callback is provided.
         """
         # Release grab if modal
-        try:
-            self.grab_release()
-        except Exception:
-            pass
+        if self.modal:
+            try:
+                self.grab_release()
+            except Exception:
+                pass
         
         # Execute callback or destroy
         if self.on_close is not None:
             self.on_close()
         else:
-            self.destroy()     
-
-    def _make_draggable(
-            self, title_bar:ctk.CTkFrame, window: ctk.CTkToplevel
-    ) -> None:
-        """
-        Enable window dragging by clicking and dragging title bar.
-        
-        Parameters:
-            title_bar: Frame to bind drag events to
-            window: Window to move
-        """
-        def start_move(event):
-            window.x = event.x
-            window.y = event.y
-
-        def do_move(event):
-            deltax = event.x - window.x
-            deltay = event.y - window.y
-            x = window.winfo_x() + deltax
-            y = window.winfo_y() + deltay
-            window.geometry(f"+{x}+{y}")
-
-        title_bar.bind("<Button-1>", start_move)
-        title_bar.bind("<B1-Motion>", do_move)
+            self.destroy()
 
 
 class TextEntry(ctk.CTkEntry):
@@ -702,9 +663,12 @@ class DateEntry(ctk.CTkEntry):
         )
         
         # Position calendar below entry
-        x = self.winfo_rootx() - self.winfo_toplevel().winfo_rootx()
-        y = self.winfo_rooty() - self.winfo_toplevel().winfo_rooty() + self.winfo_height() + 5
-        self.frame_calendar.place(x=x, y=y)
+        self.frame_calendar.place(
+        in_=self,               # entry
+        relx=0, rely=1,         # left-bottom
+        x=0, y=Spacing.XSMALL,  # Offset
+        anchor="nw",            # Calendar starting point
+        )
         self.frame_calendar.lift()
        
         # Build calendar UI
@@ -2318,56 +2282,43 @@ class ActionMenuButton(ctk.CTkFrame):
                 command=lambda: self._handle_action(self.on_delete)
             ).pack(fill="x", padx=Spacing.BUTTON_X, pady=(0, Spacing.BUTTON_Y))
 
-        # Calculate menu position
-        x = self.menu_button.winfo_rootx() - self.winfo_toplevel().winfo_rootx() - self.menu_button.winfo_width()
-        y = self._calculate_menu_y_position()
-        
-        # Position and display menu
-        self.menu_frame.place(x=x, y=y)
-        self.menu_frame.lift()
-
-        # Bind click outside handler
-        self.winfo_toplevel().bind("<Button-1>", self._check_click_outside, add="+")
-
-    def _calculate_menu_y_position(self) -> int:
-        """
-        Calculate optimal vertical position for menu.
-        
-        Positions menu below button if space available, otherwise above button.
-        
-        Returns:
-            Y coordinate relative to toplevel window
-        """
-        # Update widget dimensions
+        # Update widget information
         window = self.winfo_toplevel()
         window.update_idletasks()
         self.menu_frame.update_idletasks()
 
-        # Get window boundaries
+        # Calculate space below
         window_top = window.winfo_rooty()
         window_bottom = window_top + window.winfo_height()
-        
-        # Get button boundaries
-        button_height = self.menu_button.winfo_height()
+
         button_top = self.menu_button.winfo_rooty()
-        button_bottom = button_top + button_height
+        button_bottom = button_top + self.menu_button.winfo_height()
 
-        # Get required menu height
         menu_height = self.menu_frame.winfo_reqheight()
-
-        # Calculate relative positions
-        button_bottom_rel = button_bottom - window_top
-        button_top_rel = button_top - window_top - menu_height
-        
-        # Calculate available space below button
         space_below = window_bottom - button_bottom
+        show_below = space_below >= menu_height
+            
+        # Position menu
+        if show_below:
+            self.menu_frame.place(
+                in_=self.menu_button,
+                relx=0, rely=1,   
+                x=0, y=Spacing.XSMALL,         
+                anchor="nw",      
+            )
+        else:
+            # Show menu above
+            self.menu_frame.place(
+                in_=self.menu_button,
+                relx=0, rely=0,  
+                x=0, y=-Spacing.XSMALL,        
+                anchor="sw",      
+            )
 
-        # Position below if space available, otherwise above
-        if space_below >= menu_height:
-            return button_bottom_rel
+        self.menu_frame.lift()
 
-        return button_top_rel
-
+        # Bind click outside handler
+        self.winfo_toplevel().bind("<Button-1>", self._check_click_outside, add="+")
 
     def hide_menu(self) -> None:
         """

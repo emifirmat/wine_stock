@@ -14,7 +14,7 @@ from ui.frames.home_frame import HomeFrame
 from ui.frames.wine_frame import WineFrame
 from ui.frames.report_frame import ReportFrame
 from ui.frames.settings_frame import SettingsFrame
-from helpers import load_ctk_image, resource_path, get_system_scale
+from helpers import load_ctk_image, resource_path
 from db.models import Shop
 
 class MainWindow:
@@ -79,7 +79,11 @@ class MainWindow:
         
         # Set icon for Windows systems only
         if platform.system() == "Windows":
-            self.root.iconbitmap(resource_path("assets/favicon.ico"))    
+            try:
+                self.root.iconbitmap(resource_path("assets/favicon.ico"))
+            except Exception:
+                # Silently fall back to default icon if loading fails
+                pass   
         
         # Configure background colour
         self.root.configure(fg_color=Colours.BG_MAIN)
