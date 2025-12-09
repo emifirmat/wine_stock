@@ -12,7 +12,7 @@ from datetime import datetime, date
 from sqlalchemy.orm import Session
 from typing import Callable
 
-from helpers import running_in_wsl
+from helpers import running_in_linux
 from ui.components import ActionMenuButton, ToplevelCustomised
 from ui.forms.add_edit_transaction import EditTransactionForm
 from ui.style import Colours, Fonts, Spacing
@@ -41,7 +41,7 @@ class TransactionsTable(DataTable, SortMixin):
         super().__init__(root, session, *args, **kwargs)
 
         # Configure table layout
-        self.column_widths = [115, 120, 100, 115, 100, 80, 100, 100]
+        self.column_widths = [110, 110, 100, 150, 120, 80, 120, 100]
         
         # Build table
         self.create_components()

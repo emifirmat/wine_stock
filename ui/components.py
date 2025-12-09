@@ -14,7 +14,7 @@ import platform
 from decimal import Decimal
 from typing import Callable
 
-from helpers import load_ctk_image, get_system_scale, resource_path, running_in_wsl
+from helpers import load_ctk_image, get_system_scale, resource_path, running_in_linux
 from ui.style import Colours, Fonts, Icons, Spacing, Rounding, Placeholders
 
 
@@ -71,25 +71,29 @@ class EntryInputMixin:
             Call this after the widget is rendered (e.g., after pack/grid and update_idletasks)
         """
         # Adjust for system DPI scaling
-        scaled_width = int(total_width * get_system_scale())
+        dpi_scale = get_system_scale()
+        scaled_width = int(total_width * dpi_scale)
         
         # Ensure widgets are rendered before measuring
         self.update_idletasks()
         
+        # Calculate scaled padding
+        pad_label = int(Spacing.LABEL_X * dpi_scale)
+        pad_small = int(Spacing.SMALL * dpi_scale)
+
         # Calculate component widths including padding
-        label_width = self.label.winfo_width() + Spacing.LABEL_X * 2
-        label_asterisk_width = self.label_optional.winfo_width() + Spacing.LABEL_X
-        entry_width = self.entry.winfo_width() + Spacing.LABEL_X
+        label_width = self.label.winfo_width() + pad_label * 2
+        label_asterisk_width = self.label_optional.winfo_width() + pad_small
+        entry_width = self.entry.winfo_width() + pad_label
         
         # Calculate remaining space for alignment
-        empty_label_width = scaled_width - (
-            label_width + entry_width + label_asterisk_width
-        )
+        occupied_width = label_width + label_asterisk_width + entry_width
+        empty_label_width = (scaled_width - occupied_width) // dpi_scale
 
         if empty_label_width < 0:
             raise ValueError(
                 f"total_width ({total_width}) is too small for components. "
-                f"Required minimum: {label_width + entry_width + label_asterisk_width} "
+                f"Required minimum: {occupied_width} "
                 f"(after scaling: {scaled_width})."
             )
 
@@ -158,8 +162,9 @@ class AutoScrollFrame(ctk.CTkFrame):
     Scrollable container with automatic scrollbar management.
     
     Provides a scrollable inner frame that automatically shows/hides the
-    scrollbar based on content height. Exposes inner frame for widget placement
-    and prevents horizontal scrolling.
+    vertical scrollbar based on content height. Prevents horizontal scrolling
+    by synchronizing inner frame width with canvas width. Handles mousewheel
+    events with platform-specific implementations for Windows/macOS and Linux/WSL.
     """
 
     def __init__(self, root, **kwargs):
@@ -199,9 +204,15 @@ class AutoScrollFrame(ctk.CTkFrame):
             anchor="nw",
         )
 
+        # Scroll state
+        self._can_scroll = False
+
         # Bind resize events
         self.inner.bind("<Configure>", self._on_inner_configure)
         self.canvas.bind("<Configure>", self._on_canvas_configure)
+
+        # Bind mousewheel events on toplevel
+        self._bind_mousewheel_to_toplevel()
 
         # Calculate initial scrollbar visibility
         self.after(0, self._update_scrollbar_visibility)
@@ -210,17 +221,27 @@ class AutoScrollFrame(ctk.CTkFrame):
         """
         Update scroll region and scrollbar visibility when content changes.
         
+        Called when the inner frame is resized (e.g., widgets added/removed).
+        Updates the scrollable area and adjusts scrollbar visibility accordingly.
+        
         Parameters:
-            event: Configure event (unused but required by bind)
+            event: Configure event (unused but required by tkinter bind signature)
         """
+        # Update scrollable region to match content size
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        # Keep inner width same as canvas to prevent horizontal scrollbar
+       
+        # Synchronize inner width with canvas to prevent horizontal scrolling
         self.canvas.itemconfigure(self._window_id, width=self.canvas.winfo_width())
+        
+        # Update scrollbar visibility based on new content height
         self._update_scrollbar_visibility()
 
     def _on_canvas_configure(self, event: tk.Event) -> None:
         """
         Keep inner frame width synchronized with canvas width.
+        
+        Called when the canvas is resized (e.g., window resize). Ensures the
+        inner frame always matches canvas width to prevent horizontal scrolling.
         
         Parameters:
             event: Configure event containing new canvas dimensions
@@ -231,21 +252,124 @@ class AutoScrollFrame(ctk.CTkFrame):
     def _update_scrollbar_visibility(self) -> None:
         """
         Show scrollbar only when content height exceeds visible area.
+        
+        Compares content height with visible canvas height to determine if
+        scrolling is needed. Automatically shows/hides the scrollbar and
+        updates the scroll state flag.
         """
         self.update_idletasks()
         content_h = self.inner.winfo_reqheight()
         view_h = self.canvas.winfo_height()
 
+        # Determine if scrolling is needed
         needs_scroll = content_h > view_h and view_h > 0
+        self._can_scroll = needs_scroll
 
         if needs_scroll:
             if not self.scrollbar.winfo_ismapped():
                 self.scrollbar.pack(side="right", fill="y")
-            self.canvas.configure(yscrollcommand=self.scrollbar.set)
+                # Reconnect canvas to scrollbar
+                self.canvas.configure(yscrollcommand=self.scrollbar.set)
         else:
             if self.scrollbar.winfo_ismapped():
+                # Disconnect canvas from scrollbar
                 self.scrollbar.pack_forget()
-            self.canvas.configure(yscrollcommand=None)    
+            self.canvas.configure(yscrollcommand=None)
+            
+    def _bind_mousewheel_to_toplevel(self) -> None:
+        """
+        Bind mousewheel events to the toplevel window.
+        
+        Uses platform-specific event bindings:
+        - Linux/WSL: Button-4 (scroll up) and Button-5 (scroll down)
+        - Windows/macOS: MouseWheel event
+        
+        The toplevel acts as the event handler, but _event_inside_inner()
+        checks if the originating widget is within this scroll frame.
+        """
+        toplevel = self.winfo_toplevel()
+
+        if running_in_linux():
+            # Linux/WSL uses Button-4 and Button-5 for mousewheel
+            toplevel.bind("<Button-4>", self._on_mousewheel_linux, add="+")
+            toplevel.bind("<Button-5>", self._on_mousewheel_linux, add="+") 
+        else:
+            # Windows and macOS use MouseWheel event
+            toplevel.bind("<MouseWheel>", self._on_mousewheel, add="+")
+      
+          
+    def _event_inside_inner(self, widget: tk.Widget) -> bool:
+        """
+        Check if the event originated from within this scroll frame.
+        
+        Traverses the widget hierarchy upward to determine if the originating
+        widget is the inner frame, canvas, or any of their descendants.
+        
+        Parameters:
+            widget: The widget that originated the event
+            
+        Returns:
+            True if widget is inside this scroll frame, False otherwise
+        """
+        w = widget
+
+        # Traverse parent widgets until finding inner, canvas or reaching root.
+        while w is not None:
+            if w is self.inner or w is self.canvas:
+                return True
+            w = getattr(w, "master", None)
+
+        return False
+        
+    def _on_mousewheel(self, event: tk.Event) -> str | None:
+        """
+        Handle mousewheel scrolling for Windows and macOS.
+        
+        Only scrolls if content is scrollable and event originated within this 
+        scroll frame. Returns "break" to prevent event propagation.
+        
+        Parameters:
+            event: MouseWheel event with delta value
+            
+        Returns:
+            "break" to stop event propagation if scrolling occurred, None otherwise
+        """
+        # Only handle scroll if enabled and event is inside this frame
+        if not self._can_scroll or not self._event_inside_inner(event.widget):
+            return
+
+        # Calculate scroll amount (normalize delta to units)
+        delta = int(-1 * (event.delta / 120))
+        self.canvas.yview_scroll(delta, "units")
+        
+        # Prevent others widgets from receiving this scroll event
+        return "break"
+
+    def _on_mousewheel_linux(self, event: tk.Event) -> str | None:
+        """
+        Handle mousewheel scrolling for Linux and WSL.
+        
+        Linux uses Button-4 (scroll up) and Button-5 (scroll down) instead
+        of the MouseWheel event. Only scrolls if content is scrollable and
+        event originated within this scroll frame.
+        
+        Parameters:
+            event: Button event with num attribute (4 for up, 5 for down)
+            
+        Returns:
+            "break" to stop event propagation if scrolling occurred, None otherwise
+
+        """
+        if not self._can_scroll or not self._event_inside_inner(event.widget):
+            return
+
+        if event.num == 4:   
+            self.canvas.yview_scroll(-1, "units")
+        elif event.num == 5:
+            self.canvas.yview_scroll(1, "units")
+
+        # Prevent others widgets from scrolling
+        return "break"
 
 
 class ToplevelCustomised(ctk.CTkToplevel):
@@ -369,7 +493,7 @@ class ToplevelCustomised(ctk.CTkToplevel):
         self.geometry(f"{self.width}x{current_height}+{center_x}+{parent_y}")
         
         # Platform-specific display handling
-        if running_in_wsl():
+        if running_in_linux():
             # WSL doesn't have flicker issues but has problems with after()
             self._additional_configuration()
         else:
@@ -1394,23 +1518,29 @@ class DropdownInput(BaseInput):
             Call this after the widget is rendered (e.g., after pack/grid and update_idletasks)
         """
         # Adjust for system DPI scaling
-        scaled_width = int(total_width * get_system_scale())
+        dpi_scale = get_system_scale()
+        scaled_width = int(total_width * dpi_scale)
 
         # Wait for widgets to render
         self.update_idletasks()
+        
+        # Calculate scaled padding
+        pad_label = int(Spacing.LABEL_X * dpi_scale)
+        pad_small = int(Spacing.SMALL * dpi_scale)
 
-        # Calculate widths
-        label_width = self.label.winfo_width() + Spacing.LABEL_X * 2
-        label_asterisk_width = self.label_optional.winfo_width() + Spacing.LABEL_X
-        dropdown_width = self.dropdown.winfo_width() + Spacing.LABEL_X
-        empty_label_width = scaled_width - (
-            label_width + dropdown_width + label_asterisk_width
-        )
+        # component widths including padding
+        label_width = self.label.winfo_width() + pad_label * 2
+        label_asterisk_width = self.label_optional.winfo_width() + pad_small
+        dropdown_width = self.dropdown.winfo_width() + pad_label
+        
+        # Calculate remaining space for alignment
+        occupied_width = label_width + label_asterisk_width + dropdown_width
+        empty_label_width = (scaled_width - occupied_width) // dpi_scale
 
         if empty_label_width < 0:
             raise ValueError(
                 f"total_width ({total_width}) is too small for components. "
-                f"Required minimum: {label_width + dropdown_width + label_asterisk_width} "
+                f"Required minimum: {occupied_width} "
                 f"(after scaling: {scaled_width})."
             )
 
@@ -1634,20 +1764,27 @@ class DoubleLabel(ctk.CTkFrame):
             Call this after the widget is rendered (e.g., after pack/grid and update_idletasks)
         """
         # Adjust for system DPI scaling
-        scaled_width = int(total_width * get_system_scale())
+        dpi_scale = get_system_scale()
+        scaled_width = int(total_width * dpi_scale)
 
         # Ensure widgets are rendered
         self.update_idletasks()
+        
+        # Calculate scaled padding
+        pad_label = int(Spacing.LABEL_X * dpi_scale)
 
-        # Calculate widths
-        title_width = self.label_title.winfo_width() + Spacing.LABEL_X * 2
-        value_width = self.label_value.winfo_width() + Spacing.LABEL_X * 2
-        empty_label_width = scaled_width - (title_width + value_width)
+        # Calculate component widths including padding 
+        title_width = self.label_title.winfo_width() + pad_label * 2
+        value_width = self.label_value.winfo_width() + pad_label * 2
+        
+        # Calculate remaining space for alignment
+        occupied_width = title_width + value_width
+        empty_label_width = (scaled_width - occupied_width) // dpi_scale
 
         if empty_label_width < 0:
             raise ValueError(
                 f"total_width ({total_width}) is too small for components. "
-                f"Required minimum: {title_width + value_width} "
+                f"Required minimum: {occupied_width} "
                 f"(after scaling: {scaled_width})."
             )
 
@@ -1783,26 +1920,31 @@ class ImageInput(BaseInput):
             Call this after the widget is rendered (e.g., after pack/grid and update_idletasks)
         """
         # Adjust for system DPI scaling
-        scaled_width = int(total_width * get_system_scale())
+        dpi_scale = get_system_scale()
+        scaled_width = int(total_width * dpi_scale)
 
         # Wait for widgets to render
         self.update_idletasks()
+        
+        # Calculate scaled padding
+        pad_button = int(Spacing.BUTTON_X * dpi_scale)
+        pad_label = int(Spacing.LABEL_X * dpi_scale)
+        pad_small = int(Spacing.SMALL * dpi_scale)
 
         # Calculate widths
-        label_width = self.label.winfo_width() + Spacing.LABEL_X * 2
-        label_asterisk_width = self.label_optional.winfo_width() + Spacing.LABEL_X
-        button_width = self.button.winfo_width() + Spacing.BUTTON_X
-        label_preview_width = self.label_preview.winfo_width() + Spacing.LABEL_X * 2
-        empty_label_width = scaled_width - (
-            label_width + label_preview_width + label_asterisk_width + button_width
-        )
+        label_width = self.label.winfo_width() + pad_label * 2
+        label_asterisk_width = self.label_optional.winfo_width() + pad_small
+        button_width = self.button.winfo_width() + pad_button
+        label_preview_width = self.label_preview.winfo_width() + pad_label * 2
+        
+        # Calculate remaining space for alignment
+        occupied_width = label_width + label_asterisk_width + button_width + label_preview_width
+        empty_label_width = (scaled_width - occupied_width) // dpi_scale
 
         if empty_label_width < 0:
             raise ValueError(
                 f"total_width ({total_width}) is too small for components. "
-                f"Required minimum: {
-                    label_width + label_preview_width + label_asterisk_width + button_width 
-                }"
+                f"Required minimum: {occupied_width}"
                 f"(after scaling: {scaled_width})."
             )
 

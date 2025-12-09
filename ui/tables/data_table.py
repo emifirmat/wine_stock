@@ -50,7 +50,8 @@ class DataTable(ctk.CTkFrame, ABC):
         self.filtered_lines = lines.copy()
         self.visible_rows_count = self.INITIAL_ROWS
         self.line_widget_map = {}
-        self.missing_image_paths = []
+        self.missing_image_paths = set()
+        self._last_missing_images_count = 0
         
         # Table UI components
         self.header_labels = []
@@ -77,7 +78,7 @@ class DataTable(ctk.CTkFrame, ABC):
                 text_color=Colours.TEXT_MAIN,
                 font=Fonts.TEXT_HEADER,
                 width=self.column_widths[i],
-                wraplength=self.column_widths[i],
+                wraplength=self.column_widths[i] - Spacing.TABLE_CELL_X * 2,
                 anchor="center",
             )
             label.grid(
@@ -157,7 +158,13 @@ class DataTable(ctk.CTkFrame, ABC):
 
         # Show missing images warning
         if self.missing_image_paths:
-            self.show_missing_images_warning(len(self.missing_image_paths))
+            # Get total missing_image_paths
+            new_count = len(self.missing_image_paths)
+            # Show message when there are new missing images
+            if new_count > self._last_missing_images_count:
+                self.show_missing_images_warning(new_count - self._last_missing_images_count)
+                # Update count to prevent permanent warnings
+                self._last_missing_images_count = new_count
 
     def create_row_widget(self, line) -> ctk.CTkFrame:
         """
@@ -222,7 +229,7 @@ class DataTable(ctk.CTkFrame, ABC):
             label = ctk.CTkLabel(
                 row_frame, 
                 width=self.column_widths[i],
-                wraplength=self.column_widths[i],
+                wraplength=self.column_widths[i] - Spacing.TABLE_CELL_X * 2,
                 **label_config
             )
             

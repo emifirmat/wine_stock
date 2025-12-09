@@ -72,7 +72,7 @@ class Fonts:
     TEXT_HEADER_CALENDAR = ("Segoe UI", 13, "bold")
     TEXT_ERROR = ("Segoe UI", 13, "bold")
     TEXT_DROPDOWN = ("Segoe UI", 13)
-    TEXT_AUTOCOMPLETE = ("Segoe UI", 11)
+    TEXT_AUTOCOMPLETE = TEXT_DROPDOWN
     
 
 class Icons:

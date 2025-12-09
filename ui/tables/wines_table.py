@@ -48,7 +48,7 @@ class WinesTable(DataTable, SortMixin):
         self.opened_toplevels = {}
 
         # Configure table layout
-        self.column_widths = [110, 120, 100, 90, 95, 80, 90, 90, 90, 80]
+        self.column_widths = [110, 120, 100, 90, 100, 65, 90, 110, 90, 90]
         
         # Build table
         self.create_components()
@@ -390,7 +390,7 @@ class WinesTable(DataTable, SortMixin):
         Display warning dialog about wines with invalid image paths.
         
         Parameters:
-            count: Number of wines with missing images
+            count: Number of new wines with missing images since last check
         """
         
         plural, verb = ["", "has"] if count < 2 else ["s", "have"]

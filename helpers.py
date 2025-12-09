@@ -240,17 +240,17 @@ def get_coords_center(widget: ctk.CTkBaseClass) -> tuple[int, int]:
     y = widget.winfo_screenheight() // 2
     return (x, y)
 
-def running_in_wsl() -> bool:
+def running_in_linux() -> bool:
     """
-    Check whether the application is running inside Windows Subsystem for Linux (WSL).
+    Check whether the application is running on a Linux system.
     
-    In WSL environments, the Linux kernel usually contains "microsoft" in its release name,
-    which allows us to detect it reliably via platform information.
+    Detects Linux-based systems including native Linux and Windows Subsystem
+    for Linux (WSL). Both environments identify as "linux" in platform.system().
     
     Returns:
-        True if running under WSL, False otherwise
+        True if running on Linux or WSL, False otherwise (Windows, macOS, etc.)
     """
-    return "microsoft" in platform.uname().release.lower()
+    return platform.system().lower() == "linux"
 
 def get_system_scale() -> float:
     """
