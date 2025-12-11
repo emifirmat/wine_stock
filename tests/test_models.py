@@ -8,7 +8,9 @@ import pytest
 from decimal import Decimal
 from datetime import datetime
 
+from db.events import * # Activates event listeners
 from db.models import Shop, Wine, Colour, Style, Varietal, StockMovement
+
     
 def test_shop_singleton(session):
     """
@@ -93,16 +95,12 @@ def test_named_model_mixin_get_name(session, sample_color_style_varietal):
     assert result is None
 
 
-def test_named_model_mixin_get_name_raises_error_without_name(session):
+def test_named_model_mixin_get_by_filter_raises_error(session):
     """
-    Test that get_name raises ValueError when name is not provided.
+    Test that get_by_filter raises ValueError when the filter is not provided.
     """
-    with pytest.raises(ValueError, match="Attribute 'name' should have a value"):
-        Colour.get_by_filter(session, name="")
-    
-    with pytest.raises(ValueError, match="Attribute 'name' should have a value"):
-        Colour.get_by_filter(session, name=None)
-
+    with pytest.raises(ValueError, match="At least one filter must be provided"):
+        Colour.get_by_filter(session)
 
 def test_create_wine(session, sample_color_style_varietal):
     """
@@ -311,7 +309,7 @@ def test_wine_display_properties(session, sample_color_style_varietal):
     
     assert wine_empty.origin_display == "N/A"
     assert wine_empty.varietal_display == "N/A"
-    assert wine_empty.picture_path_display == "assets/user_images/wines/default_wine.png"
+    assert wine_empty.picture_path_display == "default.png"
     assert wine_empty.min_stock_display == "N/A"
     assert wine_empty.min_stock_sort == -1
 
