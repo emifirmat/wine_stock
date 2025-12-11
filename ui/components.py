@@ -76,7 +76,7 @@ class EntryInputMixin:
         
         # Ensure widgets are rendered before measuring
         self.update_idletasks()
-        
+
         # Calculate scaled padding
         pad_label = int(Spacing.LABEL_X * dpi_scale)
         pad_small = int(Spacing.SMALL * dpi_scale)
@@ -296,7 +296,6 @@ class AutoScrollFrame(ctk.CTkFrame):
         else:
             # Windows and macOS use MouseWheel event
             toplevel.bind("<MouseWheel>", self._on_mousewheel, add="+")
-      
           
     def _event_inside_inner(self, widget: tk.Widget) -> bool:
         """
@@ -1746,17 +1745,21 @@ class DoubleLabel(ctk.CTkFrame):
         """
         self.label_value.configure(**kwargs)
 
-    def set_total_width(self, total_width: int) -> None:
+    def set_total_width(
+        self, total_width: int, asterisk_width: bool = False
+    ) -> None:
         """
         Set total width of the input container for consistent alignment.
-
-        Creates an invisible spacer label to ensure all input rows have the same
-        total width, providing visual alignment when multiple inputs are stacked.
-        Automatically accounts for system DPI scaling.
-
+        
+        Creates an invisible spacer label to ensure all label rows have the same
+        total width, providing visual alignment when multiple labels are stacked.
+        Automatically accounts for system DPI scaling and can optionally add extra
+        padding to align with input fields that have asterisk labels.
+        
         Parameters:
             total_width: Target total width of the container in pixels (before scaling)
-            
+            asterisk_width: If True, adds extra left padding to align with inputs that
+                            have asterisk labels for optional fields            
         Raises:
             ValueError: If total_width is smaller than the combined width of components
             
@@ -1767,17 +1770,33 @@ class DoubleLabel(ctk.CTkFrame):
         dpi_scale = get_system_scale()
         scaled_width = int(total_width * dpi_scale)
 
-        # Ensure widgets are rendered
-        self.update_idletasks()
-        
         # Calculate scaled padding
         pad_label = int(Spacing.LABEL_X * dpi_scale)
 
+        # Configure value label padding based on alignment mode
+        if asterisk_width:
+            # Add extra left padding to align with inputs that have asterisk labels
+            value_left_padding = Spacing.LABEL_X + 10
+            
+            # Note: grid_configure requires manual DPI scaling (unlike pack/grid)
+            self.label_value.grid_configure(
+                padx=(value_left_padding * dpi_scale, Spacing.LABEL_X * dpi_scale)
+            )
+
+            scaled_pad_value = int(value_left_padding * dpi_scale + pad_label)
+        
+        else:
+            # Standard padding for both sides
+            scaled_pad_value = pad_label * 2
+
+        # Ensure widgets are rendered before measuring
+        self.update_idletasks()
+
         # Calculate component widths including padding 
         title_width = self.label_title.winfo_width() + pad_label * 2
-        value_width = self.label_value.winfo_width() + pad_label * 2
+        value_width = self.label_value.winfo_width() + scaled_pad_value
         
-        # Calculate remaining space for alignment
+        # Calculate remaining space for alignment spacer
         occupied_width = title_width + value_width
         empty_label_width = (scaled_width - occupied_width) // dpi_scale
 
@@ -1788,7 +1807,7 @@ class DoubleLabel(ctk.CTkFrame):
                 f"(after scaling: {scaled_width})."
             )
 
-        # Create empty label for aligment
+        # Create invisible spacer label for aligment
         ctk.CTkLabel(
             self, # frame that contains all ctk components
             text="",

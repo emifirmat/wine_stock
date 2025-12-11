@@ -48,21 +48,6 @@ def populate_db_model(fields: list[str], model: type, session: Session) -> None:
             session.add(model(name=field))
             session.commit()  
 
-def get_by_id(model: type, id_: int, session: Session) -> Any | None:
-    """
-    Get the instance of a model by its ID.
-
-    Parameters:
-        model: Model class from models.py
-        id_: Primary key ID of the instance
-        session: SQLAlchemy session to perform DB operations
-        
-    Returns:
-        Model instance if found, None otherwise
-
-    """
-    return session.get(model, id_)
-
 
 def load_ctk_image(
     image_path: str, size: tuple[int,int] = (100, 100), rounded: bool = True,

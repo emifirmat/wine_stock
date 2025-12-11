@@ -84,12 +84,12 @@ def test_named_model_mixin_get_name(session, sample_color_style_varietal):
     red, _, _ = sample_color_style_varietal
     
     # Should find existing colour
-    result = Colour.get_name(session, name="Red")
+    result = Colour.get_by_filter(session, name="Red")
     assert result is not None
     assert result.id == red.id
     
     # Should return None for non-existent name
-    result = Colour.get_name(session, name="Blue")
+    result = Colour.get_by_filter(session, name="Blue")
     assert result is None
 
 
@@ -98,10 +98,10 @@ def test_named_model_mixin_get_name_raises_error_without_name(session):
     Test that get_name raises ValueError when name is not provided.
     """
     with pytest.raises(ValueError, match="Attribute 'name' should have a value"):
-        Colour.get_name(session, name="")
+        Colour.get_by_filter(session, name="")
     
     with pytest.raises(ValueError, match="Attribute 'name' should have a value"):
-        Colour.get_name(session, name=None)
+        Colour.get_by_filter(session, name=None)
 
 
 def test_create_wine(session, sample_color_style_varietal):

@@ -60,22 +60,22 @@ class NamedModelMixin:
       
     
     @classmethod
-    def get_name(cls, session: Session, **filters) -> Self | None:
+    def get_by_filter(cls, session: Session, **filters) -> Self | None:
         """
-        Get an instance by name or other filters.
+        Get a single instance matching the given filters.
         
         Parameters:
             session: SQLAlchemy database session
-            **filters: Key-value pairs to filter the query (must include 'name')
+            **filters: Key-value pairs to filter the query
             
         Returns:
             First matching instance or None
             
         Raises:
-            ValueError: If "name" filter is not provided or is empty
+            ValueError: If filter is not provided
         """
-        if not filters.get("name"):
-            raise ValueError("Attribute 'name' should have a value.")
+        if not filters:
+            raise ValueError("At least one filter must be provided.")
         return session.query(cls).filter_by(**filters).first()
 
 
@@ -116,7 +116,7 @@ class Shop(Base):
             session.commit()
         return instance
 
-class Wine(Base):
+class Wine(Base, NamedModelMixin):
     """
     Wine catalog table.
     

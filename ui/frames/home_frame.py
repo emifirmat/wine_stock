@@ -9,8 +9,7 @@ import customtkinter as ctk
 from sqlalchemy.orm import Session
 from typing import Callable
 
-from helpers import get_system_scale
-from ui.components import Card, ButtonGoBack, AutoScrollFrame
+from ui.components import Card, AutoScrollFrame
 from ui.forms.add_edit_transaction import AddTransactionForm
 from ui.forms.manage_transaction import ManageTransactionForm
 from ui.style import Colours, Fonts, Spacing, Rounding
@@ -60,19 +59,21 @@ class HomeFrame(AutoScrollFrame):
         """
         # Show empty state if no wines exist
         if not self.wine_list:
-            text = "Add at least one wine to enable and view this section."
+            text = "Add your first wine to enable this section."
             
             no_wine_text = ctk.CTkLabel(
                 self.inner,
                 text=text,
                 text_color=Colours.TEXT_MAIN,
                 justify="center",
-                font=Fonts.TEXT_MAIN
+                font=Fonts.TEXT_MAIN,
+                fg_color=Colours.BG_FORM,
+                corner_radius=Rounding.LABEL
             )
             no_wine_text.pack(
                 padx=Spacing.SUBSECTION_X, pady=Spacing.SUBSECTION_Y,
             )
-            
+
             return
         
         # Create cards container

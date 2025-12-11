@@ -5,11 +5,12 @@ This module initializes the database, populates default data,
 and launches the main application window.
 """
 import customtkinter as ctk
+from argparse import ArgumentParser, Namespace
 
 import db.events # Don't remove this
-from decimal import Decimal
-from db.models import Session, Shop, Colour, Style, Varietal, Wine
-from helpers import populate_db_model, get_by_id
+from db.sample_data import seed_sample_data
+from db.models import Session, Shop, Colour, Style, Varietal
+from helpers import populate_db_model
 from ui.main_window import MainWindow
 
 
@@ -20,6 +21,8 @@ def main() -> None:
     Sets up the database with default values, creates the main window,
     and starts the application event loop.
     """
+    args = parse_args()
+    
     # == DB config ==
     session = Session()    
     
@@ -32,11 +35,12 @@ def main() -> None:
     populate_db_model(wine_styles, Style, session)
     populate_db_model(wine_varietals, Varietal, session)
 
-    # Uncomment to populate database with sample wines
-    #add_wines(session)
-
     # Create default shop values if it is first time using the app
     Shop.get_singleton(session)
+
+    # == Demo ==
+    if args.demo:
+        seed_sample_data(session, with_transactions=args.with_transactions)
 
     # == App config ==
     root = ctk.CTk()
@@ -46,152 +50,32 @@ def main() -> None:
     # == Close db session ==
     session.close()
 
-def add_wines(session: Session) -> None:
+def parse_args() -> Namespace:
     """
-    Populate the database with ten sample wines for testing.
+    Parse command-line arguments for the application.
+
+    Supports enabling demo mode and optionally including
+    sample transactions when seeding data.
     
-    Parameters:
-        session: SQLAlchemy database session
+    Returns:
+        Parsed arguments namespace.
     """
-    wine1 = Wine(
-        name="Catena Zapata Malbec",
-        winery="Catena Zapata",
-        colour=get_by_id(Colour, 1, session),
-        style=get_by_id(Style, 1, session),
-        varietal=get_by_id(Varietal, 1, session),
-        vintage_year=2019,
-        origin="Mendoza, Argentina",
-        code="AR-MALB-001",
-        purchase_price=Decimal("20.50"),
-        selling_price=Decimal("65.23"),
-        picture_path="assets/user_images/wines/catena_zapata_malbec.png",
-        quantity=2
-    )
-    
-    wine2 = Wine(
-        name="Don Melchor Cabernet Sauvignon",
-        winery="Concha y Toro",
-        colour=get_by_id(Colour, 1, session),
-        style=get_by_id(Style, 1, session),
-        varietal=get_by_id(Varietal, 2, session),
-        vintage_year=2020,
-        origin="Puente Alto, Chile",
-        code= "CL-CABS-001",
-        purchase_price=Decimal("30.00"),
-        selling_price=Decimal("55.00"),
-        picture_path="assets/user_images/wines/don_melchor_cab_sav.png"
+    parser = ArgumentParser(description="WineStock Application")
+
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Load demo wines into the database"
     )
 
-    wine3 = Wine(
-        name="Norton Reserva Malbec",
-        winery="Bodega Norton",
-        colour=get_by_id(Colour, 1, session),
-        style=get_by_id(Style, 1, session),
-        varietal=get_by_id(Varietal, 1, session),
-        vintage_year=2021,
-        origin="Mendoza, Argentina",
-        code="AR-MALB-002",
-        purchase_price=Decimal("12.00"),
-        selling_price=Decimal("22.00"),
-    )
-    wine4 = Wine(
-        name="Susana Balbo Crios Torrontés",
-        winery="Susana Balbo Wines",
-        colour=get_by_id(Colour, 2, session),
-        style=get_by_id(Style, 1, session),
-        varietal=get_by_id(Varietal, 3, session),
-        vintage_year=2022,
-        origin="Cafayate, Argentina",
-        code="AR-TORR-001",
-        purchase_price=Decimal("9.50"),
-        selling_price=Decimal("17.00"),
-    )
-    wine5 = Wine(
-        name="Martini Asti Spumante",
-        winery="Martini & Rossi",
-        colour=get_by_id(Colour, 2, session),
-        style=get_by_id(Style, 2, session),
-        varietal=get_by_id(Varietal, 4, session),
-        vintage_year=2021,
-        origin="Asti, Italy",
-        code= "IT-SPAR-001",
-        purchase_price=Decimal("9.00"),
-        selling_price=Decimal("16.00"),
-        picture_path="assets/user_images/wines/martini_anti_spumante.jpg",
-        quantity=9
+    parser.add_argument(
+        "--with-transactions",
+        action="store_true",
+        help="Include sample transactions when using --demo"
     )
 
-    wine6 = Wine(
-        name="Fonseca Bin 27",
-        winery="Fonseca",
-        colour=get_by_id(Colour, 1, session),
-        style=get_by_id(Style, 3, session),
-        varietal=get_by_id(Varietal, 5, session),
-        vintage_year=2019,
-        origin="Douro, Portugal",
-        code="PT-PORT-001",
-        purchase_price=Decimal("14.00"),
-        selling_price=Decimal("25.00"),
-        picture_path="assets/user_images/wines/fonseca_bin_27.jpg"
-    )
+    return parser.parse_args()
 
-    wine7 = Wine(
-        name="Mateus Rosé",
-        winery="Sogrape Vinhos",
-        colour=get_by_id(Colour, 3, session),
-        style=get_by_id(Style, 2, session),
-        varietal=get_by_id(Varietal, 6, session),
-        vintage_year=2022,
-        origin="Douro, Portugal",
-        code="PT-ROSE-001",
-        purchase_price=Decimal("5.50"),
-        selling_price=Decimal("10.00"),
-    )
-
-    wine8 = Wine(
-        name="Château d'Esclans Whispering Angel",
-        winery="Château d'Esclans",
-        colour=get_by_id(Colour, 3, session),
-        style=get_by_id(Style, 1, session),
-        varietal=get_by_id(Varietal, 7, session),
-        vintage_year=2021,
-        origin="Provence, France",
-        code="FR-ROSE-002",
-        purchase_price=Decimal("15.00"),
-        selling_price=Decimal("27.00"),
-        quantity=11
-    )
-
-    wine9 = Wine(
-        name="Txakoli Ameztoi Rubentis",
-        winery="Ameztoi",
-        colour=get_by_id(Colour, 5, session),
-        style=get_by_id(Style, 5, session),
-        varietal=get_by_id(Varietal, 8, session),
-        vintage_year=2022,
-        origin="Getariako Txakolina, Spain",
-        code="ES-OTH-001",
-        purchase_price=Decimal("13.00"),
-        selling_price=Decimal("22.00"),
-        quantity=1
-    )
-
-    wine10 = Wine(
-        name="Niepoort Ruby Port",
-        winery="Niepoort",
-        colour=get_by_id(Colour, 1, session),
-        style=get_by_id(Style, 3, session),
-        varietal=get_by_id(Varietal, 9, session),
-        vintage_year=2020,
-        origin="Douro, Portugal",
-        code="PT-PORT-002",
-        purchase_price=Decimal("18.00"),
-        selling_price=Decimal("30.00"),
-        quantity=0
-    )
-
-    session.add_all([wine1, wine2, wine3,wine4, wine5, wine6, wine7, wine8, wine9, wine10])
-    session.commit()
 
 if __name__ == "__main__":
     main()

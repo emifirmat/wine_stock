@@ -12,7 +12,7 @@ from PIL import Image
 
 from db.models import Colour, Wine
 from helpers import (
-    populate_db_model, get_by_id, deep_getattr, get_coords_center,
+    populate_db_model, deep_getattr, get_coords_center,
     resource_path, load_image_from_file
 )
 
@@ -58,25 +58,6 @@ def test_populate_with_empty_list(session):
     results = session.query(Colour).all()
     assert len(results) == 0
 
-
-def test_get_by_id_returns_instance(session, sample_wine):
-    """
-    Test that get_by_id retrieves the correct instance.
-    """
-    result = get_by_id(Wine, sample_wine.id, session)
-    
-    assert result is not None
-    assert result.id == sample_wine.id
-    assert result.name == sample_wine.name
-
-
-def test_get_by_id_returns_none_for_nonexistent_id(session):
-    """
-    Test that get_by_id returns None for non-existent ID.
-    """
-    result = get_by_id(Wine, 9999, session)
-    
-    assert result is None
 
 # == Attribute utilities ==
 

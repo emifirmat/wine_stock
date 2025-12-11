@@ -621,15 +621,20 @@ class EditTransactionForm(BaseTransactionForm):
         for index, input_widget in enumerate(inputs_dict.values()):
             if isinstance(input_widget, DoubleLabel):
                 # Fixed width for value labels with dynamic content
-                input_widget.set_columns_layout(title_width=90, value_width=180)
-            elif isinstance(input_widget, AutocompleteInput):
-                input_widget.set_entry_width(280)
-            elif isinstance(input_widget, DropdownInput):
-                input_widget.configure_dropdown(width=170)
+                input_widget.set_columns_layout(
+                    title_width=90, 
+                    value_width=180
+                )
+                input_widget.set_total_width(450, asterisk_width=True)
             else:
-                input_widget.set_entry_width(170)
-            
-            input_widget.set_total_width(450)
+                if isinstance(input_widget, AutocompleteInput):
+                    input_widget.set_entry_width(280)
+                elif isinstance(input_widget, DropdownInput):
+                    input_widget.configure_dropdown(width=170)
+                else:
+                    input_widget.set_entry_width(170)
+
+                input_widget.set_total_width(450)
             
             input_widget.grid(
                 row=index, column=0, 

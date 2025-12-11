@@ -274,13 +274,13 @@ class AddWineForm(ctk.CTkFrame):
             return
 
         # Convert dropdown values to model instances
-        wine_attributes["colour"] = Colour.get_name(
+        wine_attributes["colour"] = Colour.get_by_filter(
             self.session, name=wine_attributes["colour"]
         )
-        wine_attributes["style"] = Style.get_name(
+        wine_attributes["style"] = Style.get_by_filter(
             self.session, name=wine_attributes["style"]
         )
-        wine_attributes["varietal"] = Varietal.get_name(
+        wine_attributes["varietal"] = Varietal.get_by_filter(
             self.session, name=wine_attributes["varietal"]
         ) if wine_attributes["varietal"] else None
         

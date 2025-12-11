@@ -29,8 +29,8 @@ class WinesTable(DataTable, SortMixin):
     of wines with view, edit, and delete capabilities. Highlights wines below
     minimum stock and tracks opened detail windows to prevent duplicates.
     """
-    INITIAL_ROWS = 40 
-    LOAD_MORE_ROWS = 30
+    INITIAL_ROWS = 20 
+    LOAD_MORE_ROWS = 20
 
     def __init__(self, root: ctk.CTkFrame, session: Session, *args, **kwargs):
         """

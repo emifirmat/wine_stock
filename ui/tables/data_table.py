@@ -21,7 +21,7 @@ class DataTable(ctk.CTkFrame, ABC):
     sorting capabilities, and customizable row rendering. Subclasses must
     implement get_line_columns() for specific data formatting.
     """
-    INITIAL_ROWS = 40 
+    INITIAL_ROWS = 30 
     LOAD_MORE_ROWS = 30
     
     def __init__(
@@ -100,7 +100,8 @@ class DataTable(ctk.CTkFrame, ABC):
 
         # Create rows container
         self.rows_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.rows_container.pack(fill="both", expand=True) 
+        self.rows_container.pack(fill="both", expand=True)
+        self.rows_container.columnconfigure(0, weight=1)
 
         # Create "no results" label (hidden by default)
         self.lbl_no_results = ctk.CTkLabel(
@@ -122,12 +123,14 @@ class DataTable(ctk.CTkFrame, ABC):
         for widget in self.rows_container.winfo_children():
             widget.grid_forget()
         
+        # Configure column responsiveness
+        self.rows_container.columnconfigure(0, weight=1)
+
         # Show "no results" message if no filtered data
         if not self.filtered_lines:
             self.lbl_no_results.grid(
                 row=0, column=0, sticky="ew", columnspan=len(self.headers)
             )
-            self.rows_container.columnconfigure(1, weight=1)
             return
         
         # Determine rows to display
@@ -149,9 +152,6 @@ class DataTable(ctk.CTkFrame, ABC):
                 row=i, column=0, columnspan=len(self.headers),
                 padx=Spacing.TABLE_CELL_X, pady=Spacing.TABLE_CELL_Y, sticky="ew"
             )
-        
-        # Configure column responsiveness
-        self.rows_container.grid_columnconfigure(0, weight=1)
         
         # Add "load more" button if needed
         self.create_load_more_button()
@@ -215,7 +215,7 @@ class DataTable(ctk.CTkFrame, ABC):
                         image = load_ctk_image(line_value)
                 except FileNotFoundError:
                     # Record missing image and use warning placeholder
-                    self.missing_image_paths.append(line_value)
+                    self.missing_image_paths.add(line_value)
                     print(f"[WARN] Image not found: {line_value}")
                     image = Placeholders.WINE_WARNING
 
@@ -281,7 +281,7 @@ class DataTable(ctk.CTkFrame, ABC):
         # Only show button if more rows available                
         if remaining_rows > 0:
             rows_to_load = min(remaining_rows, self.LOAD_MORE_ROWS)
-            text_content = f"Load {rows_to_load} More Rows {remaining_rows} left)"
+            text_content = f"Load {rows_to_load} More Rows ({remaining_rows} left)"
             
             self.load_more_btn = ctk.CTkButton(
                 self.rows_container,
@@ -297,7 +297,8 @@ class DataTable(ctk.CTkFrame, ABC):
             # Position at end of visible rows
             self.load_more_btn.grid(
                 row=self.visible_rows_count, 
-                padx=Spacing.BUTTON_X, pady=Spacing.BUTTON_Y, sticky="ew"
+                padx=Spacing.BUTTON_X, pady=Spacing.BUTTON_Y, sticky="ew",
+                columnspan=len(self.headers)
             )
 
     def load_more_rows(self) -> None:
