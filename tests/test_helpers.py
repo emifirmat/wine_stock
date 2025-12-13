@@ -12,8 +12,7 @@ from PIL import Image
 
 from db.models import Colour, Wine
 from helpers import (
-    populate_db_model, deep_getattr, get_coords_center,
-    resource_path, load_image_from_file
+    populate_db_model, deep_getattr, get_coords_center, load_image_from_file
 )
 
 
@@ -123,18 +122,6 @@ def test_deep_getattr_returns_none_for_none_intermediate(sample_wine):
     result = deep_getattr(sample_wine, "varietal.name")
     
     assert result is None
-
-
-# == Path utilities ==
-
-def test_resource_path_in_dev_mode():
-    """
-    Test resource_path returns correct path in development mode.
-    """
-    result = resource_path("assets/test.png")
-    
-    assert isinstance(result, Path)
-    assert "assets/test.png" in str(result)
 
 
 # == File operations ==

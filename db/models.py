@@ -11,13 +11,14 @@ from sqlalchemy.orm import sessionmaker, relationship, declarative_base, validat
 from datetime import datetime
 from typing import Self
 
+from db.bootstrap import get_sqlalchemy_url
 
 # == Global variables ==
 MAX_CHARS = 100
 
 # == DB Connection ==
 # Create connection with sqlite db. Echo=True == debugging mode
-engine = create_engine("sqlite:///wineshop.db", echo=False)
+engine = create_engine(get_sqlalchemy_url(), echo=False)
 
 # == Event Listeners ==
 @event.listens_for(engine, "connect")

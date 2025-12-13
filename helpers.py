@@ -15,23 +15,7 @@ from PIL.Image import Image as PILImage
 from sqlalchemy.orm import Session
 from typing import Any
 
-
-def resource_path(relative_path: str) -> Path:
-    """ 
-    Get absolute path to resource, works for dev and for PyInstaller.
-    
-    Parameters:
-        relative_path: Path relative to the base directory
-        
-    Returns:
-        Absolute path to the resource
-    """
-    try:
-        base_path = Path(sys._MEIPASS)  # Attributed created by PyInstaller 
-    except AttributeError:
-        base_path = Path(__file__).parent  # Dev Mode
-
-    return base_path / relative_path
+from db.bootstrap import resource_path
 
 
 def populate_db_model(fields: list[str], model: type, session: Session) -> None: 

@@ -64,9 +64,6 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
 
-    # Change Alembic engine by my engine
-    connectable = engine
-
     with connectable.connect() as connection:
         context.configure(
             connection=connection, 

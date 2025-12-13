@@ -14,7 +14,8 @@ from ui.frames.home_frame import HomeFrame
 from ui.frames.wine_frame import WineFrame
 from ui.frames.report_frame import ReportFrame
 from ui.frames.settings_frame import SettingsFrame
-from helpers import load_ctk_image, resource_path
+from helpers import load_ctk_image
+from db.bootstrap import resource_path
 from db.models import Shop
 
 class MainWindow:

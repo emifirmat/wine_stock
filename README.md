@@ -19,12 +19,12 @@ The project focuses strictly on **inventory control**, not accounting or invoici
 
 - Add, edit, delete, and search wines  
 - Record stock movements (purchases and sales)  
-- Minimum stock alerts  
-- Clean and modern UI using CustomTkinter  
+- Minimum stock alerts and visual indicators
+- Clean and modern desktop UI built with CustomTkinter  
 - SQLite database with SQLAlchemy ORM  
-- Alembic-powered migrations  
-- Auto-generated API documentation using MkDocs + mkdocstrings  
-- Fully offline — no cloud dependencies  
+- Automatic schema migrations powered by Alembic  
+- Auto-generated technical documentation using MkDocs + mkdocstrings  
+- Fully offline — no cloud services or external dependencies 
 
 ---
 
@@ -42,20 +42,30 @@ The project focuses strictly on **inventory control**, not accounting or invoici
 
 ## 📸 Screenshots
 
-Screenshots will be added later.
-
-Example format:
 ```markdown
 ![Home Screen](/screenshots/home.png)
 ![Wine Table](/screenshots/wines.png)
+![Edit Wine](/screenshots/wines_edit_.png)
+![New Sale](/screenshots/transactions_new_sale.png)
+![Reports](/screenshots/reports.png)
 ```
 
 ---
 
-## 📦 Installation
+## 🎥 Demo Video
+
+A short walkthrough of the application is available on YouTube:
+
+👉 https://www.youtube.com/xxxxx
+
+The video covers installation, demo data, and the main workflows of the application.
+
+---
+
+## 📦 Installation (Developers)
 
 ```bash
-git clone <REPOSITORY_URL>
+git clone https://github.com/emifirmat/wine_stock.git
 cd wine_stock
 
 python -m venv .venv
@@ -63,40 +73,77 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+> The application supports demo data flags for quick evaluation (see **Running the Application**).
+
 ---
 
 ## ▶️ Running the Application
 
-Development steps:
-
 ```bash
 source .venv/bin/activate
-alembic upgrade head
 python main.py
 ```
 
-End users do **not** need to run migrations.  
-The database will be created automatically on first launch.
+- The database is created automatically on first launch
+- Migrations are applied automatically if needed
+
+### Optional startup flags
+
+Start the application with demo wine data:
+
+```bash
+python main.py --demo
+```
+
+Include demo stock movements (sales and purchases):
+
+```bash
+python main.py --demo --with-transactions
+```
+This populates the database with sample data for testing and exploration.
+
+### Development and production environments
+
+By default, the application runs in **development mode**.
+
+```bash
+# Linux / macOS
+WINESTOCK_ENV=dev python main.py
+```
+```bash
+# Windows (PowerShell)
+$env:WINESTOCK_ENV="dev"
+```
+
+You can run in production mode:
+
+```bash
+# Linux / macOS
+WINESTOCK_ENV=prod python main.py
+```
+```bash
+# Windows (PowerShell)
+$env:WINESTOCK_ENV="prod"
+python main.py
+
+```
 
 ---
 
 ## 🗄️ Database & Migrations
 
-The app uses **SQLite (`wineshop.db`)**.
+The app application **SQLite (`wineshop.db`)**.
 
-Developers can apply schema migrations with:
+- The database file is created automatically if it does not exist
+- Schema migrations are applied automatically on application startup.
 
-```bash
-alembic upgrade head
-```
-
-The DB file is created automatically if it does not exist.
+No manual migration steps are required for end users.
 
 ---
 
 ## 📚 Documentation
 
-Generate and view API documentation locally:
+Generate and browse the API documentation locally:
 
 ```bash
 mkdocs serve
@@ -115,8 +162,9 @@ Run the test suite:
 pytest tests
 ```
 
-Database logic and helper utilities are covered by automated tests.  
-UI testing is done manually due to CustomTkinter constraints, and these tests were performed on both WSL (Ubuntu) and Windows 11 environments.
+- Database logic and helper utilities are covered by automated tests
+- UI testing is done manually due to CustomTkinter constraints
+- Manual UI tests were executed on WSL (Ubuntu) and Windows 11
 
 ---
 
@@ -125,10 +173,16 @@ UI testing is done manually due to CustomTkinter constraints, and these tests we
 Build a standalone executable:
 
 ```bash
-pyinstaller --noconfirm --onefile --windowed main.py
+pyinstaller --noconfirm --onefile --windowed ^
+  --hidden-import logging.config ^
+  --add-data "assets;assets" ^
+  --add-data "alembic.ini;." ^
+  --add-data "migrations;migrations" ^
+  main.py
 ```
 
-This is intended for distribution; the repository contains the reference source code.
+This executable is intended for distribution.
+The repository contains the full reference source code.
 
 ---
 
@@ -155,8 +209,8 @@ wine_stock/
 
 ## 📜 License
 
-This project is shared for portfolio and educational purposes only.  
-Commercial use or redistribution requires permission.
+This project is shared for **portfolio and educational purposes** only.  
+Commercial use or redistribution requires explicit permission.
 
 ---
 

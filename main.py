@@ -7,58 +7,50 @@ and launches the main application window.
 import customtkinter as ctk
 from argparse import ArgumentParser, Namespace
 
-import db.events # Don't remove this
+from db.bootstrap import ensure_db_ready
 from db.sample_data import seed_sample_data
-from db.models import Session, Shop, Colour, Style, Varietal
-from helpers import populate_db_model
+from db.session_factory import build_session
 from ui.main_window import MainWindow
 
 
 def main() -> None:
     """
-    Initialize and run the wine stock management application.
+    Initialise and run the wine stock management application.
     
     Sets up the database with default values, creates the main window,
-    and starts the application event loop.
+    and starts the application event loop. Ensures proper cleanup of
+    database resources on exit.
     """
+    # Ensure database schema is up to date
+    ensure_db_ready()
+    
+    # Parse command-line arguments
     args = parse_args()
     
-    # == DB config ==
-    session = Session()    
-    
-    # Populate colour, style, and varietal tables with default values
-    wine_colours = ["red", "rosé", "orange", "white", "other"]
-    wine_styles = ["dessert", "fortified", "sparkling", "still", "other"]
-    wine_varietals = ["baga", "cabernet sauvignon", "grenache", "hondarrabi zuri", 
-    "malbec", "moscato bianco", "tinta roriz", "torrontés", "touriga nacional","other"]
-    populate_db_model(wine_colours, Colour, session)
-    populate_db_model(wine_styles, Style, session)
-    populate_db_model(wine_varietals, Varietal, session)
+    # Initialise database session
+    session = build_session()    
 
-    # Create default shop values if it is first time using the app
-    Shop.get_singleton(session)
-
-    # == Demo ==
+    # Populate demo data if requested
     if args.demo:
         seed_sample_data(session, with_transactions=args.with_transactions)
 
-    # == App config ==
+    # Initialise and run application
     root = ctk.CTk()
     app_wine_stock = MainWindow(root, session)
     app_wine_stock.root.mainloop()
     
-    # == Close db session ==
+    # Clean up database session
     session.close()
 
 def parse_args() -> Namespace:
     """
     Parse command-line arguments for the application.
 
-    Supports enabling demo mode and optionally including
-    sample transactions when seeding data.
+    Supports enabling demo mode with optional sample transactions for
+    testing and demonstration purposes.
     
     Returns:
-        Parsed arguments namespace.
+        Parsed arguments namespace containing demo and with_transactions flags
     """
     parser = ArgumentParser(description="WineStock Application")
 
@@ -67,7 +59,6 @@ def parse_args() -> Namespace:
         action="store_true",
         help="Load demo wines into the database"
     )
-
     parser.add_argument(
         "--with-transactions",
         action="store_true",

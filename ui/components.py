@@ -14,7 +14,8 @@ import platform
 from decimal import Decimal
 from typing import Callable
 
-from helpers import load_ctk_image, get_system_scale, resource_path, running_in_linux
+from db.bootstrap import resource_path
+from helpers import load_ctk_image, get_system_scale, running_in_linux
 from ui.style import Colours, Fonts, Icons, Spacing, Rounding, Placeholders
 
 
