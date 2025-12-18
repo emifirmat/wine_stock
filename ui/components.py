@@ -812,6 +812,7 @@ class DateEntry(ctk.CTkEntry):
         header = ctk.CTkLabel(
             self.frame_calendar, 
             text=f"{calendar.month_name[self.month]} {self.year}",
+            text_color=Colours.TEXT_MAIN,
             font=Fonts.TEXT_HEADER_CALENDAR
         )
         header.grid(row=0, column=2, columnspan=3, pady=Spacing.SMALL)
@@ -838,7 +839,7 @@ class DateEntry(ctk.CTkEntry):
         # Days headers
         for i, day in enumerate(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]):
             ctk.CTkLabel(
-                self.frame_calendar, text=day
+                self.frame_calendar, text=day, text_color=Colours.TEXT_MAIN
             ).grid(row=1, column=i, padx=2, pady=2)
 
         # Days buttons

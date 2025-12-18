@@ -7,6 +7,7 @@ and editing existing transactions, including validation and stock tracking
 import customtkinter as ctk
 import tkinter as tk
 import tkinter.messagebox as messagebox
+from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from typing import Callable
@@ -24,11 +25,12 @@ class BaseTransactionForm(ctk.CTkFrame):
     Base form for transaction management.
     
     Provides shared functionality for adding and editing transactions,
-    including wine selection, quantity input, and validation.
+    including wine selection, quantity input, and validation. Subclasses
+    implement specific behavior for add vs edit operations.
     """
     def __init__(self, root: ctk.CTkFrame, session: Session, **kwargs):
         """
-        Initialize base transaction form.
+        Initialise base transaction form.
         
         Parameters:
             root: Parent frame container
@@ -49,8 +51,6 @@ class BaseTransactionForm(ctk.CTkFrame):
         self.quantity_var = tk.StringVar()
 
         # Listen to changes
-        self.wine_name_var.trace_add("write", self.on_entry_change)
-        self.quantity_var.trace_add("write", self.on_entry_change)
         self.subtotal_value = None
 
         # Components (to be set by subclasses)
@@ -117,7 +117,7 @@ class AddTransactionForm(BaseTransactionForm):
     """
     def __init__(self, root, session: Session, transaction_type: str, **kwargs):
         """
-        Initialize add transaction form.
+        Initialise add transaction form.
         
         Parameters:
             root: Parent frame container
@@ -130,6 +130,9 @@ class AddTransactionForm(BaseTransactionForm):
         # Transaction state
         self.transaction = transaction_type
         self.temp_stock = {}
+
+        self.wine_name_var.trace_add("write", self.on_entry_change)
+        self.quantity_var.trace_add("write", self.on_entry_change)
 
         # Components
         self.label_stock = None
@@ -144,7 +147,7 @@ class AddTransactionForm(BaseTransactionForm):
         Returns:
             Dictionary of input widgets keyed by field name
         """
-        # Configure grid
+        # Configure grid columns
         for i in range(3):
             self.grid_columnconfigure(i, weight=1)
 
@@ -373,7 +376,7 @@ class AddTransactionForm(BaseTransactionForm):
         self.label_subtotal.configure_label_value(text=f"€ {self.subtotal_value}")
         self.label_wine_code.configure_label_value(text=wine_instance.code)
         
-        # Initialize temp stock if not already tracked
+        # Initialise temp stock if not already tracked
         wine_name_lower = selected_wine_name.lower()
         if wine_name_lower not in self.temp_stock:
             self.temp_stock[wine_name_lower] = wine_instance.quantity
@@ -382,10 +385,10 @@ class AddTransactionForm(BaseTransactionForm):
 
     def add_new_wine_line(self) -> None:
         """
-        Add a new transaction line to the table.
+        Add a new transaction line to the table after validation.
         
         Validates wine selection, checks for negative stock, and adds
-        the line to the table if validation passes.
+        the line to the table if validation passes. Updates temporary stock tracking.
         """
         # Get and validate wine name
         selected_wine_name = self.wine_name_var.get().strip()
@@ -445,7 +448,8 @@ class AddTransactionForm(BaseTransactionForm):
         """
         Handle line removal from table.
         
-        Updates temp stock and disables save button if no lines remain.
+        Reverts the removed line's effect on temporary stock and disables
+        save button if no lines remain.
         
         Parameters:
             lines_size: Number of remaining lines in table
@@ -471,12 +475,13 @@ class AddTransactionForm(BaseTransactionForm):
 
     def update_label_stock(self, wine_instance: Wine) -> None:
         """
-        Update stock label with current value and warning indicator.
+        Update stock label with current temp value and warning indicator.
         
-        Displays warning icon if stock is below minimum threshold.
+        Displays warning icon and red text if temporary stock is below
+        the wine's minimum stock threshold.
         
         Parameters:
-            wine_instance: Wine instance to check stock level
+            wine_instance: Wine instance to check stock level against
         """
         wine_name_lower = wine_instance.name.lower()
 
@@ -496,7 +501,7 @@ class AddTransactionForm(BaseTransactionForm):
         else:            
             self.label_stock.configure_label_value(
                 text_color=Colours.TEXT_MAIN,
-                image=Icons.EMPTY, # Hide image
+                image=Icons.EMPTY, # Hide warning icon
                 compound=None,
                 padx=0
             )
@@ -506,15 +511,16 @@ class EditTransactionForm(BaseTransactionForm):
     """
     Form for editing existing transactions.
     
-    Allows modification of wine, transaction type, and quantity for
-    an existing StockMovement record.
+    Allows modification of wine, transaction type, quantity, and price for
+    an existing StockMovement record. Preserves historic prices when appropriate
+    and recalculates stock impacts when wine or transaction type changes.
     """
     def __init__(
         self, root: ctk.CTkFrame, session: Session, movement: StockMovement, 
         on_save: Callable | None = None, **kwargs
     ):
         """
-        Initialize edit transaction form.
+        Initialise edit transaction form.
         
         Parameters:
             root: Parent frame container
@@ -527,14 +533,27 @@ class EditTransactionForm(BaseTransactionForm):
         
         # DB instances
         self.movement = movement
+        self.current_wine = movement.wine
         
         # Callbacks
         self.on_save = on_save
 
+        # Listen to input changes
+        self.wine_name_var.trace_add("write", self.on_wine_change)
+        self.quantity_var.trace_add("write", self.on_quantity_change)
+
+        # Historic price preservation logic
+        self.use_historic_price = True
+        self.initial_wine_code = movement.wine.code
+        self.initial_transaction_type = movement.transaction_type
+        self.current_transaction_type = self.initial_transaction_type
+
         # Components
         self.label_price = None
         self.inputs_dict = self.create_components()
-        self.on_entry_change()
+        
+        # Initial calculation
+        self.on_wine_change()
 
     def create_components(self) -> dict[str, ctk.CTkBaseClass]:
         """
@@ -574,7 +593,8 @@ class EditTransactionForm(BaseTransactionForm):
         transaction = DropdownInput(
             frame_background,
             label_text="Transaction",
-            values=["", "Purchase", "Sale"]
+            values=["", "Purchase", "Sale"],
+            command=self.on_transaction_change
         )
 
         quantity = IntInput(
@@ -607,7 +627,7 @@ class EditTransactionForm(BaseTransactionForm):
 
         # Populate with initial values
         for input_name, input_widget in inputs_dict.items():
-            # Get value
+            # Get value using dot notation support
             value = deep_getattr(self.movement, input_name)
             
             if hasattr(input_widget, "set_to_value"):
@@ -617,10 +637,10 @@ class EditTransactionForm(BaseTransactionForm):
             elif input_name == "datetime":
                 input_widget.configure_label_value(text=str(value))
         
-        # Set columns and position components
+        # Configure layout and position components
         for index, input_widget in enumerate(inputs_dict.values()):
             if isinstance(input_widget, DoubleLabel):
-                # Fixed width for value labels with dynamic content
+                # Fixed width for display-only labels
                 input_widget.set_columns_layout(
                     title_width=90, 
                     value_width=180
@@ -671,9 +691,12 @@ class EditTransactionForm(BaseTransactionForm):
         
         return inputs_dict
 
-    def on_entry_change(self, *args) -> None:
+    def on_wine_change(self, *args) -> None:
         """
-        Update price and subtotal when wine or quantity changes.
+        Update price and subtotal when wine selection changes.
+        
+        Preserves historic price if wine hasn't changed from original,
+        otherwise uses current wine's price for the transaction type.
         
         Parameters:
             *args: Trace callback arguments (unused but required by trace_add)
@@ -682,39 +705,117 @@ class EditTransactionForm(BaseTransactionForm):
         if not self.inputs_dict:
             return
 
-        # Get current values
-        selected_wine_name = self.wine_name_var.get().title()
-        quantity = self.get_quantity_var()
-        transaction = self.inputs_dict["transaction_type"].get().lower()
+        # Get current wine selection
+        selected_wine_name = self.wine_name_var.get().title()        
 
-        # Reset labels if invalid wine
+        # Reset code label if invalid wine
         if selected_wine_name not in self.wine_names_dict:
-            self.label_wine_code.configure_label_value(text="-")
-            self.label_price.configure_label_value(text="€ -")
-            self.label_subtotal.configure_label_value(text="€ -")
+            code_text="-"
+        else:
+            # Get wine and update code
+            self.current_wine = self.wine_names_dict[selected_wine_name]
+            code_text=self.current_wine.code
+        
+        self.label_wine_code.configure_label_value(text=code_text)
+        self.update_price()
+        self.update_subtotal()
+
+        # Stop using historic price if wine changed
+        if self.use_historic_price and self.current_wine.code != self.initial_wine_code:
+            self.use_historic_price = False
+    
+    def on_transaction_change(self, *args) -> None:
+        """
+        Update price and subtotal when transaction type changes.
+        
+        Stops using historic price if transaction type differs from original.
+        
+        Parameters:
+            *args: Callback arguments (unused but required by command signature)
+        """
+        # Skip during component creation
+        if not self.inputs_dict:
             return
 
-        # Get wine and update code
-        wine_instance = self.wine_names_dict[selected_wine_name]
-        self.label_wine_code.configure_label_value(text=wine_instance.code)
+        # Update current transaction type
+        self.current_transaction_type = self.inputs_dict["transaction_type"].get().lower()
 
-        # Calculate price and subtotal based on transaction type
-        if transaction == "sale":
-            transaction_price = wine_instance.selling_price
-        elif transaction == "purchase":
-            transaction_price = wine_instance.purchase_price
-        else:
+        # Check if I should use historic price
+        if self.use_historic_price and self.current_transaction_type != self.initial_transaction_type:
+            self.use_historic_price = False
+
+        self.update_price()
+        self.update_subtotal()
+
+    def on_quantity_change(self, *args) -> None:
+        """
+        Recalculate subtotal when quantity changes.
+        
+        Parameters:
+            *args: Trace callback arguments (unused but required by trace_add)
+        """
+        self.update_subtotal()
+
+
+    def update_price(self) -> None:
+        """
+        Update price label based on wine and transaction type.
+        
+        Uses historic price if wine and transaction type haven't changed,
+        otherwise calculates price from current wine's selling/purchase price.
+        """
+        selected_wine_name = self.wine_name_var.get().title()
+        
+        # Reset price label if invalid wine
+        if selected_wine_name not in self.wine_names_dict:
             self.label_price.configure_label_value(text="€ -")
-            self.label_subtotal.configure_label_value(text="€ -")
             return
         
+        # Use historic price if nothing changed
+        if self.use_historic_price:
+            self.label_price.configure_label_value(text=f"€ {self.movement.price}")
+            return
+
+        # Calculate price based on transaction type
+        if self.current_transaction_type == "sale":
+            transaction_price = self.current_wine.selling_price
+        elif self.current_transaction_type == "purchase":
+            transaction_price = self.current_wine.purchase_price
+        else:
+            transaction_price = "-"
+        
         self.label_price.configure_label_value(text=f"€ {transaction_price}")
-        self.subtotal_value = quantity * transaction_price
-        self.label_subtotal.configure_label_value(text=f"€ {self.subtotal_value}")
-    
+            
+
+    def update_subtotal(self) -> None:
+        """
+        Recalculate and update subtotal label.
+        
+        Multiplies current quantity by price to get subtotal amount.
+        """
+        # Skip during component creation
+        if not self.inputs_dict:
+            return
+
+        quantity = self.get_quantity_var()
+        price = self.label_price.label_value.cget("text").replace("€ ", "")
+
+        if price == "-":
+            # Reset subtotal if no valid price
+            self.label_subtotal.configure_label_value(text="€ -")
+        else:
+            # Calculate subtotal
+            price = Decimal(price)
+            self.subtotal_value = quantity * price
+            self.label_subtotal.configure_label_value(text=f"€ {self.subtotal_value}")
+
+
     def save_values(self) -> None:
         """
         Save edited transaction to database after validation.
+
+        Validates wine selection, calculates stock impact, warns about negative 
+        stock, and saves changes if user confirms.
         """
         # Get and validate values
         selected_wine_name = self.wine_name_var.get().strip().title()
@@ -744,7 +845,7 @@ class EditTransactionForm(BaseTransactionForm):
             # Different wine selected, start with its current stock
             new_stock = self.movement.wine.quantity
 
-        # Apply new transaction's effect
+        # Apply new transaction's effect on stock
         if transaction_type == "purchase":            
             new_stock += quantity
         elif transaction_type == "sale":
@@ -794,4 +895,3 @@ class EditTransactionForm(BaseTransactionForm):
     
         # Close window
         self.winfo_toplevel().destroy()
-    

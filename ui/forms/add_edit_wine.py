@@ -14,9 +14,9 @@ from typing import Callable, Any
 
 from db.models import Wine, Colour, Style, Varietal
 from helpers import deep_getattr
-from ui.components import (TextInput, IntInput, DropdownInput, ImageInput,
+from ui.components import (DoubleLabel, TextInput, IntInput, DropdownInput, ImageInput,
     DecimalInput, ClearSaveButtons)
-from ui.style import Colours, Fonts, Spacing
+from ui.style import Colours, Fonts, Spacing, Icons
 from validators import (
     validate_string, validate_dropdown, validate_year, validate_int, 
     validate_decimal
@@ -51,6 +51,7 @@ class AddWineForm(ctk.CTkFrame):
         self.session = session
         self.wine = wine
         self.on_save = on_save
+        self.is_edit = wine is not None
 
         # Lookup dictionaries
         self.wine_colours_dict = self.get_wine_colours_dict()
@@ -123,11 +124,18 @@ class AddWineForm(ctk.CTkFrame):
             optional=True
         )
         
-        quantity = IntInput(
-            frame_background,
-            label_text="Stock" if self.wine else "Initial Stock",
-            placeholder="In bottles",
-        )
+        if self.wine:
+            quantity = DoubleLabel(
+                frame_background,
+                label_title_text="Stock",
+                label_value_text="" # Defined later
+            )
+        else:
+            quantity = IntInput(
+                frame_background,
+                label_text="Initial Stock",
+                placeholder="In bottles",
+            )
         
         min_stock = IntInput(
             frame_background,
@@ -167,7 +175,15 @@ class AddWineForm(ctk.CTkFrame):
             # Disable autosize in dropdowns
             if hasattr(input_widget, "configure_dropdown"):
                 input_widget.configure_dropdown(width=200)
-            input_widget.set_total_width(450)
+            
+            # Fix total width for aligment
+            width_args = {"total_width": 450}
+            if isinstance(input_widget, DoubleLabel):
+                  width_args["asterisk_width"] = True
+                  input_widget.set_columns_layout(title_width=90, value_width=130)
+            input_widget.set_total_width(**width_args)
+                  
+            # Position widget
             input_widget.grid(
                 row=index, column=0, 
                 padx=Spacing.LABEL_X, pady=Spacing.LABEL_Y
@@ -199,7 +215,7 @@ class AddWineForm(ctk.CTkFrame):
         )
 
         # Load existing data if in edit mode
-        if self.wine:
+        if self.is_edit:
             self.set_edition_mode(inputs_dict)
         
         return inputs_dict
@@ -285,8 +301,9 @@ class AddWineForm(ctk.CTkFrame):
         ) if wine_attributes["varietal"] else None
         
         try:
-            if self.wine:
+            if self.is_edit:
                 # Update existing wine
+                wine_attributes.pop("quantity", None)
                 for attr, val in wine_attributes.items():
                     setattr(self.wine, attr, val)
             else:
@@ -329,7 +346,7 @@ class AddWineForm(ctk.CTkFrame):
         )
 
         # Handle post-save actions
-        if self.wine:
+        if self.is_edit:
             # Edit mode: refresh parent view and close
             if self.on_save:
                 self.on_save(self.wine)
@@ -346,7 +363,7 @@ class AddWineForm(ctk.CTkFrame):
             Dictionary of validated field values, or None if validation fails
         """
         try:
-            return {
+            data = {
                 "name": validate_string("name", self.inputs_dict["name"].get()),
                 "winery": validate_string("winery", self.inputs_dict["winery"].get()),
                 "colour": validate_dropdown("colour", self.inputs_dict["colour.name"].get()),
@@ -356,10 +373,6 @@ class AddWineForm(ctk.CTkFrame):
                 "origin": self.inputs_dict["origin"].get().strip(), # Optional
                 "code": validate_string("code", self.inputs_dict["code"].get()),
                 "picture_path": self.inputs_dict["picture_path"].get_new_path(), # Optional
-                "quantity": validate_int(
-                    "initial stock", self.inputs_dict["quantity"].get(), 
-                    allowed_signs="positive"
-                ),
                 "min_stock": self.inputs_dict["min_stock"].get(),
                 "purchase_price": validate_decimal(
                     "purchase price", self.inputs_dict["purchase_price"].get()
@@ -368,6 +381,15 @@ class AddWineForm(ctk.CTkFrame):
                     "selling price", self.inputs_dict["selling_price"].get()
                 )
             }
+
+            if not self.is_edit:
+                data["quantity"] = validate_int(
+                    "initial stock",
+                    self.inputs_dict["quantity"].get(),
+                    allowed_signs="positive"
+                )
+
+            return data
         
         except ValueError as ve:
             # Display validation error
@@ -390,6 +412,17 @@ class AddWineForm(ctk.CTkFrame):
                 input_widget.set_to_value(value)
             elif isinstance(input_widget, ImageInput):
                 input_widget.set_file_path(value)
+            elif isinstance(input_widget, DoubleLabel):
+                value_label_args = {"text": value}
+                if input_name == "quantity" and value < 0:
+                    value_label_args.update({
+                        "text_color": Colours.ERROR,
+                        "image": Icons.WARNING,
+                        "compound": "right",
+                        "padx": Spacing.SMALL
+                    })
+                value_label_args["text"] = value
+                input_widget.configure_label_value(**value_label_args)
             else:
                 # Text and numeric inputs
                 input_widget.update_text_value(

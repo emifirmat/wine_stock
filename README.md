@@ -42,13 +42,11 @@ The project focuses strictly on **inventory control**, not accounting or invoici
 
 ## 📸 Screenshots
 
-```markdown
-![Home Screen](/screenshots/home.png)
-![Wine Table](/screenshots/wines.png)
-![Edit Wine](/screenshots/wines_edit_.png)
-![New Sale](/screenshots/transactions_new_sale.png)
-![Reports](/screenshots/reports.png)
-```
+![Home Screen](screenshots/home.png)
+![Wine Table](screenshots/wines.png)
+![Edit Wine](screenshots/wines_edit.png)
+![New Sale](screenshots/transactions_new_sale.png)
+![Reports](screenshots/reports.png)
 
 ---
 
@@ -56,20 +54,34 @@ The project focuses strictly on **inventory control**, not accounting or invoici
 
 A short walkthrough of the application is available on YouTube:
 
-👉 https://www.youtube.com/xxxxx
+👉 https://youtu.be/TReVcJcWJY0
 
-The video covers installation, demo data, and the main workflows of the application.
+The video covers application execution, demo data, and the main workflows.
 
 ---
 
 ## 📦 Installation (Developers)
+
+### Clone the repository and create a virtual environment:
 
 ```bash
 git clone https://github.com/emifirmat/wine_stock.git
 cd wine_stock
 
 python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+```
+
+### Activate the virtual environment and install dependencies:
+
+#### Linux / macOS
+```bash
+source .venv/bin/activate        
+pip install -r requirements.txt
+```
+
+#### Windows
+```bash
+.venv\Scripts\activate      
 pip install -r requirements.txt
 ```
 
@@ -79,8 +91,15 @@ pip install -r requirements.txt
 
 ## ▶️ Running the Application
 
+#### Linux / macOS
 ```bash
-source .venv/bin/activate
+source .venv/bin/activate        
+python main.py
+```
+
+#### Windows: 
+```
+.venv\Scripts\activate
 python main.py
 ```
 
@@ -106,33 +125,33 @@ This populates the database with sample data for testing and exploration.
 
 By default, the application runs in **development mode**.
 
+#### Linux / macOS
 ```bash
-# Linux / macOS
 WINESTOCK_ENV=dev python main.py
 ```
+
+#### Windows (PowerShell)
 ```bash
-# Windows (PowerShell)
-$env:WINESTOCK_ENV="dev"
+$env:WINESTOCK_ENV="dev" python main.py
 ```
 
-You can run in production mode:
+Run in **production mode**:
 
+#### Linux / macOS
 ```bash
-# Linux / macOS
 WINESTOCK_ENV=prod python main.py
 ```
-```bash
-# Windows (PowerShell)
-$env:WINESTOCK_ENV="prod"
-python main.py
 
+#### Windows (PowerShell)
+```bash
+$env:WINESTOCK_ENV="prod" python main.py
 ```
 
 ---
 
 ## 🗄️ Database & Migrations
 
-The app application **SQLite (`wineshop.db`)**.
+The application uses **SQLite (`wineshop.db`)**.
 
 - The database file is created automatically if it does not exist
 - Schema migrations are applied automatically on application startup.
